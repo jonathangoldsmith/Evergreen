@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrackerPlusPlus design system</title>
+<!-- General Sans (Fontshare, ITF Free Font License) for the agent's voice only -->
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@500,600&display=swap" rel="stylesheet">
+<style>
+  /* Tokens: light is the default (use scene: indoors at a desk, bright projector) */
+  :root {
+    --surface: #F7F8F6; --card: #FFFFFF; --text: #15201B; --muted: #55615B;
+    --accent: #1F6F5C; --on-accent: #FFFFFF; --warning: #8A5A00; --error: #B3261E; --success: #2F7A4F;
+    --rule: #E3E7E4; --phone: #FFFFFF;
+    --agent: "General Sans", system-ui, sans-serif;
+    /* Preview stand-in for SF Pro: the app uses SF Pro + Dynamic Type natively */
+    --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  :root[data-theme="dark"] {
+    --surface: #0F1513; --card: #18201D; --text: #EEF2EF; --muted: #A6B1AC;
+    --accent: #5FC2A6; --on-accent: #0F1513; --rule: #26302C; --phone: #0F1513;
+  }
+  * { box-sizing: border-box; }
+  ::selection { background: var(--accent); color: var(--on-accent); }
+  body { margin: 0; background: var(--surface); color: var(--text); font: 16px/1.5 var(--ui); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 48px 24px 64px; }
+  header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 48px; }
+  h1 { font: 600 32px/1.15 var(--agent); margin: 0 0 8px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); max-width: 56ch; margin: 0; }
+  button { font: 600 15px var(--ui); border-radius: 12px; min-height: 44px; padding: 0 16px; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: var(--on-accent); border: 0; }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--rule); }
+  .toggle { background: var(--card); color: var(--text); border: 1px solid var(--rule); }
+  h2 { font: 600 13px/1 var(--ui); color: var(--muted); margin: 56px 0 24px; }
+
+  /* Phones */
+  .phones { display: flex; gap: 32px; flex-wrap: wrap; }
+  .phone { width: 340px; max-width: 100%; background: var(--phone); border: 1px solid var(--rule); border-radius: 40px; padding: 20px 20px 28px; box-shadow: 0 12px 32px rgba(21,32,27,.08); }
+  .phone .bar { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); padding: 0 8px 16px; font-variant-numeric: tabular-nums; }
+  .phone .title { font-size: 28px; font-weight: 700; margin: 4px 4px 16px; }
+  .cap { font-size: 13px; color: var(--muted); margin: 0 4px 12px; }
+
+  /* The one card: the agent's latest action */
+  .agent-card { background: var(--card); border-radius: 20px; padding: 20px; box-shadow: 0 2px 8px rgba(21,32,27,.06); }
+  :root[data-theme="dark"] .agent-card { box-shadow: none; border: 1px solid var(--rule); }
+  .verb { font: 600 22px/1.2 var(--agent); color: var(--accent); margin: 0 0 8px; }
+  .change { font-size: 17px; margin: 0 0 4px; font-variant-numeric: tabular-nums; }
+  .change s { color: var(--muted); }
+  .why { font-size: 15px; color: var(--muted); margin: 8px 0 16px; }
+  .keep { font-size: 15px; font-weight: 600; margin: 0 0 16px; }
+  .actions { display: flex; gap: 8px; }
+  .actions button { flex: 1; }
+
+  /* Rows, not cards */
+  .rows { margin-top: 24px; border-top: 1px solid var(--rule); }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 14px 4px; border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+  .row .t { color: var(--muted); font-size: 15px; }
+  .row.done .n { color: var(--muted); }
+  .link { display: flex; justify-content: space-between; padding: 16px 4px; font-weight: 600; }
+  .link span:last-child { color: var(--muted); }
+
+  /* Feed rows: the five-part anatomy (D9) */
+  .feed-row { padding: 14px 4px; border-bottom: 1px solid var(--rule); }
+  .feed-row .v { font: 600 17px/1.25 var(--agent); color: var(--accent); }
+  .feed-row .c { font-size: 15px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .feed-row .c s { color: var(--muted); }
+  .feed-row .r { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .feed-row .meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .feed-row .meta a { color: var(--text); font-weight: 600; text-decoration: none; }
+
+  /* Done sheet: the one authored motion moment */
+  .done { text-align: left; padding: 24px 4px; }
+  .points { font: 600 72px/1 var(--agent); font-variant-numeric: tabular-nums; margin: 8px 0; }
+  .badge { display: inline-block; font-size: 13px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 4px 8px; }
+  .offline { font-size: 13px; color: var(--warning); margin: 0 4px 12px; }
+
+  /* Specimen + palette */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+  .spec { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 20px; }
+  .spec .label { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .swatch { display: flex; align-items: center; gap: 12px; padding: 8px 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .chip { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--rule); flex: none; }
+  .scale div { margin: 6px 0; }
+  footer { margin-top: 56px; color: var(--muted); font-size: 14px; max-width: 70ch; }
+  @media (prefers-reduced-motion: reduce) { .points { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>TrackerPlusPlus: quiet assistant</h1>
+      <p class="lede">One accent and one typeface belong to the agent. Everything else stays quiet so "it already handled it" reads at a glance.</p>
+    </div>
+    <button class="toggle" id="theme" aria-pressed="false">Dark mode</button>
+  </header>
+
+  <h2>Screens</h2>
+  <div class="phones">
+    <!-- Today: home, with the one card -->
+    <section class="phone" aria-label="Today screen">
+      <div class="bar"><span>1:30</span><span>Sam</span></div>
+      <div class="title">Today</div>
+      <article class="agent-card" aria-label="Booked comeback, 6:30 PM, 15 minutes, double points. Undo available.">
+        <p class="verb">Booked comeback</p>
+        <p class="change"><s>12:00 PM walk, 30 min</s> → 6:30 PM, 15 min</p>
+        <p class="why">Your 12:00 walk didn't happen. No problem. Shorter sessions are easier to finish, and you usually walk in the evening.</p>
+        <p class="keep">Keep your 40 points · 2× comeback</p>
+        <div class="actions"><button class="btn-ghost">Undo</button><button class="btn-primary">Pick another time</button></div>
+      </article>
+      <div class="rows" role="list">
+        <div class="row done" role="listitem"><span class="n">Lunchtime walk</span><span class="t">12:00 · missed</span></div>
+        <div class="row" role="listitem"><span class="n">Comeback walk</span><span class="t">6:30 PM · 15 min</span></div>
+      </div>
+      <div class="link"><span>This week: 1 of 3</span><span>›</span></div>
+    </section>
+
+    <!-- Feed sheet -->
+    <section class="phone" aria-label="Feed sheet">
+      <div class="bar"><span>1:31</span><span>Feed</span></div>
+      <div class="title">What I did</div>
+      <p class="offline">Offline, showing last update</p>
+      <div class="feed-row">
+        <div class="v">Booked comeback</div>
+        <div class="c"><s>12:00 PM, 30 min</s> → 6:30 PM, 15 min</div>
+        <div class="r">You missed lunch; evening sessions are your most finished.</div>
+        <div class="meta"><span>1:30 PM</span><a href="#">Undo</a></div>
+      </div>
+      <div class="feed-row">
+        <div class="v">Moved</div>
+        <div class="c"><s>Sat 8:00 AM, 30 min</s> → Sat 10:30 AM, 25 min</div>
+        <div class="r">A meeting landed on it.</div>
+        <div class="meta"><span>11:05 AM</span><a href="#">Undo</a></div>
+      </div>
+      <div class="feed-row">
+        <div class="v">Added routine</div>
+        <div class="c">Every Wednesday, 5:00 PM · Swim</div>
+        <div class="r">You've done this 3 of the last 4 weeks.</div>
+        <div class="meta"><span>Mon</span><a href="#">Undo</a></div>
+      </div>
+    </section>
+
+    <!-- Done sheet -->
+    <section class="phone" aria-label="Done sheet">
+      <div class="bar"><span>6:47</span><span>Done</span></div>
+      <div class="done">
+        <span class="badge">2× comeback</span>
+        <div class="points" id="pts" aria-live="polite">40</div>
+        <p class="cap" style="margin:0">points kept</p>
+        <div class="rows">
+          <div class="row"><span>This week</span><span class="t">2 of 3</span></div>
+          <div class="row"><span>This month</span><span class="t">3 of 9 · goal is 1 more than usual</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <h2>Type</h2>
+  <div class="grid">
+    <div class="spec">
+      <div class="label">Agent voice · General Sans Semibold · agent headlines only</div>
+      <div style="font:600 28px/1.15 var(--agent); color:var(--accent)">Booked comeback</div>
+      <div style="font:600 20px/1.2 var(--agent); color:var(--accent); margin-top:8px">Moved · Shrunk · Added routine</div>
+    </div>
+    <div class="spec scale">
+      <div class="label">Everything else · SF Pro with Dynamic Type (shown here in the system stand-in)</div>
+      <div style="font-size:28px;font-weight:700">Large title 28/34</div>
+      <div style="font-size:17px;font-weight:600">Headline 17/22</div>
+      <div style="font-size:17px">Body 17/22. You usually work out about 2 times a week.</div>
+      <div style="font-size:13px;color:var(--muted)">Footnote 13/18 · 6:30 PM · tabular numbers</div>
+    </div>
+  </div>
+
+  <h2>Color</h2>
+  <div class="grid">
+    <div class="spec">
+      <div class="swatch"><span class="chip" style="background:#1F6F5C"></span>Agent accent #1F6F5C · 6.0:1 on card</div>
+      <div class="swatch"><span class="chip" style="background:#15201B"></span>Text #15201B · 15.7:1 on surface</div>
+      <div class="swatch"><span class="chip" style="background:#55615B"></span>Muted #55615B · 6.1:1 on surface</div>
+      <div class="swatch"><span class="chip" style="background:#F7F8F6"></span>Surface #F7F8F6</div>
+      <div class="swatch"><span class="chip" style="background:#FFFFFF"></span>Card #FFFFFF</div>
+    </div>
+    <div class="spec">
+      <div class="swatch"><span class="chip" style="background:#8A5A00"></span>Warning #8A5A00 · offline only · 5.6:1</div>
+      <div class="swatch"><span class="chip" style="background:#B3261E"></span>Error #B3261E · 6.1:1</div>
+      <div class="swatch"><span class="chip" style="background:#2F7A4F"></span>Success #2F7A4F · 4.9:1</div>
+      <div class="swatch"><span class="chip" style="background:#5FC2A6"></span>Dark-mode accent #5FC2A6 · 7.7:1 on dark card</div>
+      <div style="display:flex;gap:8px;margin-top:12px"><button class="btn-primary">Pick another time</button><button class="btn-ghost">Undo</button></div>
+    </div>
+  </div>
+
+  <footer>Preview only. On iPhone the body text is SF Pro with Dynamic Type; General Sans ships as a bundled font scaled with UIFontMetrics. No rings or charts anywhere: progress is always a sentence. The points count-up is the app's one animation and is skipped under Reduce Motion.</footer>
+</div>
+<script>
+  const btn = document.getElementById('theme');
+  btn.addEventListener('click', () => {
+    const dark = document.documentElement.dataset.theme === 'dark';
+    document.documentElement.dataset.theme = dark ? '' : 'dark';
+    btn.textContent = dark ? 'Dark mode' : 'Light mode';
+    btn.setAttribute('aria-pressed', String(!dark));
+  });
+  // The one authored moment: points count up (skipped with Reduce Motion)
+  const el = document.getElementById('pts');
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const end = 40, t0 = performance.now(), d = 600;
+    const step = now => { const p = Math.min(1, (now - t0) / d); el.textContent = Math.round(end * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); };
+    el.textContent = '0'; requestAnimationFrame(step);
+  }
+</script>
+</body>
+</html>
