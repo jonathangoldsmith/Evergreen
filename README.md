@@ -6,7 +6,7 @@
 
 Evergreen is an iOS agent that protects your workout plan instead of just writing one. It notices a missed session and books a shorter comeback, moves a workout when a meeting lands on it, buys what your training needs under a spending rule you set once, and shows its reasoning for every action. Built for the [Personal Agents Hackathon](https://luma.com/personalagenthack) (San Francisco, November 2026).
 
-> Formerly *Tracker++*. The code, the Xcode project and the repository still use the name `TrackerPlusPlus`.
+> Formerly *Tracker++*.
 
 ![Evergreen recommendation system](docs/figures/recommendation-system.png)
 
@@ -66,7 +66,7 @@ The phone keeps the memory and does every write (calendar, notifications, the pr
 | [`harness/`](harness/) | The recommendation backend: shoe and workout recommenders, web research, Senso evidence, SingleStore audit log. [README](harness/README.md) · [app integration](harness/INTEGRATION.md) |
 | [`memory-agent/`](memory-agent/) | The memory layer: facts from health snapshots and feedback, Amplitude events. Runs in iOS JavaScriptCore; Node for tests. [README](memory-agent/README.md) |
 | [`MockData/`](MockData/) | Synthetic Apple Health exports for three personas: Sam (inactive), Alex (moderate), Jordan (half-marathon training). |
-| [`docs/designs/`](docs/designs/) | Design docs: the [main plan](docs/designs/trackerplusplus-hackathon.md), the [shopping beat](docs/designs/trackerplusplus-shopping-beat.md), the [recommendation harness](docs/designs/trackerplusplus-recommendation-harness.md). |
+| [`docs/designs/`](docs/designs/) | Design docs: the [main plan](docs/designs/evergreen-hackathon.md), the [shopping beat](docs/designs/evergreen-shopping-beat.md), the [recommendation harness](docs/designs/evergreen-recommendation-harness.md). |
 | [`docs/figures/`](docs/figures/) | The system figure above. |
 | [`demo-video/`](demo-video/) | Screen recordings of each demo beat. |
 | [`DESIGN.md`](DESIGN.md) | The design system: colors, type, spacing, components. |
@@ -78,7 +78,7 @@ The phone keeps the memory and does every write (calendar, notifications, the pr
 Requires Xcode 26 and an iPhone simulator (or a phone with a development team).
 
 ```sh
-open app/TrackerPlusPlus.xcodeproj      # then Run
+open app/Evergreen.xcodeproj      # then Run
 ```
 
 Demo controls are on by default in Debug builds (the floating button). See [app/README.md](app/README.md) for the Sam and Jordan stories.
@@ -164,7 +164,7 @@ Recordings of each beat are in [`demo-video/`](demo-video/).
 - **Every action is reversible and explained.** Each action carries a reason and Undo; purchases over the mandate ask first.
 - **Cite everything.** Recommendations point to their sources: expert reviews, the care guide, the person's own memory.
 - **Never block the demo.** Every model or service call has a time limit and a deterministic fallback.
-- **Grounded in evidence.** Comeback bonuses, loss-framed points and the training-load guardrail trace to published studies; see the [main design doc](docs/designs/trackerplusplus-hackathon.md).
+- **Grounded in evidence.** Comeback bonuses, loss-framed points and the training-load guardrail trace to published studies; see the [main design doc](docs/designs/evergreen-hackathon.md).
 
 ## Status and roadmap
 

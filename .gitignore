@@ -61,5 +61,5 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 
-# Amplitude API key for the app (see app/TrackerPlusPlus.xcconfig)
+# Amplitude API key for the app (see app/Evergreen.xcconfig)
 app/Secrets.xcconfig

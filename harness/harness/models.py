@@ -1,4 +1,4 @@
-"""Pydantic mirror of the Swift contract (app/TrackerPlusPlus/Contract/Contract.swift).
+"""Pydantic mirror of the Swift contract (app/Evergreen/Contract/Contract.swift).
 Field names match exactly; dates are ISO 8601 with an offset."""
 from __future__ import annotations
 

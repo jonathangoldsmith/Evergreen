@@ -1,5 +1,5 @@
 {
-  "Simulator Target Bundle": "com.trackerplusplus.app",
+  "Simulator Target Bundle": "com.evergreentraining.app",
   "aps": {
     "alert": {
       "title": "Moved",

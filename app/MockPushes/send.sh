@@ -9,4 +9,4 @@ if [ ! -f "$dir/$name.apns" ]; then
   echo "No $name.apns. Choose one of:"; ls "$dir"/*.apns | xargs -n1 basename | sed 's/\.apns$//'
   exit 1
 fi
-xcrun simctl push booted com.trackerplusplus.app "$dir/$name.apns"
+xcrun simctl push booted com.evergreentraining.app "$dir/$name.apns"

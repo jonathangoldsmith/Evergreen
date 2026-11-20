@@ -1,0 +1,168 @@
+1
+00:00:00,000 --> 00:00:03,500
+Hi, I'm Anna. I designed Evergreen and our little pine buddy.
+
+2
+00:00:03,500 --> 00:00:08,000
+Most of us want to work out a bit more than our normal.
+
+3
+00:00:08,000 --> 00:00:12,500
+But a plan breaks the moment it meets a real calendar.
+
+4
+00:00:12,500 --> 00:00:17,000
+A meeting runs late, it rains, your shoes wear out, and the week slips.
+
+5
+00:00:17,000 --> 00:00:21,500
+Evergreen is a personal training agent that works inside your real life.
+
+6
+00:00:21,500 --> 00:00:26,500
+It reads Apple Health: 21 runs in 30 days, an average heart rate of 132,
+
+7
+00:00:26,500 --> 00:00:30,500
+and a training load that's up 19% on your usual week.
+
+8
+00:00:30,500 --> 00:00:35,000
+Then it reads your calendar and finds the time you actually have.
+
+9
+00:00:35,000 --> 00:00:39,500
+This week: Friday evening, and Saturday and Sunday mornings.
+
+10
+00:00:39,500 --> 00:00:43,000
+Three workouts, each with a reason you can see.
+
+11
+00:00:43,000 --> 00:00:45,000
+Jonathan, show them what it does.
+
+12
+00:00:45,000 --> 00:00:48,500
+Thanks, Anna. I'm Jonathan, and I built the iOS app.
+
+13
+00:00:48,500 --> 00:00:52,500
+Evergreen doesn't just plan. It acts for you, end to end.
+
+14
+00:00:52,500 --> 00:00:57,000
+At 4 PM, a team sync lands right on top of tonight's 6 PM run.
+
+15
+00:00:57,000 --> 00:01:01,500
+Nobody taps anything. The agent sees the conflict and moves the run to 6:45,
+
+16
+00:01:01,500 --> 00:01:06,000
+the next open slot, so the week still has all three workouts.
+
+17
+00:01:06,000 --> 00:01:10,500
+It tells you why, and Undo is one tap away.
+
+18
+00:01:10,500 --> 00:01:15,000
+Now rain is forecast for Saturday's 8:30 AM long run.
+
+19
+00:01:15,000 --> 00:01:19,500
+It finds a $15 day pass at 24 Hour Fitness, 0.4 miles from home.
+
+20
+00:01:19,500 --> 00:01:23,500
+Spending is where it always asks first. Nothing is bought without your OK.
+
+21
+00:01:23,500 --> 00:01:27,500
+One tap, and it books the pass and moves the run onto a treadmill.
+
+22
+00:01:27,500 --> 00:01:30,000
+Surya, show them how it shops.
+
+23
+00:01:30,000 --> 00:01:33,500
+Thanks, Jonathan. I'm Surya. I built the recommendation harness.
+
+24
+00:01:33,500 --> 00:01:38,000
+Jordan's shoes are at 392 miles, and his race is in nine days.
+
+25
+00:01:38,000 --> 00:01:42,500
+Our harness on Vercel uses Nimble to research real shoes on expert review sites.
+
+26
+00:01:42,500 --> 00:01:47,000
+Hard rules run in code: wide toe box, no carbon plate, arrives in time to break in.
+
+27
+00:01:47,000 --> 00:01:51,500
+Then Superlinked's SIE ranks the shortlist with a Qwen reranker,
+
+28
+00:01:51,500 --> 00:01:56,000
+and a Qwen model picks one and writes why every other shoe lost.
+
+29
+00:01:56,000 --> 00:02:00,500
+Senso supplies cited passages, live, so every claim has a source.
+
+30
+00:02:00,500 --> 00:02:05,000
+Every recommendation is written to a SingleStore audit log.
+
+31
+00:02:05,000 --> 00:02:09,500
+If anything fails, guardrails fall back to a safe, deterministic pick.
+
+32
+00:02:09,500 --> 00:02:13,000
+Jordan says yes once, and two break-in runs land on his calendar.
+
+33
+00:02:13,000 --> 00:02:15,000
+Tony, take us home.
+
+34
+00:02:15,000 --> 00:02:18,500
+Thanks, Surya. I'm Tony. I built the data and the memory agent.
+
+35
+00:02:18,500 --> 00:02:23,000
+Evergreen remembers you, on your phone. The memory agent runs in JavaScriptCore.
+
+36
+00:02:23,000 --> 00:02:27,500
+Every tick, it rolls your history into a memory of how you actually train.
+
+37
+00:02:27,500 --> 00:02:32,000
+Workouts, memory updates and approved purchases go to Amplitude,
+
+38
+00:02:32,000 --> 00:02:36,500
+with opaque, hashed ids. No names or health readings leave the phone.
+
+39
+00:02:36,500 --> 00:02:41,000
+So we see what the agent does and what people say yes to, not who they are.
+
+40
+00:02:41,000 --> 00:02:45,500
+Evergreen plans around your real life, acts on its own, and asks before it spends.
+
+41
+00:02:45,500 --> 00:02:50,000
+Training that grows with you.
+
+42
+00:02:50,000 --> 00:02:55,000
+We're Anna, Jonathan, Surya and Tony. Thank you!
+

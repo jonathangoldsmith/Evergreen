@@ -11,7 +11,7 @@ The snapshot goes in, facts come out. `validateSnapshot` and `validateFacts` (`s
 | `dailySummaries[]` | `date` YYYY-MM-DD; optional `restingHeartRate` 0-250, `steps`, `sleepMinutes.totalAsleep` 0-1440 (at most 6 decimals) |
 | `workouts[]` | `activityType`, `start`, `end`, `durationMin` >= 0; optional `effort` 1-10 (2 decimals); other fields are never read or output |
 | `target.workoutsPerWeek` | optional; > 0, at most 2 decimals |
-| `calendar.events[]` | optional; `title` non-empty, `start` and `end` as above, `end` after `start`. Validated only: no fact reads it, so a title never reaches memory or output. The persona fixtures carry mock events written by `scripts/mock-calendar.mjs` |
+| `calendar.events[]` | Optional fixture events with title and start/end. Only the calendar demo reads the interval bounds; the facts engine ignores events. |
 
 ## Facts
 
@@ -45,7 +45,7 @@ The snapshot goes in, facts come out. `validateSnapshot` and `validateFacts` (`s
 - **Days:** local date of the timestamp. Workouts not ended by `now` are ignored. Unknown activities read `Other`, no slot. Strength types read "strength training" unless both share a sentence.
 - **Unlogged days** are unknown, never zero. Weekly comparisons need 7 logged days, averages 7, body facts 3.
 - **Abstention:** under 14 logged days, only `history.thin`.
-- **Wording:** comparisons state both numbers and the ratio. Percentage only for a non-zero value with ratio 0.1 to 10 (also the target). A zero baseline: ratio undefined. "equal" only when exactly equal. Load is effort-weighted only if every counted workout has `effort`. Minutes in `numbers` are exact to the millisecond; averages and ratios are rounded to 2 decimals as in the sentence, exact fractions `{ num, den }` are under `numbers.exact`. Comparisons are exact.
+- **Wording:** State both numbers and ratio. Percentages require nonzero values and ratios 0.1–10. Zero baselines have no ratio; equality is exact. Effort weights require complete effort data. Minutes are exact to milliseconds. Display averages and ratios to two decimals; exact fractions live in `numbers.exact`.
 - **Conflicts rejected:** two different summaries for one date; same activity, instant and duration with different `effort`. `computeFacts` validates first and throws.
 - **Day modes:** `auto` (default) reads a local midnight as `completed`, any other `now` as `in_progress`; `completed` needs a midnight and describes the day just ended. `in_progress` writes only raw counts for the unfinished day; other facts use completed days. If `exportDate` is after `now` (a look-back), summaries dated on or after the last described day are ignored.
 - **No raw health data** (per-workout heart rate, routes, samples). Messages never echo input.
