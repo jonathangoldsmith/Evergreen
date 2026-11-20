@@ -110,6 +110,7 @@ The trigger stays Swift's (`shoeMiles ≥ 375` and race within 14 days). If the 
 
 - **Shoes:** real models from expert reviews found with Nimble this morning; the review page is the last citation. Prices are list prices from the reviews. Delivery is simulated: every pick ships from the "Demo store, no charge" in 3 days.
 - **The Why screen:** expect about 15–25 options: the chosen one, about 3 the model compared, and the rest with rule reasons (toe box not confirmed, low cushioning for long runs, carbon plate). Consider showing the first 4–5 and collapsing the rest.
+- **Images:** `purchase.imageUrl` (and `options[].imageUrl`) is a product photo from the web, often WebP, which iOS shows natively. To show it, add `var imageUrl: String? = nil` to `Purchase` and `Purchase.Option` in `Contract.swift` (optional, so old payloads still decode), then on the card: `AsyncImage(url: purchase.imageUrl.flatMap(URL.init)) { $0.resizable().scaledToFit() } placeholder: { Color.clear }.frame(height: 120)`. Swift's own fallback pick has no image, so keep the placeholder empty.
 - Unknown JSON keys (`condition`, `profile`, `source`, ...) are fine to ignore; only `purchase` matters.
 
 ## 5. Check it
@@ -122,3 +123,40 @@ curl -s -X POST https://trackerplusplus-harness.vercel.app/warm -H "X-Harness-Se
 In the Simulator: Demo → "Jordan: shoes near 400 mi". The card should show the harness's shoe, and Why this pair should show live citations including a review site. Turn Wi-Fi off and repeat: Swift's own Pacer 9 should appear, so the fallback works.
 
 **Before going on stage:** `POST /warm` with the secret, so the first request doesn't wait for a cold model.
+
+
+## 6. Workout recommendations (optional, after the shoes)
+
+`POST /workouts/recommend` with the same header returns Jordan's next 7 days as `AgentAction`s you can append like any other action:
+
+```json
+{"persona": "jordan", "now": "<demo clock ISO 8601>",
+ "shoes": {"boughtOn": "2026-10-22", "startMiles": 267},
+ "raceDate": "2026-11-29",
+ "newPairArrives": "2026-11-23",
+ "busy": [{"start": "...", "end": "..."}]}
+```
+
+- `newPairArrives`: send the chosen option's `arrives` date once Order it was tapped; leave it out before.
+- `busy`: the same busy times the snapshot already carries.
+- Response `actions[]`: `{id, kind: "addWorkout" | "note", title, planItemId, after: {start, end, activityType}, reason, points, createdAt, rules}`. `rules` is an extra field you can ignore or show on the Why screen. Ids are stable (`wk-<date>-<activity>`), so repeat calls don't duplicate.
+- `actions[].evidence`: web citations `{source, passage, url}` for the session's rule; show them on the Why screen.
+- `suggestions[]`: up to 2 optional extras from expert guidance, e.g. `{title: "Relaxed strides", minutes: 6, when: "after your Thu run", attachTo: "wk-…", why, source: {title, host, url}, quote, optional: true}`. Show them as "Suggested" (don't book automatically). Fine to ignore for the demo.
+- About 1.5 s; `source` is `sie` (model-written reasons) or `rules` (template reasons).
+
+
+## 7. Send the phone's memory (health data → memory → recommendations)
+
+`MemoryEngine` already rolls the person's health snapshot into memory after every tick. Send that memory with both requests so the harness plans from the phone's own memory instead of its bundled copy:
+
+```json
+"memory": {
+  "plannerText": "<memoryPlannerText's text>",
+  "facts": [{"text": "Fixed slot among recognised activities: running on Tue between 18:00 and 19:00, in 3 of the last 4 weeks.", "kind": "regularity"}]
+}
+```
+
+- `plannerText`: call the bundle's `memoryPlannerText` (memory-agent/docs/PHONE.md) after the roll.
+- `facts`: the fact lines from the `profile` and `rolling` files (`text`, and `kind` if you have it; the harness infers it otherwise).
+- Both routes return `memorySource: "phone"` when they used it, `"bundled"` when they fell back. Fixed slots set the week plan's session times; load, sleep and resting-HR facts go into the reasons and the shoe pick's runner description.
+- Shoe wear still reads per-run distances from the persona data, because memory holds counts and minutes, not mileage.
