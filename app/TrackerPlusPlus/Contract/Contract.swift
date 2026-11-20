@@ -192,6 +192,9 @@ struct TickSnapshot: Codable {
     var approvedPurchaseIds: [String] = []
     var demo: DemoConditions? = nil
     var visits: [Visit] = []
+    /// Whether the person has verified their identity (Persona). Until then the
+    /// agent buys nothing on its own; every purchase asks first.
+    var identityVerified = false
 }
 
 struct TickResponse: Codable, Hashable {

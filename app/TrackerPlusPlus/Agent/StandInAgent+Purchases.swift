@@ -47,15 +47,56 @@ extension StandInAgent {
         for item in s.plan.sorted(by: { $0.slot.start < $1.slot.start })
         where Self.outdoorTypes.contains(item.slot.activityType) && !done.contains(item.id)
             && rainAt >= item.slot.start.addingTimeInterval(-Self.rainLead) && rainAt <= item.slot.end {
-            let id = "pass-\(item.id)-\(Int(rainAt.timeIntervalSince1970))"
+            // Before the person has verified their identity the agent asks
+            // first. The ask is its own purchase id, so a "Not now" on it is
+            // never read as an undone auto-buy that needs a refund.
+            let epoch = Int(rainAt.timeIntervalSince1970)
+            let askBase = "pass-ask-\(item.id)-\(epoch)"
+            let asks = known.contains("purchase-\(askBase)") || !s.identityVerified
+            let id = asks ? askBase : "pass-\(item.id)-\(epoch)"
             let buyId = "purchase-\(id)"
+            let boughtId = asks ? "\(buyId)-bought" : buyId
             let cancelId = "\(buyId)-cancel"
             let outcomeId = "\(buyId)-outcome"
+            let askMandate = s.mandate.filter { $0.category != .dayPass }
+
+            if asks {
+                if !known.contains(buyId) {
+                    guard !(s.demo?.forecastClear ?? false), s.now < item.slot.start,
+                          let ask = await dayPass(id: id, item: item, rainAt: rainAt, mandate: askMandate)
+                    else { continue }
+                    actions.append(AgentAction(
+                        id: buyId, kind: .purchase, title: "Found a gym day pass", planItemId: item.id,
+                        reason: "Rain at \(rainAt.clock) would wash out your \(Activity.noun(item.slot.activityType)). I buy passes on my own only after you've verified your identity.",
+                        createdAt: s.now, purchaseId: id, purchase: ask
+                    ))
+                    continue
+                }
+                // "Not now" ends it.
+                if undone.contains(buyId) { continue }
+                // "Order it" buys the pass and moves the workout indoors.
+                if !known.contains(boughtId) {
+                    guard s.approvedPurchaseIds.contains(id), !(s.demo?.forecastClear ?? false), s.now < item.slot.start,
+                          var pass = s.actions.first(where: { $0.id == buyId })?.purchase
+                    else { continue }
+                    pass.status = .bought
+                    var after = item.slot
+                    after.place = Self.gym
+                    actions.append(AgentAction(
+                        id: boughtId, kind: .purchase, title: "Bought a gym day pass", planItemId: item.id,
+                        before: item.slot, after: after,
+                        reason: "You said yes. Demo Gym, no charge; your \(Activity.noun(item.slot.activityType)) moves indoors.",
+                        createdAt: s.now, purchaseId: id, purchase: pass
+                    ))
+                    continue
+                }
+                // Bought: cancelling and the arrival work as for an auto-buy, below.
+            }
 
             // The snapshot only carries actions still in effect, so an undone
             // pass is rebuilt from the plan item (back at its original slot).
-            let bought = s.actions.first { $0.id == buyId }
-            let personUndid = undone.contains(buyId)
+            let bought = s.actions.first { $0.id == boughtId }
+            let personUndid = undone.contains(boughtId)
             guard bought != nil || personUndid else {
                 // Buy once, before the workout, while rain is still forecast.
                 guard !known.contains(buyId), !(s.demo?.forecastClear ?? false), s.now < item.slot.start,
@@ -74,7 +115,7 @@ extension StandInAgent {
             guard !known.contains(cancelId) else { continue }
             var rebuilt = bought?.purchase
             if rebuilt == nil {
-                rebuilt = await dayPass(id: id, item: item, rainAt: rainAt, mandate: s.mandate, live: false)
+                rebuilt = await dayPass(id: id, item: item, rainAt: rainAt, mandate: asks ? askMandate : s.mandate, live: false)
             }
             guard let pass = rebuilt else { continue }
             let original = bought?.before ?? item.slot

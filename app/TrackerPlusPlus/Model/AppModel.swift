@@ -32,6 +32,10 @@ final class AppModel {
     private(set) var memoryReport: MemoryEngine.Report?
     /// Events Amplitude accepted since launch.
     private(set) var amplitudeSent = 0
+    /// Whether this phone's owner has passed the Persona identity check. Kept
+    /// per install, so it survives switching demo people; until it's true the
+    /// agent buys nothing on its own and Order it asks for the check first.
+    private(set) var identityVerified = UserDefaults.standard.bool(forKey: "identity_verified")
     /// Whether an Amplitude key was built in (app/Secrets.xcconfig).
     var amplitudeOn: Bool { amplitude != nil }
     /// Whether notifications are allowed, for onboarding and the demo controls.
@@ -203,7 +207,8 @@ final class AppModel {
             mandate: Self.mandate,
             approvedPurchaseIds: run.approvedPurchaseIds,
             demo: run.demo,
-            visits: run.visits
+            visits: run.visits,
+            identityVerified: identityVerified
         )
         do {
             let response = try await agent.tick(snapshot)
@@ -261,6 +266,22 @@ final class AppModel {
         run.approvedPurchaseIds.append(purchaseId)
         amplitude?.track(eventType: "Purchase Approved")
         save()
+        Task { await tick() }
+    }
+
+    /// Persona finished the inquiry: purchases may go ahead, and the agent may
+    /// buy under the person's rule from now on.
+    func identityVerified(inquiryId: String) {
+        identityVerified = true
+        UserDefaults.standard.set(true, forKey: "identity_verified")
+        UserDefaults.standard.set(inquiryId, forKey: "persona_inquiry_id")
+    }
+
+    /// Demo control: back to unverified, so the next purchase asks for the check again.
+    func forgetVerification() {
+        identityVerified = false
+        UserDefaults.standard.removeObject(forKey: "identity_verified")
+        UserDefaults.standard.removeObject(forKey: "persona_inquiry_id")
         Task { await tick() }
     }
 
