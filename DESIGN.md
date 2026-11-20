@@ -108,7 +108,7 @@ Only the agent card is elevated: 0 2px 8px at 6% ink in light mode; a 1px rule i
 - **Feed row:** the same five parts, newest first, Undo on each.
 - **Buttons:** primary = solid accent, ghost = 1px rule; at least 44pt tall; focus ring is 2px accent.
 - **Badge:** "2× comeback", accent outline.
-- **Demo controls:** floating debug button, enabled from the app's page in iOS Settings, off by default.
+- **Demo controls:** floating debug button, toggled from the app's page in iOS Settings. On by default in Debug builds (simulator or phone from Xcode), off in Release.
 
 ## Do's and Don'ts
 
