@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TrackerPlusPlus
 
-/// How the plan becomes TrackerPlusPlus calendar events, and what a sync
+/// How the plan becomes Evergreen calendar events, and what a sync
 /// creates, moves and deletes. EventKit itself is checked on the phone.
 struct CalendarSyncTests {
     private let comeback = PlanItem(

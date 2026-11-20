@@ -1,6 +1,6 @@
 import Foundation
 
-/// One event on the TrackerPlusPlus calendar, as the plan says it should be.
+/// One event on the Evergreen calendar, as the plan says it should be.
 /// The key goes in the event's URL field, so each plan item maps to one event
 /// across launches and repeated ticks (outside voice 5). `eventIdentifier` is
 /// never used as a key.

@@ -1,4 +1,4 @@
-/// Whether the app can keep the plan on the TrackerPlusPlus calendar. Without
+/// Whether the app can keep the plan on the Evergreen calendar. Without
 /// full access the plan stays in the app (design state table, Permissions row).
 enum CalendarAccess: Equatable {
     case on

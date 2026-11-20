@@ -1,4 +1,4 @@
-"""TrackerPlusPlus harness: stateless FastAPI app (Vercel entry point)."""
+"""Evergreen harness: stateless FastAPI app (Vercel entry point)."""
 from __future__ import annotations
 
 import hmac
@@ -11,7 +11,7 @@ from harness.evidence import senso
 from harness.models import EvidenceRequest, EvidenceResponse, ShoesRequest, ShoesResponse
 from harness.recommend import shoes
 
-app = FastAPI(title="TrackerPlusPlus harness", version="0.1.0")
+app = FastAPI(title="Evergreen harness", version="0.1.0")
 
 
 def require_secret(x_harness_secret: str = Header(default="")) -> None:

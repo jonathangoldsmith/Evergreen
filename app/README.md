@@ -1,6 +1,6 @@
-# TrackerPlusPlus iOS app
+# Evergreen iOS app
 
-SwiftUI and SwiftData, iOS 18+, iPhone portrait, Swift 6 language mode (full data-race checking). This is P0a and P0b from [the design doc](../docs/designs/trackerplusplus-hackathon.md): the miss loop in the app, with the plan kept on a TrackerPlusPlus calendar (eng review D14, task T7). Visual tokens come from [DESIGN.md](../DESIGN.md).
+SwiftUI and SwiftData, iOS 18+, iPhone portrait, Swift 6 language mode (full data-race checking). This is P0a and P0b from [the design doc](../docs/designs/trackerplusplus-hackathon.md): the miss loop in the app, with the plan kept on a Evergreen calendar (eng review D14, task T7). Visual tokens come from [DESIGN.md](../DESIGN.md).
 
 ## Run it
 
@@ -10,19 +10,19 @@ SwiftUI and SwiftData, iOS 18+, iPhone portrait, Swift 6 language mode (full dat
 
 The project uses folder-synced groups: any file added under `app/TrackerPlusPlus/` (or `app/TrackerPlusPlusTests/`) is in the build automatically, so there's no project file to merge.
 
-Layout: `App/` (entry point and root view), `Agent/` (who answers `/tick`), `Contract/` (the JSON shapes), `CalendarSync/` (the TrackerPlusPlus calendar), `Notifications/` (local notifications and the gym), `LiveActivity/` (starts and updates it), `Model/` (app state, personas, the pinned plan, `Storage/` for SwiftData), `Design/` (tokens, button styles, the agent font), and `Views/` by screen (`Today`, `Feed`, `Week`, `Done`, `Onboarding`, `Demo`). One type per file, except `Contract/Contract.swift`, which stays whole so it can be compared with the harness's Python models. Colors are in `app/Shared/Assets.xcassets` with light and dark values from DESIGN.md. `app/Shared/` is in both the app and the `TrackerPlusPlusWidgets` extension (the Live Activity UI, in `app/TrackerPlusPlusWidgets/`), so put anything both need there.
+Layout: `App/` (entry point and root view), `Agent/` (who answers `/tick`), `Contract/` (the JSON shapes), `CalendarSync/` (the Evergreen calendar), `Notifications/` (local notifications and the gym), `LiveActivity/` (starts and updates it), `Model/` (app state, personas, the pinned plan, `Storage/` for SwiftData), `Design/` (tokens, button styles, the agent font), and `Views/` by screen (`Today`, `Feed`, `Week`, `Done`, `Onboarding`, `Demo`). One type per file, except `Contract/Contract.swift`, which stays whole so it can be compared with the harness's Python models. Colors are in `app/Shared/Assets.xcassets` with light and dark values from DESIGN.md. `app/Shared/` is in both the app and the `TrackerPlusPlusWidgets` extension (the Live Activity UI, in `app/TrackerPlusPlusWidgets/`), so put anything both need there.
 
 ## Tests
 
 `TrackerPlusPlusTests/StandInAgentTests.swift` covers the stand-in's rules: goal rounding, the very-active cap, thin history, the grace period, comeback length and time, no repeat or undone bookings, a missed comeback, completion points and duplicate merging. `CalendarSyncTests.swift` covers how plan items become calendar events and what a sync creates, moves and deletes. `SlotDefenseTests.swift` covers moves, shrinks and when the agent leaves a workout alone. Run them with ⌘U in Xcode, or:
 
 ```
-xcodebuild test -project app/TrackerPlusPlus.xcodeproj -scheme TrackerPlusPlus -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild test -project app/TrackerPlusPlus.xcodeproj -scheme Evergreen -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 ## Demo controls
 
-On by default in Debug builds, which is what Xcode installs on the simulator or a phone; off in Release (design D13). Turn them on or off in iOS Settings → Tracker++ → Demo controls, or in the simulator:
+On by default in Debug builds, which is what Xcode installs on the simulator or a phone; off in Release (design D13). Turn them on or off in iOS Settings → Evergreen → Demo controls, or in the simulator:
 
 ```
 xcrun simctl spawn booted defaults write com.trackerplusplus.app demo_controls -bool YES
@@ -34,7 +34,7 @@ Sam's story: launch after 1:00 PM (or set the clock to 1:30 PM) → the agent ha
 
 ## Who answers /tick
 
-- **Harness URL empty (default):** `StandInAgent`, an offline stand-in for the harness's `decide()`. It covers only the P0 rules (normal and goal, thin history, duplicate merging, misses, comebacks, points). The harness owns the real rules; when it's deployed, put its URL in iOS Settings → Tracker++ → Harness URL.
+- **Harness URL empty (default):** `StandInAgent`, an offline stand-in for the harness's `decide()`. It covers only the P0 rules (normal and goal, thin history, duplicate merging, misses, comebacks, points). The harness owns the real rules; when it's deployed, put its URL in iOS Settings → Evergreen → Harness URL.
 - **Harness URL set:** `HarnessAgent` posts the snapshot to `<url>/tick`. If the call fails, the last good screen stays up with "Offline, showing last update".
 
 ## Contract
@@ -61,9 +61,9 @@ The contract structs stay the wire format; the models convert to and from them. 
 
 The app re-anchors each history so it ends yesterday, and today is the story day (eng review D6). Sam's week plan is pinned in `Model/PinnedPlan.swift` so the 12:00 lunchtime walk is always there (eng review D12).
 
-## The TrackerPlusPlus calendar
+## The Evergreen calendar
 
-With full calendar access, the app keeps the plan on its own TrackerPlusPlus calendar: on iCloud if the phone has it, otherwise on the phone (outside voice 15). Every change to the run syncs it, so the pinned week appears, a comeback is added, "Pick another time" moves the event and Undo removes it.
+With full calendar access, the app keeps the plan on its own Evergreen calendar: on iCloud if the phone has it, otherwise on the phone (outside voice 15). Every change to the run syncs it, so the pinned week appears, a comeback is added, "Pick another time" moves the event and Undo removes it.
 
 - Each event's URL holds a key made of the story day and the plan item's id (`trackerplusplus://plan/2026-11-19/plan-sam-d0-120`). Syncing compares those keys, so repeat ticks never duplicate an event, and the app only touches events that carry its key.
 - Sync covers the story day and the 3 weeks after it. Earlier days stay as history.
@@ -98,7 +98,7 @@ Banners show even with the app open. Tapping one opens Today and ticks.
 
 Surya's harness (`harness/`, live at `https://trackerplusplus-harness.vercel.app`, see [harness/INTEGRATION.md](../harness/INTEGRATION.md)) picks Jordan's next pair from real review sites, ranks it on Superlinked SIE, cites Senso and logs every decision in SingleStore. `Agent/RecommendClient.swift` asks its `POST /shoes/recommend` when the stand-in's shoe rule fires (375 miles, race within 14 days), and the answer is the card's `Purchase`. Swift keeps the trigger, the `shoes-<boughtOn>` id, Order it / Not now / Cancel order, the break-in runs and the calendar.
 
-- **Turn it on:** put the shared secret (Surya has it) in `app/Secrets.xcconfig` as `HARNESS_SECRET = …`, or in iOS Settings → Tracker++ → Harness secret. The URL defaults to the deployed harness; Shoes URL overrides it (for example `http://localhost:8000`).
+- **Turn it on:** put the shared secret (Surya has it) in `app/Secrets.xcconfig` as `HARNESS_SECRET = …`, or in iOS Settings → Evergreen → Harness secret. The URL defaults to the deployed harness; Shoes URL overrides it (for example `http://localhost:8000`).
 - **Fallback:** no secret, no answer within 6 seconds, any error, or the harness reading the pair as fresh → the stand-in's own pick (Pacer 9) with cached passages.
 - **Before the demo:** `curl -X POST https://trackerplusplus-harness.vercel.app/warm -H "X-Harness-Secret: $SECRET"` so the first pick doesn't wait for a cold model.
 - Why this pair shows the first 5 options and a "Show N more" button for the rest.

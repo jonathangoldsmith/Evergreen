@@ -12,7 +12,7 @@ Two recommendations, made on the backend from the fake persona data, that the ap
    - **New pair arriving:** a break-in ramp.
    - **Race week:** no new shoes on race day.
 
-   Every change is a calendar-ready `AgentAction`, which the phone writes to the TrackerPlusPlus calendar.
+   Every change is a calendar-ready `AgentAction`, which the phone writes to the Evergreen calendar.
 
 The phone keeps doing the hands' work: EventKit calendar writes, notifications and the feed. The harness decides; it never touches the calendar.
 
@@ -70,7 +70,7 @@ flowchart TB
         SI["StandInAgent<br/>(brain for everything else)"]
         EC["EvidenceClient<br/>3 s timeout"]
         RC["RecommendClient (new)<br/>3 s / 6 s timeout"]
-        CAL["CalendarSync → TrackerPlusPlus calendar<br/>EventKit"]
+        CAL["CalendarSync → Evergreen calendar<br/>EventKit"]
         UI["Today card · Why screen · Feed<br/>Notifications · Live Activity"]
         SI --> EC
         SI --> RC

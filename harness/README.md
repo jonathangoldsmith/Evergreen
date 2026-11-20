@@ -1,4 +1,4 @@
-# TrackerPlusPlus harness
+# Evergreen harness
 
 The stateless backend that recommends running shoes from the fake persona data. The app stays the agent's hands: it applies what comes back and writes the calendar. Design: [docs/designs/trackerplusplus-recommendation-harness.md](../docs/designs/trackerplusplus-recommendation-harness.md).
 

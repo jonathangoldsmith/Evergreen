@@ -15,7 +15,7 @@ final class AppModel {
     private(set) var response: TickResponse?
     private(set) var offline = false
     private(set) var agentName = ""
-    /// Whether the plan is also on the TrackerPlusPlus calendar.
+    /// Whether the plan is also on the Evergreen calendar.
     private(set) var calendarAccess: CalendarAccess
 
     private let calendar = Calendar.current
@@ -426,7 +426,7 @@ final class AppModel {
         }
     }
 
-    /// Clears the run (actions, logged workouts, the clock), the TrackerPlusPlus
+    /// Clears the run (actions, logged workouts, the clock), the Evergreen
     /// calendar and the test meeting.
     func resetDemo() {
         calendarSync.removeAllEvents(around: storyDay)
@@ -462,7 +462,7 @@ final class AppModel {
     }
 
     /// Saves the run, refreshes what views read, then brings the
-    /// TrackerPlusPlus calendar in line with the plan. Every change to the run
+    /// Evergreen calendar in line with the plan. Every change to the run
     /// goes through here.
     private func save() {
         do {

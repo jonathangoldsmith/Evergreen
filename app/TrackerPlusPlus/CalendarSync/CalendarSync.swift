@@ -1,7 +1,7 @@
 import EventKit
 import os
 
-/// Keeps the plan on the app's own TrackerPlusPlus calendar (P0b, task T7):
+/// Keeps the plan on the app's own Evergreen calendar (P0b, task T7):
 /// creates the calendar on iCloud, or on the phone without iCloud, and makes
 /// its events match the plan from the story day on. It only ever touches
 /// events that carry the app's URL key, and never the person's other calendars.
