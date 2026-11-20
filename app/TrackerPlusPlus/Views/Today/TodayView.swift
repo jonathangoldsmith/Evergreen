@@ -33,7 +33,8 @@ struct TodayView: View {
                         if doneCount >= model.plan.count && doneCount > 0 {
                             PineBuddy(pose: .cheering, filled: weekTiers)
                         } else {
-                            WalkingBuddy(filled: weekTiers)
+                            // Waves hi each time Today opens, then walks.
+                            WavingBuddy(filled: weekTiers)
                         }
                     }
                     .frame(height: 72)

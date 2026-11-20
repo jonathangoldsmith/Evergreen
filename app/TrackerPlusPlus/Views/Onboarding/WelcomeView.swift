@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Onboarding screen 1: the mark, a pine, Evergreen's promise, Let's go.
+/// Onboarding screen 1: the mark, the buddy waving hi, Evergreen's promise, Let's go.
 struct WelcomeView: View {
     let onStart: () -> Void
 
@@ -8,7 +8,7 @@ struct WelcomeView: View {
         VStack(alignment: .leading, spacing: 0) {
             AppMark()
             Spacer(minLength: Theme.lg)
-            PineBuddy(pose: .running)
+            WavingBuddy(loops: true)
                 .frame(height: 220)
                 .frame(maxWidth: .infinity)
             Spacer(minLength: Theme.lg)

@@ -5,13 +5,19 @@ import SwiftUI
 /// crisp at any size. Used for the app mark, the Welcome art and the week's
 /// progress, where each finished workout fills a tier from the bottom up.
 struct PineBuddy: View {
-    enum Pose { case standing, running, cheering, walking }
+    enum Pose { case standing, running, cheering, walking, waving, celebrating }
 
     var pose: Pose = .standing
     /// Tiers filled, bottom up (0–3). nil fills all three.
     var filled: Int? = nil
     /// Where the walk cycle is, -1…1 (walking only).
     var stride: Double = 0
+    /// Waving: how far the arm is up, 0…1, and where the hand is in its swing, -1…1.
+    var raise: Double = 1
+    var wave: Double = 0
+    /// Celebrating: height of the hop, 0…1, and the squash on landing, 0…1.
+    var hop: Double = 0
+    var squash: Double = 0
 
     var body: some View {
         Canvas { context, size in
@@ -24,6 +30,19 @@ struct PineBuddy: View {
                 context.translateBy(x: 50, y: 100)
                 context.rotate(by: .degrees(stride * 3))
                 context.translateBy(x: -50, y: -100)
+            }
+            if pose == .waving {
+                // Leans into the wave a little, pivoting on the feet.
+                context.translateBy(x: 50, y: 116)
+                context.rotate(by: .degrees(wave * raise * 2.5))
+                context.translateBy(x: -50, y: -116)
+            }
+            if pose == .celebrating {
+                // Up on the hop; wider and shorter on landing, from the feet.
+                // Stands 6 lower so the tip stays inside the frame at the top of a hop.
+                context.translateBy(x: 50, y: 124 - hop * 11)
+                context.scaleBy(x: 1 + squash * 0.06, y: 1 - squash * 0.08)
+                context.translateBy(x: -50, y: -118)
             }
             draw(in: &context)
         }
@@ -79,16 +98,34 @@ struct PineBuddy: View {
 
         // Face, on the bottom tier.
         for x in [40.0, 60.0] {
-            context.fill(Path(ellipseIn: CGRect(x: x - 3.4, y: 74, width: 6.8, height: 7.4)), with: .color(Self.line))
-            context.fill(Path(ellipseIn: CGRect(x: x - 1.6, y: 75.2, width: 2.4, height: 2.4)), with: .color(.white))
+            if pose == .celebrating {
+                // Happy squint: little upturned arcs.
+                var eye = Path()
+                eye.addArc(center: CGPoint(x: x, y: 79), radius: 3.6,
+                           startAngle: .degrees(200), endAngle: .degrees(340), clockwise: false)
+                context.stroke(eye, with: .color(Self.line), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+            } else {
+                context.fill(Path(ellipseIn: CGRect(x: x - 3.4, y: 74, width: 6.8, height: 7.4)), with: .color(Self.line))
+                context.fill(Path(ellipseIn: CGRect(x: x - 1.6, y: 75.2, width: 2.4, height: 2.4)), with: .color(.white))
+            }
         }
         for x in [31.0, 69.0] {
             context.fill(Path(ellipseIn: CGRect(x: x - 4.5, y: 81, width: 9, height: 5)), with: .color(Self.blush.opacity(0.85)))
         }
-        var smile = Path()
-        smile.addArc(center: CGPoint(x: 50, y: 81), radius: 4.5,
-                     startAngle: .degrees(20), endAngle: .degrees(160), clockwise: false)
-        context.stroke(smile, with: .color(Self.line), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+        if pose == .waving || pose == .celebrating {
+            // Open smile, saying hi or cheering.
+            var mouth = Path()
+            mouth.move(to: CGPoint(x: 45, y: 81.5))
+            mouth.addQuadCurve(to: CGPoint(x: 55, y: 81.5), control: CGPoint(x: 50, y: 91))
+            mouth.closeSubpath()
+            context.fill(mouth, with: .color(Self.line))
+            context.fill(Path(ellipseIn: CGRect(x: 47.6, y: 84.6, width: 4.8, height: 2.6)), with: .color(Self.blush))
+        } else {
+            var smile = Path()
+            smile.addArc(center: CGPoint(x: 50, y: 81), radius: 4.5,
+                         startAngle: .degrees(20), endAngle: .degrees(160), clockwise: false)
+            context.stroke(smile, with: .color(Self.line), style: StrokeStyle(lineWidth: 2.2, lineCap: .round))
+        }
     }
 
     /// A soft pine tier: rounded tip, rounded corners and a scalloped hem.
@@ -147,7 +184,11 @@ struct PineBuddy: View {
         case .walking:
             [(CGPoint(x: 46, y: 99), CGPoint(x: 44 + stride * 7, y: 116 - max(0, stride) * 3), stride * 10),
              (CGPoint(x: 54, y: 99), CGPoint(x: 56 - stride * 7, y: 116 - max(0, -stride) * 3), -stride * 10)]
-        case .standing, .cheering:
+        case .celebrating:
+            // Feet kick up and out on the hop.
+            [(CGPoint(x: 46, y: 99), CGPoint(x: 41 - hop * 2, y: 116 - hop * 4), hop * 14),
+             (CGPoint(x: 54, y: 99), CGPoint(x: 59 + hop * 2, y: 116 - hop * 4), -hop * 14)]
+        case .standing, .cheering, .waving:
             [(CGPoint(x: 46, y: 99), CGPoint(x: 42, y: 116), 0),
              (CGPoint(x: 54, y: 99), CGPoint(x: 58, y: 116), 0)]
         }
@@ -157,17 +198,33 @@ struct PineBuddy: View {
     private var arms: [(CGPoint, CGPoint, CGPoint)] {
         switch pose {
         case .cheering:
-            [(CGPoint(x: 22, y: 64), CGPoint(x: 12, y: 60), CGPoint(x: 9, y: 48)),
+            return [(CGPoint(x: 22, y: 64), CGPoint(x: 12, y: 60), CGPoint(x: 9, y: 48)),
              (CGPoint(x: 78, y: 64), CGPoint(x: 88, y: 60), CGPoint(x: 91, y: 48))]
         case .running:
-            [(CGPoint(x: 22, y: 64), CGPoint(x: 12, y: 66), CGPoint(x: 10, y: 56)),
+            return [(CGPoint(x: 22, y: 64), CGPoint(x: 12, y: 66), CGPoint(x: 10, y: 56)),
              (CGPoint(x: 78, y: 64), CGPoint(x: 88, y: 70), CGPoint(x: 92, y: 76))]
         case .walking:
-            [(CGPoint(x: 22, y: 64), CGPoint(x: 14, y: 70), CGPoint(x: 12 - stride * 4, y: 78)),
+            return [(CGPoint(x: 22, y: 64), CGPoint(x: 14, y: 70), CGPoint(x: 12 - stride * 4, y: 78)),
              (CGPoint(x: 78, y: 64), CGPoint(x: 86, y: 70), CGPoint(x: 88 + stride * 4, y: 78))]
+        case .waving:
+            // Left arm relaxed; the right comes up from its side and swings from the elbow.
+            let rest = (bend: CGPoint(x: 86, y: 70), hand: CGPoint(x: 88, y: 78))
+            let angle = wave * 28 * .pi / 180
+            let elbow = CGPoint(x: 89, y: 54)
+            let up = CGPoint(x: elbow.x + 15 * sin(angle), y: elbow.y - 15 * cos(angle))
+            return [(CGPoint(x: 22, y: 64), CGPoint(x: 14, y: 70), CGPoint(x: 12, y: 78)),
+                    (CGPoint(x: 78, y: 64), Self.mix(rest.bend, elbow, raise), Self.mix(rest.hand, up, raise))]
+        case .celebrating:
+            // Arms up, pumping higher with the hop.
+            return [(CGPoint(x: 22, y: 64), CGPoint(x: 12, y: 58 - hop * 3), CGPoint(x: 8 - hop * 2, y: 46 - hop * 8)),
+                    (CGPoint(x: 78, y: 64), CGPoint(x: 88, y: 58 - hop * 3), CGPoint(x: 92 + hop * 2, y: 46 - hop * 8))]
         case .standing:
-            []
+            return []
         }
+    }
+
+    private static func mix(_ a: CGPoint, _ b: CGPoint, _ t: Double) -> CGPoint {
+        CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
     }
 }
 
@@ -190,10 +247,16 @@ struct WalkingBuddy: View {
 }
 
 #Preview {
-    HStack {
-        PineBuddy(pose: .standing).frame(height: 160)
-        PineBuddy(pose: .running).frame(height: 160)
-        PineBuddy(pose: .cheering, filled: 1).frame(height: 160)
+    VStack {
+        HStack {
+            PineBuddy(pose: .standing).frame(height: 160)
+            PineBuddy(pose: .running).frame(height: 160)
+            PineBuddy(pose: .cheering, filled: 1).frame(height: 160)
+        }
+        HStack {
+            WavingBuddy(loops: true).frame(height: 160)
+            CelebratingBuddy().frame(height: 160)
+        }
     }
     .padding()
     .background(Theme.surface)
