@@ -1,0 +1,22 @@
+[
+  {"id": "pacer-9", "name": "Pacer 9", "amountCents": 13800, "arrivesInDays": 3, "wideToeBox": true, "carbonPlate": false, "surface": "road", "cushion": "high", "dropMm": 8, "lifeKm": 650,
+   "blurb": "Daily road trainer with a soft, durable foam. Wide toe box option. Built for high weekly mileage and long runs."},
+  {"id": "glide-trainer", "name": "Glide Trainer", "amountCents": 12500, "arrivesInDays": 7, "wideToeBox": true, "carbonPlate": false, "surface": "road", "cushion": "high", "dropMm": 10, "lifeKm": 700,
+   "blurb": "Max-cushion road trainer for long, easy miles. Roomy forefoot."},
+  {"id": "tempo-lite", "name": "Tempo Lite", "amountCents": 9600, "arrivesInDays": 4, "wideToeBox": false, "carbonPlate": false, "surface": "road", "cushion": "medium", "dropMm": 6, "lifeKm": 500,
+   "blurb": "Light tempo shoe for faster sessions. Snug, narrow fit."},
+  {"id": "aero-elite", "name": "Aero Elite", "amountCents": 22000, "arrivesInDays": 2, "wideToeBox": true, "carbonPlate": true, "surface": "road", "cushion": "high", "dropMm": 8, "lifeKm": 400,
+   "blurb": "Carbon-plated race shoe. Fast and bouncy, short lifespan."},
+  {"id": "stride-daily", "name": "Stride Daily", "amountCents": 11000, "arrivesInDays": 3, "wideToeBox": true, "carbonPlate": false, "surface": "road", "cushion": "medium", "dropMm": 10, "lifeKm": 600,
+   "blurb": "Firm, stable everyday trainer. Good for short easy runs, less forgiving on long runs."},
+  {"id": "ridge-trail", "name": "Ridge Trail", "amountCents": 13000, "arrivesInDays": 3, "wideToeBox": true, "carbonPlate": false, "surface": "trail", "cushion": "medium", "dropMm": 6, "lifeKm": 700,
+   "blurb": "Lugged trail shoe for dirt and rock. Heavy on pavement."},
+  {"id": "cloud-cruiser", "name": "Cloud Cruiser", "amountCents": 15500, "arrivesInDays": 3, "wideToeBox": false, "carbonPlate": false, "surface": "road", "cushion": "high", "dropMm": 9, "lifeKm": 650,
+   "blurb": "Plush cushioned trainer for long runs. Standard, narrow-ish fit."},
+  {"id": "metro-flex", "name": "Metro Flex", "amountCents": 8500, "arrivesInDays": 2, "wideToeBox": true, "carbonPlate": false, "surface": "road", "cushion": "low", "dropMm": 4, "lifeKm": 450,
+   "blurb": "Minimal, flexible shoe for short runs and gym work. Little cushioning."},
+  {"id": "tempo-wide", "name": "Tempo Wide", "amountCents": 14500, "arrivesInDays": 5, "wideToeBox": true, "carbonPlate": true, "surface": "road", "cushion": "medium", "dropMm": 6, "lifeKm": 450,
+   "blurb": "Plated tempo trainer in a wide fit. Snappy for workouts."},
+  {"id": "long-haul", "name": "Long Haul", "amountCents": 16000, "arrivesInDays": 8, "wideToeBox": true, "carbonPlate": false, "surface": "road", "cushion": "high", "dropMm": 8, "lifeKm": 800,
+   "blurb": "Durable high-mileage trainer. Wide fit. Ships from the warehouse in about a week."}
+]

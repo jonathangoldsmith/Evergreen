@@ -182,6 +182,9 @@ extension ActionCopy {
     /// 15 min → 6:30 PM, 15 min, Demo Gym"), else "Current pair → Pacer 9, arrives Monday".
     static func purchaseChange(_ purchase: Purchase, moved: AgentAction?) -> Text {
         if let moved, let change = beforeAfter(moved) { return change }
+        if isDayPass(purchase) {
+            return Text("\(Text("Outside").strikethrough().foregroundStyle(Theme.textMuted)) → \(Text(purchase.item).fontWeight(.semibold))")
+        }
         let after = arrivalDay(purchase).map { "\(purchase.item), arrives \($0)" } ?? purchase.item
         return Text("\(Text("Current pair").strikethrough().foregroundStyle(Theme.textMuted)) → \(Text(after).fontWeight(.semibold))")
     }

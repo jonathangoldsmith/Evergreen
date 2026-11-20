@@ -4,7 +4,8 @@ import Foundation
 // engine, ask-first shoes for Jordan. Each change in a purchase's life is a new
 // action with its own stable id, because the phone ignores ids it already has;
 // the UI folds them by `purchaseId`. Rules live only here on demo day (eng
-// review D1); the harness serves Senso evidence through `POST /evidence`.
+// review D1); the harness serves Senso evidence through `POST /evidence` and,
+// with its secret set, Jordan's pick through `POST /shoes/recommend`.
 
 extension StandInAgent {
     /// Workouts carry no distance, so mileage uses a fixed 9 min/mi pace.
@@ -221,9 +222,13 @@ extension StandInAgent {
         } else if known.contains(askId) {
             return [] // declined with "Not now"
         } else {
-            guard let purchase = await shoesPurchase(
-                id: id, miles: miles, daysToRace: daysToRace, day: day, race: race, mandate: s.mandate, cal: cal
-            ) else {
+            var picked = await harnessShoes(s, id: id, miles: miles, boughtOn: boughtOn, raceDate: raceDate, cal: cal)
+            if picked == nil {
+                picked = await shoesPurchase(
+                    id: id, miles: miles, daysToRace: daysToRace, day: day, race: race, mandate: s.mandate, cal: cal
+                )
+            }
+            guard let purchase = picked else {
                 return []
             }
             actions.append(AgentAction(
@@ -269,6 +274,25 @@ extension StandInAgent {
             ))
         }
         return actions
+    }
+
+    /// The harness's pick (harness/INTEGRATION.md), under Swift's stable id.
+    /// Its status already follows the mandate and its options carry `arrives`
+    /// for the break-in runs. Nil without a harness secret, on any failure, or
+    /// when the harness reads the pair as fresh: the stand-in's own pick runs.
+    private func harnessShoes(
+        _ s: TickSnapshot, id: String, miles: Int, boughtOn: Date, raceDate: Date, cal: Calendar
+    ) async -> Purchase? {
+        guard let recommend,
+              var picked = await recommend.shoes(
+                  persona: s.persona, now: s.now, boughtOn: boughtOn, startMiles: s.demo?.shoesStartMiles ?? 0,
+                  raceDate: raceDate, mandate: s.mandate, cal: cal
+              ),
+              !picked.options.isEmpty
+        else { return nil }
+        picked.id = id
+        picked.miles = miles
+        return picked
     }
 
     /// Keeps pairs that fit the fit notes and arrive in time, then picks the cheapest.

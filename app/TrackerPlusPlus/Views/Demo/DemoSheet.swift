@@ -27,6 +27,19 @@ struct DemoSheet: View {
                 } footer: {
                     Text(footer)
                 }
+
+                Section {
+                    LabeledContent("Sent since launch", value: model.amplitudeOn ? "\(model.amplitudeSent)" : "Off")
+                    LabeledContent("Waiting to send", value: "\(model.memoryReport?.pending ?? 0)")
+                    if let problem = model.memoryReport?.problem {
+                        LabeledContent("Last problem", value: problem)
+                    }
+                    Button("Sync memory now") { Task { await model.syncMemory() } }
+                } header: {
+                    Text("Amplitude")
+                } footer: {
+                    Text("Each tick rolls the person's memory and hands workout and memory events to the Amplitude SDK; Order it sends Purchase Approved. The key comes from app/Secrets.xcconfig at build time. Ids are opaque; no names or health readings leave the phone.")
+                }
             }
             .navigationTitle("Demo")
             .navigationBarTitleDisplayMode(.inline)

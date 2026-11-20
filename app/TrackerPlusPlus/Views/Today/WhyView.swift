@@ -9,6 +9,10 @@ struct WhyView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var showCheckout = false
+    /// The harness can send 15–25 options; the first few tell the story.
+    @State private var showAllOptions = false
+
+    static let optionsShown = 5
 
     var body: some View {
         NavigationStack {
@@ -82,7 +86,8 @@ struct WhyView: View {
             }
         }
         step("Options") {
-            ForEach(Array(purchase.options.enumerated()), id: \.offset) { index, option in
+            let hidden = showAllOptions ? 0 : max(0, purchase.options.count - Self.optionsShown)
+            ForEach(Array(purchase.options.dropLast(hidden).enumerated()), id: \.offset) { index, option in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline) {
                         Text("\(option.name) · \(ActionCopy.money(option.amountCents))")
@@ -96,9 +101,14 @@ struct WhyView: View {
                     }
                     if let lost = option.lostBecause {
                         Text(lost).font(.footnote).foregroundStyle(Theme.textMuted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .accessibilityElement(children: .combine)
+            }
+            if hidden > 0 {
+                Button("Show \(hidden) more") { showAllOptions = true }
+                    .buttonStyle(GhostButtonStyle())
             }
         }
         step(purchase.status == .awaitingApproval ? "What I'll do" : "What I did") {

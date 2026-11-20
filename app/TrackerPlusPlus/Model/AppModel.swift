@@ -1,3 +1,4 @@
+import AmplitudeSwift
 import Foundation
 import Observation
 import SwiftData
@@ -20,6 +21,20 @@ final class AppModel {
     private let calendar = Calendar.current
     @ObservationIgnored private let calendarSync = CalendarSync()
     @ObservationIgnored private let notifier = Notifier()
+    /// Tony's memory bundle in JavaScriptCore; nil if it doesn't load.
+    @ObservationIgnored private let memory = MemoryEngine.standard()
+    /// The app's Amplitude client, made once in the app entry; nil without a key.
+    @ObservationIgnored private let amplitude: Amplitude?
+    /// The last memory sync, for the demo controls.
+    private(set) var memoryReport: MemoryEngine.Report?
+    /// Events Amplitude accepted since launch.
+    private(set) var amplitudeSent = 0
+    /// Whether this phone's owner has passed the Persona identity check. Kept
+    /// per install, so it survives switching demo people; until it's true the
+    /// agent buys nothing on its own and Order it asks for the check first.
+    private(set) var identityVerified = UserDefaults.standard.bool(forKey: "identity_verified")
+    /// Whether an Amplitude key was built in (app/Secrets.xcconfig).
+    var amplitudeOn: Bool { amplitude != nil }
     /// Whether notifications are allowed, for onboarding and the demo controls.
     private(set) var notificationAccess: NotificationAccess = .notAsked
 
@@ -39,8 +54,9 @@ final class AppModel {
     /// Waits for a burst of calendar changes to settle before ticking.
     @ObservationIgnored private var calendarChangeTask: Task<Void, Never>?
 
-    init(context: ModelContext) {
+    init(context: ModelContext, amplitude: Amplitude? = nil) {
         self.context = context
+        self.amplitude = amplitude
         let today = Calendar.current.startOfDay(for: Date())
         let saved = (try? context.fetch(FetchDescriptor<Run>()))?.first
         let run = saved ?? Run(persona: .jordan, storyDay: today)
@@ -173,7 +189,8 @@ final class AppModel {
             mandate: Self.mandate,
             approvedPurchaseIds: run.approvedPurchaseIds,
             demo: run.demo,
-            visits: run.visits
+            visits: run.visits,
+            identityVerified: identityVerified
         )
         do {
             let response = try await agent.tick(snapshot)
@@ -185,6 +202,21 @@ final class AppModel {
             // Keep the last good screen up with a quiet label (design D5).
             offline = true
         }
+        await syncMemory()
+    }
+
+    /// Rolls the person's memory and sends its staged events to Amplitude when
+    /// a key is set (memory-agent/docs/AMPLITUDE.md). Never blocks the agent.
+    func syncMemory() async {
+        guard let memory else { return }
+        let sink = amplitude.map(AmplitudeSink.init)
+        let input = MemoryInput(
+            personaKey: persona.key.rawValue, historyStart: persona.historyStart,
+            now: now, workouts: workouts, calendar: calendar
+        )
+        let report = await memory.sync(input, sink: sink)
+        amplitudeSent += report.sent
+        memoryReport = report
     }
 
     private func apply(_ response: TickResponse) {
@@ -211,7 +243,24 @@ final class AppModel {
     func approvePurchase(_ purchaseId: String) {
         guard !run.approvedPurchaseIds.contains(purchaseId) else { return }
         run.approvedPurchaseIds.append(purchaseId)
+        amplitude?.track(eventType: "Purchase Approved")
         save()
+        Task { await tick() }
+    }
+
+    /// Persona finished the inquiry: purchases may go ahead, and the agent may
+    /// buy under the person's rule from now on.
+    func identityVerified(inquiryId: String) {
+        identityVerified = true
+        UserDefaults.standard.set(true, forKey: "identity_verified")
+        UserDefaults.standard.set(inquiryId, forKey: "persona_inquiry_id")
+    }
+
+    /// Demo control: back to unverified, so the next purchase asks for the check again.
+    func forgetVerification() {
+        identityVerified = false
+        UserDefaults.standard.removeObject(forKey: "identity_verified")
+        UserDefaults.standard.removeObject(forKey: "persona_inquiry_id")
         Task { await tick() }
     }
 

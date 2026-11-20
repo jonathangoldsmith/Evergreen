@@ -94,6 +94,36 @@ No push backend yet, so everything is local (plan item 16 and the Lock Screen):
 
 Banners show even with the app open. Tapping one opens Today and ticks.
 
+## Jordan's shoes from the harness
+
+Surya's harness (`harness/`, live at `https://trackerplusplus-harness.vercel.app`, see [harness/INTEGRATION.md](../harness/INTEGRATION.md)) picks Jordan's next pair from real review sites, ranks it on Superlinked SIE, cites Senso and logs every decision in SingleStore. `Agent/RecommendClient.swift` asks its `POST /shoes/recommend` when the stand-in's shoe rule fires (375 miles, race within 14 days), and the answer is the card's `Purchase`. Swift keeps the trigger, the `shoes-<boughtOn>` id, Order it / Not now / Cancel order, the break-in runs and the calendar.
+
+- **Turn it on:** put the shared secret (Surya has it) in `app/Secrets.xcconfig` as `HARNESS_SECRET = …`, or in iOS Settings → Tracker++ → Harness secret. The URL defaults to the deployed harness; Shoes URL overrides it (for example `http://localhost:8000`).
+- **Fallback:** no secret, no answer within 6 seconds, any error, or the harness reading the pair as fresh → the stand-in's own pick (Pacer 9) with cached passages.
+- **Before the demo:** `curl -X POST https://trackerplusplus-harness.vercel.app/warm -H "X-Harness-Secret: $SECRET"` so the first pick doesn't wait for a cold model.
+- Why this pair shows the first 5 options and a "Show N more" button for the rest.
+
+`harness_url` is different: it swaps the whole agent. Leave it empty.
+
+## Memory and Amplitude
+
+Amplitude runs through the Amplitude-Swift SDK (Swift Package Manager, app target only), made once in `TrackerPlusPlusApp.init()` for the US region. Its key is the project API key, built in from the git-ignored `app/Secrets.xcconfig`:
+
+```
+AMPLITUDE_API_KEY = <project API key>
+```
+
+`app/TrackerPlusPlus.xcconfig` (the project's base configuration) includes that file if it exists and points `INFOPLIST_FILE` at `TrackerPlusPlus-Info.plist`, which passes the key to the app. Without the file the app builds and sends nothing.
+
+- **Purchase Approved:** tracked when the person taps Order it on a purchase card.
+- **Memory events:** `Memory/MemoryEngine.swift` runs the memory agent's phone bundle (`memory-agent/`, see its `docs/PHONE.md`) in JavaScriptCore. After every tick it rolls the person's memory into Application Support/Memory and hands the staged events (workouts and `memory_rolled`) to the SDK with their own opaque `user_id`, `insert_id` and time, then acknowledges them so each is handed over once. Ids are HMACs under a per-install secret kept in the Keychain; events carry no names or health readings. The demo controls show how many were handed over and how many are waiting.
+
+The bundle is a built copy: after changing `memory-agent/src`, refresh it with
+
+```
+cd memory-agent && npm install && node scripts/build-phone.mjs ../app/TrackerPlusPlus/Resources/Memory/memory-phone.js
+```
+
 ## Not built yet
 
 - Routines and the load guardrail (P1 and P2, task T11).

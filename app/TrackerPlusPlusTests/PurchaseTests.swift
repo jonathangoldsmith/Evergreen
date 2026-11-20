@@ -5,8 +5,9 @@ import Testing
 /// The shopping beat's happy paths (eng review D5) and the guard that the
 /// purchase rules stay silent without demo conditions (D6).
 struct PurchaseTests {
-    /// No evidence URL: tests never touch the network and get cached passages.
-    let agent = StandInAgent(evidence: nil)
+    /// No evidence URL or harness: tests never touch the network, get cached
+    /// passages and the stand-in's own shoe pick.
+    let agent = StandInAgent(evidence: nil, recommend: nil)
 
     /// Jordan's shape: 20 runs of 56¼ minutes in 30 days = 1,125 minutes = 125
     /// miles, on a pair that already had 267, so the pair reads 392.

@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B8F1030630B0ECDB0058A375 /* AmplitudeSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030530B0ECDB0058A375 /* AmplitudeSwift */; };
+		B8F1030930B0ECF60058A375 /* TrackerPlusPlus.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */; };
+		B8F1030C30B0F1490058A375 /* PersonaInquirySDK2 in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7A1000000000000000000027 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -20,6 +26,7 @@
 		7A1000000000000000000001 /* TrackerPlusPlus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrackerPlusPlus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A1000000000000000000010 /* TrackerPlusPlus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TrackerPlusPlus.entitlements; sourceTree = "<group>"; };
 		7A1000000000000000000020 /* TrackerPlusPlusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackerPlusPlusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = TrackerPlusPlus.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,6 +47,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B8F1030630B0ECDB0058A375 /* AmplitudeSwift in Frameworks */,
+				B8F1030C30B0F1490058A375 /* PersonaInquirySDK2 in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -59,6 +68,8 @@
 				7A1000000000000000000002 /* TrackerPlusPlus */,
 				7A1000000000000000000021 /* TrackerPlusPlusTests */,
 				7A1000000000000000000010 /* TrackerPlusPlus.entitlements */,
+				B8F1030430B0ECDB0058A375 /* Frameworks */,
+				B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */,
 				7A1000000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -70,6 +81,13 @@
 				7A1000000000000000000020 /* TrackerPlusPlusTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B8F1030430B0ECDB0058A375 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -92,6 +110,8 @@
 			);
 			name = TrackerPlusPlus;
 			packageProductDependencies = (
+				B8F1030530B0ECDB0058A375 /* AmplitudeSwift */,
+				B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */,
 			);
 			productName = TrackerPlusPlus;
 			productReference = 7A1000000000000000000001 /* TrackerPlusPlus.app */;
@@ -148,6 +168,10 @@
 			);
 			mainGroup = 7A1000000000000000000004;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B8F1030330B0EAC50058A375 /* XCRemoteSwiftPackageReference "Amplitude-Swift" */,
+				B8F1030A30B0F1490058A375 /* XCRemoteSwiftPackageReference "inquiry-ios-2" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7A1000000000000000000005 /* Products */;
 			projectDirPath = "";
@@ -164,6 +188,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B8F1030930B0ECF60058A375 /* TrackerPlusPlus.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -204,6 +229,7 @@
 /* Begin XCBuildConfiguration section */
 		7A100000000000000000000C /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -226,6 +252,7 @@
 		};
 		7A100000000000000000000D /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -374,6 +401,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B8F1030330B0EAC50058A375 /* XCRemoteSwiftPackageReference "Amplitude-Swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/amplitude/Amplitude-Swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+		B8F1030A30B0F1490058A375 /* XCRemoteSwiftPackageReference "inquiry-ios-2" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/persona-id/inquiry-ios-2";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B8F1030530B0ECDB0058A375 /* AmplitudeSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B8F1030330B0EAC50058A375 /* XCRemoteSwiftPackageReference "Amplitude-Swift" */;
+			productName = AmplitudeSwift;
+		};
+		B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B8F1030A30B0F1490058A375 /* XCRemoteSwiftPackageReference "inquiry-ios-2" */;
+			productName = PersonaInquirySDK2;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7A100000000000000000000A /* Project object */;
 }

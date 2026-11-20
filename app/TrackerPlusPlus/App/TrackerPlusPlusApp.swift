@@ -1,3 +1,4 @@
+import AmplitudeSwift
 import SwiftData
 import SwiftUI
 
@@ -5,6 +6,8 @@ import SwiftUI
 struct TrackerPlusPlusApp: App {
     private let container: ModelContainer
     @State private var model: AppModel
+    /// The one Amplitude client. Nil when no key is set (app/Secrets.xcconfig), so nothing is sent.
+    private let amplitude: Amplitude?
 
     init() {
         Theme.registerFonts()
@@ -16,9 +19,17 @@ struct TrackerPlusPlusApp: App {
             UserDefaults.standard.set(true, forKey: "demo_controls")
         }
         #endif
+        let amplitudeKey = Bundle.main.object(forInfoDictionaryKey: "AMPLITUDE_API_KEY") as? String
+        if let amplitudeKey, !amplitudeKey.isEmpty, !amplitudeKey.hasPrefix("$(") {
+            // The "default" project is in the US data region.
+            amplitude = Amplitude(configuration: Configuration(apiKey: amplitudeKey, serverZone: .US))
+        } else {
+            print("[amplitude] API key is not set — no events will be sent")
+            amplitude = nil
+        }
         let container = Storage.container()
         self.container = container
-        _model = State(initialValue: AppModel(context: container.mainContext))
+        _model = State(initialValue: AppModel(context: container.mainContext, amplitude: amplitude))
     }
 
     var body: some Scene {
