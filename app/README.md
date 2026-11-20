@@ -96,7 +96,16 @@ Banners show even with the app open. Tapping one opens Today and ticks.
 
 ## Memory and Amplitude
 
-`Memory/MemoryEngine.swift` runs the memory agent's phone bundle (`memory-agent/`, see its `docs/PHONE.md`) in JavaScriptCore. After every tick it rolls the person's memory into Application Support/Memory and, when an Amplitude API key is set in iOS Settings → Tracker++, posts the staged events (workouts and `memory_rolled`) to Amplitude's HTTP API, then acknowledges them so each is sent once. Ids are HMACs under a per-install secret kept in the Keychain; events carry no names or health readings. The demo controls show how many were sent and how many are waiting.
+Amplitude runs through the Amplitude-Swift SDK (Swift Package Manager, app target only), made once in `TrackerPlusPlusApp.init()` for the US region. Its key is the project API key, built in from the git-ignored `app/Secrets.xcconfig`:
+
+```
+AMPLITUDE_API_KEY = <project API key>
+```
+
+`app/TrackerPlusPlus.xcconfig` (the project's base configuration) includes that file if it exists and points `INFOPLIST_FILE` at `TrackerPlusPlus-Info.plist`, which passes the key to the app. Without the file the app builds and sends nothing.
+
+- **Purchase Approved:** tracked when the person taps Order it on a purchase card.
+- **Memory events:** `Memory/MemoryEngine.swift` runs the memory agent's phone bundle (`memory-agent/`, see its `docs/PHONE.md`) in JavaScriptCore. After every tick it rolls the person's memory into Application Support/Memory and hands the staged events (workouts and `memory_rolled`) to the SDK with their own opaque `user_id`, `insert_id` and time, then acknowledges them so each is handed over once. Ids are HMACs under a per-install secret kept in the Keychain; events carry no names or health readings. The demo controls show how many were handed over and how many are waiting.
 
 The bundle is a built copy: after changing `memory-agent/src`, refresh it with
 

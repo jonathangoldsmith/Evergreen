@@ -50,18 +50,6 @@
 			<key>AutocorrectionType</key>
 			<string>No</string>
 		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSTextFieldSpecifier</string>
-			<key>Title</key>
-			<string>Amplitude API key</string>
-			<key>Key</key>
-			<string>amplitude_api_key</string>
-			<key>AutocapitalizationType</key>
-			<string>None</string>
-			<key>AutocorrectionType</key>
-			<string>No</string>
-		</dict>
 	</array>
 	<key>StringsTable</key>
 	<string>Root</string>

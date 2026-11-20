@@ -1,3 +1,4 @@
+import AmplitudeSwift
 import Foundation
 import Observation
 import SwiftData
@@ -25,12 +26,14 @@ final class AppModel {
     @ObservationIgnored private let liveActivity = LiveActivityController()
     /// Tony's memory bundle in JavaScriptCore; nil if it doesn't load.
     @ObservationIgnored private let memory = MemoryEngine.standard()
+    /// The app's Amplitude client, made once in the app entry; nil without a key.
+    @ObservationIgnored private let amplitude: Amplitude?
     /// The last memory sync, for the demo controls.
     private(set) var memoryReport: MemoryEngine.Report?
     /// Events Amplitude accepted since launch.
     private(set) var amplitudeSent = 0
-    /// Whether an Amplitude key is set in iOS Settings.
-    private(set) var amplitudeOn = false
+    /// Whether an Amplitude key was built in (app/Secrets.xcconfig).
+    var amplitudeOn: Bool { amplitude != nil }
     /// Whether notifications are allowed, for onboarding and the demo controls.
     private(set) var notificationAccess: NotificationAccess = .notAsked
     private(set) var gymAlertsOn = false
@@ -51,8 +54,9 @@ final class AppModel {
     /// Waits for a burst of calendar changes to settle before ticking.
     @ObservationIgnored private var calendarChangeTask: Task<Void, Never>?
 
-    init(context: ModelContext) {
+    init(context: ModelContext, amplitude: Amplitude? = nil) {
         self.context = context
+        self.amplitude = amplitude
         let today = Calendar.current.startOfDay(for: Date())
         let saved = (try? context.fetch(FetchDescriptor<Run>()))?.first
         let run = saved ?? Run(persona: .sam, storyDay: today)
@@ -218,8 +222,7 @@ final class AppModel {
     /// a key is set (memory-agent/docs/AMPLITUDE.md). Never blocks the agent.
     func syncMemory() async {
         guard let memory else { return }
-        let sink = AmplitudeSink.configured()
-        amplitudeOn = sink != nil
+        let sink = amplitude.map(AmplitudeSink.init)
         let input = MemoryInput(
             personaKey: persona.key.rawValue, historyStart: persona.historyStart,
             now: now, workouts: workouts, calendar: calendar
@@ -256,6 +259,7 @@ final class AppModel {
     func approvePurchase(_ purchaseId: String) {
         guard !run.approvedPurchaseIds.contains(purchaseId) else { return }
         run.approvedPurchaseIds.append(purchaseId)
+        amplitude?.track(eventType: "Purchase Approved")
         save()
         Task { await tick() }
     }
