@@ -66,3 +66,21 @@ def memory(persona: str) -> dict | None:
         return _load(f"memory/{persona}.json")
     except FileNotFoundError:
         return None
+
+
+MEMORY_KINDS = ("regularity", "load", "body")
+_KIND_HINTS = {"regularity": ("Fixed slot", "Days since", "Longest stretch"), "load": ("load",),
+               "body": ("sleep", "resting heart rate")}
+
+
+def resolve_memory(phone, persona: str) -> tuple[dict | None, str | None]:
+    """The phone's memory when the request carries it, else the bundled copy. Facts without a kind
+    get one from their wording so slot parsing and filtering work the same for both."""
+    if phone and (phone.facts or phone.plannerText):
+        facts = []
+        for f in phone.facts:
+            kind = f.kind or next((k for k, hints in _KIND_HINTS.items() if any(h.lower() in f.text.lower() for h in hints)), None)
+            facts.append({"text": f.text, "kind": kind})
+        return {"facts": facts, "plannerText": phone.plannerText or "", "asOf": None}, "phone"
+    mem = memory(persona)
+    return (mem, "bundled") if mem else (None, None)

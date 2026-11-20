@@ -6,7 +6,7 @@
 
 Tracker++ is an iOS agent that protects your workout plan instead of just writing one. It notices a missed session and books a shorter comeback, moves a workout when a meeting lands on it, buys what your training needs under a spending rule you set once, and shows its reasoning for every action. Built for the [Personal Agents Hackathon](https://luma.com/personalagenthack) (San Francisco, November 2026).
 
-![TrackerPlusPlus recommendation system](docs/figures/recommendation-system.png)
+![Evergreen recommendation system](docs/figures/recommendation-system.png)
 
 ## Contents
 
@@ -89,7 +89,7 @@ Requires [uv](https://docs.astral.sh/uv/).
 cd harness
 uv sync
 cp .env.example .env          # add your keys (see below)
-uv run pytest -q              # 34 tests
+uv run pytest -q              # 36 tests
 PYTHONPATH=. uv run uvicorn api.index:app --port 8000
 ```
 

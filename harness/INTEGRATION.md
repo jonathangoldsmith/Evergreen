@@ -143,3 +143,20 @@ In the Simulator: Demo → "Jordan: shoes near 400 mi". The card should show the
 - `actions[].evidence`: web citations `{source, passage, url}` for the session's rule; show them on the Why screen.
 - `suggestions[]`: up to 2 optional extras from expert guidance, e.g. `{title: "Relaxed strides", minutes: 6, when: "after your Thu run", attachTo: "wk-…", why, source: {title, host, url}, quote, optional: true}`. Show them as "Suggested" (don't book automatically). Fine to ignore for the demo.
 - About 1.5 s; `source` is `sie` (model-written reasons) or `rules` (template reasons).
+
+
+## 7. Send the phone's memory (health data → memory → recommendations)
+
+`MemoryEngine` already rolls the person's health snapshot into memory after every tick. Send that memory with both requests so the harness plans from the phone's own memory instead of its bundled copy:
+
+```json
+"memory": {
+  "plannerText": "<memoryPlannerText's text>",
+  "facts": [{"text": "Fixed slot among recognised activities: running on Tue between 18:00 and 19:00, in 3 of the last 4 weeks.", "kind": "regularity"}]
+}
+```
+
+- `plannerText`: call the bundle's `memoryPlannerText` (memory-agent/docs/PHONE.md) after the roll.
+- `facts`: the fact lines from the `profile` and `rolling` files (`text`, and `kind` if you have it; the harness infers it otherwise).
+- Both routes return `memorySource: "phone"` when they used it, `"bundled"` when they fell back. Fixed slots set the week plan's session times; load, sleep and resting-HR facts go into the reasons and the shoe pick's runner description.
+- Shoe wear still reads per-run distances from the persona data, because memory holds counts and minutes, not mileage.

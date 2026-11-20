@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from harness import data, store
 from harness.clients import sie
-from harness.models import ShoeState
+from harness.models import PhoneMemory, ShoeState
 from harness.recommend.condition import condition
 from harness.web import workout_ideas
 
@@ -52,6 +52,7 @@ class WorkoutsRequest(BaseModel):
     newPairArrives: Optional[date] = None       # set once a shoe order is placed
     raceDate: Optional[date] = None
     busy: list[Busy] = Field(default_factory=list)
+    memory: Optional[PhoneMemory] = None          # the phone's memory; falls back to the bundled copy
 
 
 def effort(w: dict) -> float:
@@ -120,7 +121,7 @@ def build(req: WorkoutsRequest) -> dict:
     # Whole-week shift so weekdays match the history (and Tony's memory slots, computed on the same data).
     ws = data.workouts(req.persona, now, keep_weekdays=True)
     sig = signals(ws, data.daily(req.persona, now, keep_weekdays=True), now)
-    mem = data.memory(req.persona)
+    mem, mem_source = data.resolve_memory(req.memory, req.persona)
     slots = memory_slots(mem)
     week = usual_week(ws, now)
     cond = condition(ws, req.shoes, now) if req.shoes else None
@@ -194,7 +195,7 @@ def build(req: WorkoutsRequest) -> dict:
         if end.hour >= 21 and not s.get("race"):
             s["tags"].append("no free slot that day")
         s["start"], s["end"] = start, end
-    return {"sessions": sessions, "signals": sig, "condition": cond, "memory": mem}
+    return {"sessions": sessions, "signals": sig, "condition": cond, "memory": mem, "memorySource": mem_source}
 
 
 def _template(s: dict) -> str:
@@ -353,7 +354,7 @@ def recommend(req: WorkoutsRequest) -> dict:
     mem = plan["memory"] or {}
     used = [f["text"] for f in mem.get("facts", []) if f.get("kind") in ("regularity", "load", "body")]
     result = {"summary": summary, "signals": sig, "actions": actions, "suggestions": suggestions(req, plan, ids),
-              "memoryUsed": used,
+              "memoryUsed": used, "memorySource": plan["memorySource"],
               "memoryAsOf": mem.get("asOf"), "live": source == "sie", "source": source,
               "condition": plan["condition"].model_dump() if plan["condition"] else None}
     result["auditId"] = store.log_recommendation(req.persona, source, "week plan", int((time.monotonic() - t0) * 1000),

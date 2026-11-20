@@ -49,6 +49,18 @@ class Mandate(BaseModel):
     maxAutoCents: int
 
 
+class MemoryFact(BaseModel):
+    text: str
+    kind: Optional[str] = None
+
+
+class PhoneMemory(BaseModel):
+    """The phone's memory (memory-agent in JavaScriptCore): memoryPlannerText's text and the fact lines.
+    When sent, it replaces the harness's bundled copy."""
+    plannerText: Optional[str] = None
+    facts: list[MemoryFact] = Field(default_factory=list)
+
+
 class ShoeState(BaseModel):
     boughtOn: date
     startMiles: float = 0
@@ -74,6 +86,7 @@ class ShoesRequest(BaseModel):
     shoes: ShoeState
     raceDate: date
     mandate: list[Mandate] = Field(default_factory=list)
+    memory: Optional[PhoneMemory] = None
 
 
 class Condition(BaseModel):
@@ -100,5 +113,6 @@ class ShoesResponse(BaseModel):
     purchase: Optional[Purchase]
     live: bool          # true = SIE ranked and decided; false = deterministic fallback
     source: str         # "sie" | "rules" | "fresh"
-    candidatesFrom: Optional[str] = None   # "web-singlestore" | "web-snapshot" | "catalog"
+    candidatesFrom: Optional[str] = None
+    memorySource: Optional[str] = None     # "phone" | "bundled" | None   # "web-singlestore" | "web-snapshot" | "catalog"
     auditId: Optional[str] = None          # SingleStore recommendations row, when logging is on

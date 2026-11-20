@@ -140,3 +140,10 @@ def test_web_pick_carries_image_url(no_sie, monkeypatch):
     monkeypatch.setattr(research, "load_snapshot", lambda persona: snap)
     p = TestClient(app).post("/shoes/recommend", json=body()).json()["purchase"]
     assert p["imageUrl"] and p["imageUrl"] == p["options"][0]["imageUrl"] and p["imageUrl"].startswith("https://")
+
+
+def test_shoes_report_memory_source(no_sie):
+    c = TestClient(app)
+    assert c.post("/shoes/recommend", json=body()).json()["memorySource"] == "bundled"
+    r = c.post("/shoes/recommend", json=body(memory={"facts": [{"text": "Average sleep over the last 7 days: 8 h"}]})).json()
+    assert r["memorySource"] == "phone"

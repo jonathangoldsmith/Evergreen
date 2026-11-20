@@ -103,3 +103,15 @@ def test_taper_sessions_cite_a_web_source(offline):
     r = TestClient(app).post("/workouts/recommend", json=req().model_dump(mode="json")).json()
     taper = [a for a in r["actions"] if any("taper" in t for t in a["rules"])]
     assert taper and all(a["evidence"] and a["evidence"][0]["url"] for a in taper)
+
+
+def test_phone_memory_replaces_bundled_copy(offline):
+    phone = {"plannerText": "Runs on Wednesday mornings.", "facts": [
+        {"text": "Fixed slot among recognised activities: running on Sun between 10:00 and 11:00, in 3 of the last 4 weeks."}]}
+    c = TestClient(app)
+    r = c.post("/workouts/recommend", json={**req().model_dump(mode="json"), "memory": phone}).json()
+    assert r["memorySource"] == "phone"
+    sun = next(a for a in r["actions"] if a["id"].startswith("wk-2026-11-22"))
+    assert sun["after"]["start"].startswith("2026-11-22T10:00")            # the phone's slot, not the bundled 08:00
+    assert any("Sun between 10:00" in t for t in r["memoryUsed"])
+    assert c.post("/workouts/recommend", json=req().model_dump(mode="json")).json()["memorySource"] == "bundled"

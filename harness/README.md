@@ -56,7 +56,7 @@ The whole route has a 5 s budget. Measured on Jordan with web candidates: about 
 
 `POST /workouts/recommend` plans the next 7 days. Code decides the sessions; the model only explains them.
 
-- **Usual week:** per weekday, the activity, minutes and start hour Jordan actually did in the last 4 weeks. **Tony's memory agent** supplies the fixed slots (e.g. "running on Tue between 18:00 and 19:00") and they set the start time. The history is shifted by whole weeks here so weekdays match the memory.
+- **Usual week:** per weekday, the activity, minutes and start hour Jordan actually did in the last 4 weeks. **Memory** supplies the fixed slots: the phone's memory when the request carries `memory` (`memorySource: "phone"`), else the bundled copy built by Tony's memory agent (`"bundled"`). It (e.g. "running on Tue between 18:00 and 19:00") and they set the start time. The history is shifted by whole weeks here so weekdays match the memory.
 - **Health data:** training load (effort × minutes; effort estimated from average heart rate when missing) for the last 7 days vs. the 4-week weekly average. The week must stay ≤ min(110% of the larger of the two, 1.3 × the average). Sleep down 30+ min/night or resting HR up 3+ bpm → the first hard session becomes easy.
 - **Shoes:** worn out (≥85%) and no new pair yet → runs longer than 45 min move to the bike or elliptical. After `newPairArrives`, the first two runs are 30-minute break-in runs.
 - **Race:** taper in the last 10 days (long run 60%, other runs 80%), rest the day before, and race day as a note.
