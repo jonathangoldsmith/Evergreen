@@ -13,6 +13,8 @@ struct StandInAgent: Agent {
     var name: String { "Offline stand-in" }
     /// Where live Senso evidence comes from; nil uses the bundled passages.
     var evidence: EvidenceClient? = EvidenceClient.configured()
+    /// Who picks Jordan's shoes; nil (no harness secret) uses the stand-in's own pick.
+    var recommend: RecommendClient? = RecommendClient.configured()
 
     static let basePoints = 20
     /// A window counts as missed 30 minutes after it ends, and a workout up to 30
