@@ -1,0 +1,11 @@
+{
+  "Simulator Target Bundle": "com.trackerplusplus.app",
+  "aps": {
+    "alert": {
+      "title": "Moved",
+      "body": "Something landed on tomorrow's 7:30 AM elliptical session. Now 8:15 AM, 25 min."
+    },
+    "sound": "default"
+  },
+  "open": "today"
+}

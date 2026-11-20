@@ -6,11 +6,11 @@ SwiftUI and SwiftData, iOS 18+, iPhone portrait, Swift 6 language mode (full dat
 
 1. Open `app/TrackerPlusPlus.xcodeproj` in Xcode.
 2. For a real phone: choose your team under Signing & Capabilities. HealthKit needs a team; check early whether a free personal team works (open question in the doc).
-3. Run. Onboarding asks for Health and Calendar access, then shows "Your normal".
+3. Run. Onboarding asks for Health, Calendar and notification access, then shows "Your normal". Location is asked only when gym alerts are turned on, and Live Activities the first time one starts. The usage strings are `NSHealthShareUsageDescription`, `NSCalendarsFullAccessUsageDescription` and `NSLocationWhenInUseUsageDescription`; `NSSupportsLiveActivities` is on.
 
 The project uses folder-synced groups: any file added under `app/TrackerPlusPlus/` (or `app/TrackerPlusPlusTests/`) is in the build automatically, so there's no project file to merge.
 
-Layout: `App/` (entry point and root view), `Agent/` (who answers `/tick`), `Contract/` (the JSON shapes), `CalendarSync/` (the TrackerPlusPlus calendar), `Model/` (app state, personas, the pinned plan, `Storage/` for SwiftData), `Design/` (tokens, button styles, the agent font), and `Views/` by screen (`Today`, `Feed`, `Week`, `Done`, `Onboarding`, `Demo`). One type per file, except `Contract/Contract.swift`, which stays whole so it can be compared with the harness's Python models. Colors are in `Assets.xcassets` with light and dark values from DESIGN.md.
+Layout: `App/` (entry point and root view), `Agent/` (who answers `/tick`), `Contract/` (the JSON shapes), `CalendarSync/` (the TrackerPlusPlus calendar), `Notifications/` (local notifications and the gym), `LiveActivity/` (starts and updates it), `Model/` (app state, personas, the pinned plan, `Storage/` for SwiftData), `Design/` (tokens, button styles, the agent font), and `Views/` by screen (`Today`, `Feed`, `Week`, `Done`, `Onboarding`, `Demo`). One type per file, except `Contract/Contract.swift`, which stays whole so it can be compared with the harness's Python models. Colors are in `app/Shared/Assets.xcassets` with light and dark values from DESIGN.md. `app/Shared/` is in both the app and the `TrackerPlusPlusWidgets` extension (the Live Activity UI, in `app/TrackerPlusPlusWidgets/`), so put anything both need there.
 
 ## Tests
 
@@ -80,6 +80,19 @@ When something lands on an upcoming workout, the agent moves it before it can be
 - Demo controls → **Add a meeting on the next workout** puts a 1-hour "Team sync" on the person's own calendar 15 minutes before tomorrow's first workout. Reset demo removes it.
 
 To check sync without the Calendar app, the log is under subsystem `com.trackerplusplus.app`, category `calendar`.
+
+## Notifications and Live Activity
+
+No push backend yet, so everything is local (plan item 16 and the Lock Screen):
+
+- **Calendar trigger:** a reminder 30 minutes before each upcoming workout in the next week. They're rescheduled on every change, so a move or an undo carries over. They fire on the phone's real clock, not the demo clock.
+- **Timer trigger:** demo controls → **Send a test notification in 5 seconds** repeats what the agent last did, as a notification ("Moved: Something landed on tomorrow's 7:30 AM elliptical session…"). Lock the phone to see it.
+- **Location trigger:** **Gym arrival alerts** asks for location and watches a demo gym (`Notifications/Gym.swift`, a fixed spot) for arrival and departure. The iOS 27 simulator never fires location triggers (locationd logs "Couldn't get fences"), so **Arrive at the gym** and **Leave the gym** send the same notifications 3 seconds later. The real geofence is untested until it runs on a phone.
+- **Mock pushes:** `app/MockPushes/*.apns` are what the harness would push once it has a backend. Send one to the booted simulator with `app/MockPushes/send.sh comeback-booked` (also `workout-moved`, `workout-reminder`, `workout-done`), or drag a `.apns` file onto the simulator window.
+- **Live Activity:** the next workout on the Lock Screen and in the Dynamic Island, from 2 hours before it until it's done, then it shows the points for 15 minutes. **Show Live Activity for the next workout** starts it now. The countdown is shifted by the demo clock, so at a demo time of 1:30 PM the 6:30 PM comeback shows 5 hours. It's started and updated on the phone (no push token).
+- **Copy:** every notification's words are in `Notifications/NotificationCopy.swift`, so Surya can change them in one place (plan item 16). Same tone as the app: no guilt, points only as what a workout keeps or earns.
+
+Banners show even with the app open. Tapping one opens Today and ticks.
 
 ## Not built yet
 

@@ -1,0 +1,11 @@
+{
+  "Simulator Target Bundle": "com.trackerplusplus.app",
+  "aps": {
+    "alert": {
+      "title": "Booked comeback",
+      "body": "12:00 PM, 30 min → 6:30 PM, 15 min. Shorter sessions are easier to finish after a miss. Keep your 40 points."
+    },
+    "sound": "default"
+  },
+  "open": "today"
+}

@@ -70,6 +70,32 @@ struct DemoSheet: View {
                     }
                 }
 
+                Section {
+                    LabeledContent("Notifications", value: model.notificationAccess == .on ? "On" : "Off")
+                    if model.notificationAccess == .notAsked {
+                        Button("Turn on notifications") { Task { await model.requestNotificationAccess() } }
+                    }
+                    Button("Send a test notification in 5 seconds") { model.sendTestNotification() }
+                        .disabled(model.notificationAccess != .on)
+                    Toggle("Gym arrival alerts", isOn: Binding(
+                        get: { model.gymAlertsOn },
+                        set: { on in Task { await model.setGymAlerts(on) } }
+                    ))
+                    HStack {
+                        Button("Arrive at the gym") { model.sendGymNotification(arriving: true) }
+                        Spacer()
+                        Button("Leave the gym") { model.sendGymNotification(arriving: false) }
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(model.notificationAccess != .on)
+                    Button("Show Live Activity for the next workout") { model.startLiveActivity() }
+                        .disabled(!model.liveActivityAvailable || model.nextWorkout == nil)
+                } header: {
+                    Text("Notifications")
+                } footer: {
+                    Text("The test notification repeats what the agent last did; lock the phone to see it. Gym alerts watch the demo gym on a phone; the simulator doesn't fire location triggers, so Arrive and Leave send the same notifications 3 seconds later. The Live Activity starts on its own 2 hours before a workout.")
+                }
+
                 Section("Agent") {
                     LabeledContent("Answering /tick", value: model.agentName)
                     Button("Tick now") { Task { await model.tick() } }

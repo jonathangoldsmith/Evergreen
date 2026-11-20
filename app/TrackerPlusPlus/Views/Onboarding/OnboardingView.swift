@@ -21,7 +21,7 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, Theme.lg)
         .safeAreaInset(edge: .bottom) {
-            Button(step < 2 ? "Continue" : "Start", action: advance)
+            Button(step < 3 ? "Continue" : "Start", action: advance)
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(busy)
                 .padding(Theme.lg)
@@ -42,8 +42,11 @@ struct OnboardingView: View {
             step = 1
         case 1:
             await model.requestCalendarAccess()
-            await model.tick()
             step = 2
+        case 2:
+            await model.requestNotificationAccess()
+            await model.tick()
+            step = 3
         default:
             model.completeOnboarding()
         }

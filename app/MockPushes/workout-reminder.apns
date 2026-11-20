@@ -1,0 +1,11 @@
+{
+  "Simulator Target Bundle": "com.trackerplusplus.app",
+  "aps": {
+    "alert": {
+      "title": "Comeback walk at 6:30 PM",
+      "body": "15 minutes keeps your 40 points."
+    },
+    "sound": "default"
+  },
+  "open": "today"
+}

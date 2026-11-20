@@ -14,8 +14,10 @@ final class Run {
     var storyDay: Date
     /// Demo clock as minutes after midnight on the story day; nil means real time.
     var clockMinutes: Int?
-    /// Plan items whose Done sheet has already shown.
-    var seenCompletions: [String]
+    /// Plan items whose Done sheet has already shown, one id per line. A plain
+    /// string on purpose: SwiftData keeps a `[String]` as an archived blob, and
+    /// decoding that blob during a save crashed the app after a day rollover.
+    var seenCompletionIds: String = ""
     /// The last good `/tick` answer exactly as it arrived, kept on screen when
     /// the agent can't be reached.
     var lastResponse: Data?
@@ -31,9 +33,14 @@ final class Run {
         self.onboarded = false
         self.storyDay = storyDay
         self.clockMinutes = nil
-        self.seenCompletions = []
+        self.seenCompletionIds = ""
         self.lastResponse = nil
     }
 
     var personaKey: PersonaKey { PersonaKey(rawValue: persona) ?? .sam }
+
+    var seenCompletions: [String] {
+        get { seenCompletionIds.split(separator: "\n").map(String.init) }
+        set { seenCompletionIds = newValue.joined(separator: "\n") }
+    }
 }

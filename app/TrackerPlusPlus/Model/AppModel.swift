@@ -21,6 +21,11 @@ final class AppModel {
 
     private let calendar = Calendar.current
     @ObservationIgnored private let calendarSync = CalendarSync()
+    @ObservationIgnored private let notifier = Notifier()
+    @ObservationIgnored private let liveActivity = LiveActivityController()
+    /// Whether notifications are allowed, for onboarding and the demo controls.
+    private(set) var notificationAccess: NotificationAccess = .notAsked
+    private(set) var gymAlertsOn = false
 
     // Copied out of SwiftData on every save, so views depend on this class
     // rather than on individual records. Without the copy, undoing a move
@@ -56,6 +61,8 @@ final class AppModel {
         }
         save()
         calendarSync.onChange = { [weak self] in self?.calendarChanged() }
+        notifier.onOpen = { [weak self] in Task { await self?.tick() } }
+        Task { await refreshNotifications() }
     }
 
     // MARK: Derived
@@ -226,6 +233,99 @@ final class AppModel {
         }
     }
 
+    // MARK: Notifications and Live Activity
+
+    /// The next workout that isn't done or missed yet.
+    var nextWorkout: PlanItem? {
+        plan.first { completion(for: $0) == nil && !isMissed($0) && $0.slot.end > now }
+    }
+
+    /// Onboarding's notifications step.
+    func requestNotificationAccess() async {
+        await notifier.requestAccess()
+        await refreshNotifications()
+    }
+
+    func refreshNotifications() async {
+        await notifier.refreshAccess()
+        notificationAccess = notifier.access
+        gymAlertsOn = notifier.gymAlertsOn
+        await scheduleNotifications()
+    }
+
+    /// Demo control: what the agent last did, as a notification in 5 seconds.
+    func sendTestNotification() {
+        let latest = latestAction.flatMap { $0.kind == .note ? nil : $0 }
+        Task { await notifier.sendTestNotification(for: latest, fallback: nextWorkout, now: now, after: 5) }
+    }
+
+    /// Demo control: what arriving at or leaving the gym sends.
+    func sendGymNotification(arriving: Bool) {
+        Task { await notifier.sendGymNotification(arriving: arriving, next: nextWorkout) }
+    }
+
+    func setGymAlerts(_ on: Bool) async {
+        if on {
+            if notificationAccess != .on { await requestNotificationAccess() }
+            await notifier.enableGymAlerts(next: nextWorkout)
+        } else {
+            notifier.disableGymAlerts()
+        }
+        gymAlertsOn = notifier.gymAlertsOn
+    }
+
+    /// Demo control: show the Live Activity now, however far off the workout is.
+    func startLiveActivity() {
+        syncLiveActivity(startNow: true)
+    }
+
+    var liveActivityAvailable: Bool { liveActivity.isAvailable }
+
+    private func scheduleNotifications() async {
+        let upcoming = plan.filter { completion(for: $0) == nil }
+        await notifier.scheduleReminders(for: upcoming)
+        await notifier.scheduleGymAlerts(next: nextWorkout)
+    }
+
+    private func syncLiveActivity(startNow: Bool = false) {
+        var finished: WorkoutActivityAttributes.ContentState?
+        if let id = liveActivity.followingItemId,
+           let item = plan.first(where: { $0.id == id }),
+           let done = completion(for: item) {
+            var state = activityState(for: item)
+            state.phase = .done
+            state.points = done.points
+            state.note = NotificationCopy.activityDone(points: done.points)
+            finished = state
+        }
+        liveActivity.sync(
+            upcoming: nextWorkout.map { ($0, activityState(for: $0)) },
+            finished: finished,
+            storyNow: now,
+            startNow: startNow
+        )
+    }
+
+    private func activityState(for item: PlanItem) -> WorkoutActivityAttributes.ContentState {
+        let movedByAgent = appliedActions.contains {
+            $0.planItemId == item.id && $0.id.hasPrefix("defend-") && !isUndone($0)
+        }
+        return WorkoutActivityAttributes.ContentState(
+            phase: .upcoming,
+            title: item.source == .comeback
+                ? "Comeback \(Activity.noun(item.slot.activityType))"
+                : Activity.title(item.slot.activityType),
+            symbol: Activity.symbol(item.slot.activityType),
+            startText: item.slot.start.clock,
+            minutes: item.slot.minutes,
+            points: item.points,
+            isComeback: item.source == .comeback,
+            // Shifted by the demo clock, so the countdown matches the story time.
+            countdownTo: Date.now.addingTimeInterval(item.slot.start.timeIntervalSince(now)),
+            note: NotificationCopy.activityNote(item, movedByAgent: movedByAgent)
+        )
+    }
+
     func completeOnboarding() {
         run.onboarded = true
         save()
@@ -283,6 +383,7 @@ final class AppModel {
     /// cleanup joins this when calendar writes land (P0b).
     func resetDemo() {
         calendarSync.removeAllEvents(around: storyDay)
+        liveActivity.endAll()
         switchPerson(to: persona.key)
     }
 
@@ -321,6 +422,8 @@ final class AppModel {
         }
         refreshFromStore()
         syncCalendar()
+        syncLiveActivity()
+        Task { await scheduleNotifications() }
     }
 
     private func refreshFromStore() {
