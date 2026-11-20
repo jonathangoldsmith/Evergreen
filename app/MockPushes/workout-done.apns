@@ -1,0 +1,11 @@
+{
+  "Simulator Target Bundle": "com.trackerplusplus.app",
+  "aps": {
+    "alert": {
+      "title": "Done",
+      "body": "40 points earned. 2 of 3 this week."
+    },
+    "sound": "default"
+  },
+  "open": "today"
+}
