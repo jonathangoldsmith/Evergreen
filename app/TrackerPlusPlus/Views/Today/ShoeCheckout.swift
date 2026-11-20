@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The "Order it" screen for new running shoes: what you're getting, when it
 /// arrives, how you pay, and the break-in runs Evergreen will add. Nothing is
-/// ordered until Place order; then it confirms with the buddy cheering.
+/// ordered until Place order; then it confirms with the buddy hopping and cheering.
 struct ShoeCheckout: View {
     let purchaseId: String
 
@@ -34,6 +34,7 @@ struct ShoeCheckout: View {
                     Button(ordered ? "Done" : "Cancel") { dismiss() }
                 }
             }
+            .sensoryFeedback(.success, trigger: ordered)
             .safeAreaInset(edge: .bottom) {
                 if let purchase, !ordered {
                     VStack(spacing: Theme.xs) {
@@ -102,7 +103,7 @@ struct ShoeCheckout: View {
 
     private func confirmation(_ purchase: Purchase) -> some View {
         VStack(spacing: Theme.md) {
-            PineBuddy(pose: .cheering)
+            CelebratingBuddy()
                 .frame(height: 180)
                 .padding(.top, Theme.xl)
             Text("Ordered! Fresh legs, here we come.")

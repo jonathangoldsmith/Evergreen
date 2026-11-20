@@ -80,7 +80,7 @@ components:
 - progress is a sentence, never a ring or chart
 - encouraging at the miss: a muted "Next time", never red, guilt or a minus number
 - every workout carries its reason, citing the health data or calendar time behind it
-- one character: the pine buddy, a round, friendly pine with dot eyes, rosy cheeks and coral running shoes. It is the mark, the Welcome art (running) and the week's progress (a tier fills per finished workout; it cheers when the week is done). No other illustration. Its leaf green, blush and shoe coral are decoration only, never text or UI color
+- one character: the pine buddy, a round, friendly pine with dot eyes, rosy cheeks and coral running shoes. It is the mark, the Welcome art (waving hi) and the week's progress (a tier fills per finished workout; it waves when Today opens, walks, and cheers when the week is done). It hops and cheers when an order is placed. No other illustration. Its leaf green, blush and shoe coral are decoration only, never text or UI color
 
 ## Colors
 
@@ -127,7 +127,10 @@ Only the agent card is elevated: 0 2px 8px at 6% ink in light mode; a 1px rule i
 - **Approach:** minimal-functional
 - **Easing:** enter(ease-out) exit(ease-out) move(ease-in-out)
 - **Duration:** micro 80ms, short 200ms, medium 300ms, long 600ms
-- **The one authored moment:** none for now; onboarding's Permissions page slides in (300ms ease-in-out)
+- **Authored moments:** only the pine buddy, and only from its own body (no confetti, particles or extra art). Each is still under Reduce Motion.
+  - **Hi:** arm up (300ms ease-out), about 2.5 swings at 2 per second, arm down (300ms). Welcome loops it after a 1.6s rest; Today waves once when it opens, then walks.
+  - **Order placed:** three 500ms hops with arms pumping and a squash on each landing, then a small bounce; a success haptic.
+- Onboarding's Permissions page slides in (300ms ease-in-out).
 
 ## Decisions Log
 
@@ -138,3 +141,4 @@ Only the agent card is elevated: 0 2px 8px at 6% ink in light mode; a 1px rule i
 | 2026-11-20 | Renamed to Rally; cheerleader voice | Asked for a strong, motivating brand. Copy turns first-person and upbeat; visuals, accent rules and the no-guilt rules stay |
 | 2026-11-20 | Renamed to Evergreen; tailored-training proposition | Value moves to picking the right, sustainable workout from health data and calendar time, with occasional ask-first shopping. Coach voice that cites its data; pine tree as the one image, including the week's progress |
 | 2026-11-20 | Pine buddy mascot | Asked for a cuter brand: an original kawaii pine with running shoes replaces the flat pine |
+| 2026-11-20 | Buddy waves hi and celebrates orders | Asked for: the buddy says hi (Welcome, Today) and celebrates a placed order. The first authored motion, kept to the character itself so the no-confetti rule stands |
