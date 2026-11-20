@@ -1,53 +1,29 @@
 import SwiftUI
 
-/// Onboarding (design D16, D15): a one-sentence explainer before each system
-/// prompt, ending on "Your normal".
+/// Onboarding: Welcome, then the three permissions on one page, then Today.
 struct OnboardingView: View {
     @Environment(AppModel.self) private var model
-    @State private var step = 0
-    @State private var busy = false
+    @State private var showPermissions = false
 
     var body: some View {
-        // Centered when it fits; scrolls at large text sizes or on a short screen
-        // such as iPhone Duo's outer display.
-        ViewThatFits(in: .vertical) {
-            OnboardingStep(step: step)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            ScrollView {
-                OnboardingStep(step: step)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, Theme.lg)
+        Group {
+            if showPermissions {
+                PermissionsView(onContinue: finish)
+                    .transition(.move(edge: .trailing))
+            } else {
+                WelcomeView(onStart: start)
             }
         }
-        .padding(.horizontal, Theme.lg)
-        .safeAreaInset(edge: .bottom) {
-            Button(step < 3 ? "Continue" : "Start", action: advance)
-                .buttonStyle(PrimaryButtonStyle())
-                .disabled(busy)
-                .padding(Theme.lg)
-        }
-        .background(Theme.surface)
+        .animation(.easeInOut(duration: 0.3), value: showPermissions)
     }
 
-    private func advance() {
-        Task { await next() }
+    private func start() {
+        showPermissions = true
     }
 
-    private func next() async {
-        busy = true
-        defer { busy = false }
-        switch step {
-        case 0:
-            await Permissions.requestHealth()
-            step = 1
-        case 1:
-            await model.requestCalendarAccess()
-            step = 2
-        case 2:
-            await model.requestNotificationAccess()
+    private func finish() {
+        Task {
             await model.tick()
-            step = 3
-        default:
             model.completeOnboarding()
         }
     }

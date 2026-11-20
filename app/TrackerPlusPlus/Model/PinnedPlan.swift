@@ -1,10 +1,14 @@
 import Foundation
 
-/// Hand-written demo plans (eng review D12). Sam's always includes the lunchtime
-/// walk on the story day, so the 1:30 PM miss happens every rehearsal; Claude's
-/// live `/plan` runs only before going on stage or in an optional "regenerate" beat.
+/// Hand-written demo plan (eng review D12): Jordan's three workouts, starting
+/// with tonight's 6 PM run. Claude's live `/plan` runs only before going on
+/// stage or in an optional "regenerate" beat.
 enum PinnedPlan {
+    /// What a workout is for, so Evergreen can say why it picked it.
+    enum Focus { case easy, long, strength }
+
     struct Entry {
+        let focus: Focus
         let dayOffset: Int
         let hour: Int
         let minute: Int
@@ -14,23 +18,11 @@ enum PinnedPlan {
 
     static func entries(for key: PersonaKey) -> [Entry] {
         switch key {
-        case .sam:
-            [
-                Entry(dayOffset: 0, hour: 12, minute: 0, minutes: 30, activityType: "Walking"),
-                Entry(dayOffset: 1, hour: 7, minute: 30, minutes: 25, activityType: "Elliptical"),
-                Entry(dayOffset: 3, hour: 10, minute: 0, minutes: 30, activityType: "TraditionalStrengthTraining"),
-            ]
-        case .alex:
-            [
-                Entry(dayOffset: 0, hour: 12, minute: 30, minutes: 45, activityType: "TraditionalStrengthTraining"),
-                Entry(dayOffset: 1, hour: 18, minute: 0, minutes: 30, activityType: "Running"),
-                Entry(dayOffset: 2, hour: 9, minute: 0, minutes: 40, activityType: "Yoga"),
-            ]
         case .jordan:
             [
-                Entry(dayOffset: 0, hour: 18, minute: 0, minutes: 45, activityType: "Running"),
-                Entry(dayOffset: 1, hour: 8, minute: 30, minutes: 90, activityType: "Running"),
-                Entry(dayOffset: 2, hour: 7, minute: 0, minutes: 40, activityType: "FunctionalStrengthTraining"),
+                Entry(focus: .easy, dayOffset: 0, hour: 18, minute: 0, minutes: 45, activityType: "Running"),
+                Entry(focus: .long, dayOffset: 1, hour: 8, minute: 30, minutes: 90, activityType: "Running"),
+                Entry(focus: .strength, dayOffset: 2, hour: 7, minute: 0, minutes: 40, activityType: "FunctionalStrengthTraining"),
             ]
         }
     }
@@ -41,13 +33,22 @@ enum PinnedPlan {
         calendar.date(byAdding: .hour, value: 5, to: storyDay)!
     }
 
+    static func id(_ key: PersonaKey, _ entry: Entry) -> String {
+        "plan-\(key.rawValue)-d\(entry.dayOffset)-\(entry.hour)\(entry.minute)"
+    }
+
+    /// The focus of a pinned workout, by its plan item id.
+    static func focus(for itemId: String, key: PersonaKey) -> Focus? {
+        entries(for: key).first { id(key, $0) == itemId }?.focus
+    }
+
     static func items(for key: PersonaKey, storyDay: Date, calendar: Calendar = .current) -> [PlanItem] {
         entries(for: key).map { entry in
             let day = calendar.date(byAdding: .day, value: entry.dayOffset, to: storyDay)!
             let start = calendar.date(bySettingHour: entry.hour, minute: entry.minute, second: 0, of: day)!
             let end = start.addingTimeInterval(Double(entry.minutes) * 60)
             return PlanItem(
-                id: "plan-\(key.rawValue)-d\(entry.dayOffset)-\(entry.hour)\(entry.minute)",
+                id: id(key, entry),
                 slot: Slot(start: start, end: end, activityType: entry.activityType),
                 points: StandInAgent.basePoints,
                 source: .plan

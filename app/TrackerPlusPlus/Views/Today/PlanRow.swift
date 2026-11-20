@@ -1,35 +1,82 @@
 import SwiftUI
 
-/// One planned workout. Missed ones are muted, never red (design D7).
+/// One planned workout: the day (with a "Moved" badge when the agent moved
+/// it), what and how long, and the time. Tapping an upcoming one picks another
+/// time. Missed ones are muted, never red (design D7).
 struct PlanRow: View {
     let item: PlanItem
 
     @Environment(AppModel.self) private var model
+    @State private var picking = false
 
     var body: some View {
-        HStack(spacing: Theme.md) {
-            Text(item.slot.start.clock)
-                .font(.body.monospacedDigit())
-                .foregroundStyle(Theme.textMuted)
-                .frame(minWidth: 76, alignment: .leading)
-            Image(systemName: Activity.symbol(item.slot.activityType))
-                .foregroundStyle(Theme.textMuted)
-                .frame(width: 24)
+        if canMove {
+            Button(action: pick) { row(showsChevron: true) }
+                .buttonStyle(RowPressStyle())
+                .accessibilityHint("Picks another time")
+                .pickAnotherTime(for: item, isPresented: $picking)
+        } else {
+            row(showsChevron: false)
+        }
+    }
+
+    /// Done and missed workouts stay put; upcoming ones can move.
+    private var canMove: Bool {
+        model.completion(for: item) == nil && !isMissed && item.slot.start > model.now
+    }
+
+    private func pick() {
+        picking = true
+    }
+
+    private func row(showsChevron: Bool) -> some View {
+        HStack(alignment: .top, spacing: Theme.md) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(Activity.title(item.slot.activityType))
-                    .font(.body)
-                    .foregroundStyle(Theme.text)
-                    .strikethrough(isMissed, color: Theme.textMuted)
-                Text("\(item.slot.minutes) min\(item.source == .comeback ? " · 2× points" : "")\(item.slot.place.map { " · \($0)" } ?? "")")
+                HStack(spacing: Theme.sm) {
+                    Text(item.slot.start.formatted(.dateTime.weekday(.wide)))
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(isMissed ? Theme.textMuted : Theme.text)
+                        .strikethrough(isMissed, color: Theme.textMuted)
+                    if model.movedAction(for: item) != nil {
+                        Badge(text: "Moved")
+                    }
+                }
+                Text(detail)
                     .font(.footnote)
                     .foregroundStyle(Theme.textMuted)
+                if let reason = model.reason(for: item), !isMissed, model.completion(for: item) == nil {
+                    Text(reason)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
             }
             Spacer(minLength: Theme.sm)
-            status
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(item.slot.start.clock)
+                    .font(.body.monospacedDigit())
+                    .foregroundStyle(isMissed ? Theme.textMuted : Theme.text)
+                status
+            }
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.textMuted)
+                    .accessibilityHidden(true)
+            }
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
         .frame(minHeight: 44)
+        .contentShape(.rect)
         .accessibilityElement(children: .combine)
+    }
+
+    /// "Strength · 30 min · Demo Gym"
+    private var detail: String {
+        var parts = [Activity.title(item.slot.activityType), "\(item.slot.minutes) min"]
+        if let place = item.slot.place { parts.append(place) }
+        return parts.joined(separator: " · ")
     }
 
     private var isMissed: Bool { model.isMissed(item) }
@@ -41,9 +88,16 @@ struct PlanRow: View {
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.success)
         } else if isMissed {
-            Text("Didn't happen")
+            Text("Next time")
                 .font(.footnote)
                 .foregroundStyle(Theme.textMuted)
         }
+    }
+}
+
+/// A row that dims while pressed, with no other chrome.
+private struct RowPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.opacity(configuration.isPressed ? 0.6 : 1)
     }
 }

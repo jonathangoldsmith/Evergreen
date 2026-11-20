@@ -40,7 +40,7 @@ struct CalendarSyncTests {
     @Test func notesCarryTheAgentsReason() {
         let entry = entries([comeback], reasons: ["comeback-plan-walk": "Shorter sessions are easier."])[0]
 
-        #expect(entry.notes == "Shorter sessions are easier.\n\nPlanned by TrackerPlusPlus.")
+        #expect(entry.notes == "Shorter sessions are easier.\n\nPlanned by Evergreen.")
         #expect(entry.start == Fixture.at(18, 30))
         #expect(entry.end == Fixture.at(18, 45))
     }

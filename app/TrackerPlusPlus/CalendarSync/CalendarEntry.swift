@@ -25,7 +25,7 @@ struct CalendarEntry: Equatable, Sendable {
             return CalendarEntry(
                 key: key,
                 title: title(for: item),
-                notes: [reasons[item.id], "Planned by TrackerPlusPlus."].compactMap(\.self).joined(separator: "\n\n"),
+                notes: [reasons[item.id], "Planned by Evergreen."].compactMap(\.self).joined(separator: "\n\n"),
                 start: item.slot.start,
                 end: item.slot.end
             )

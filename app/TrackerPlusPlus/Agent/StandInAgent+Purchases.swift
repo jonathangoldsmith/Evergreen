@@ -27,7 +27,10 @@ extension StandInAgent {
 
     // MARK: Day pass (auto-buy branch)
 
-    static let gym = "Demo Gym"
+    /// The gym Evergreen suggests when rain spoils an outdoor workout. The price and
+    /// cancel terms below are demo placeholders, not the gym's real terms.
+    static let gym = "24 Hour Fitness"
+    static let gymArea = "San Francisco"
     static let dayPassCents = 1500
     static let outdoorTypes: Set<String> = ["Walking", "Running", "Cycling"]
     /// Rain this close before a workout still spoils it.
@@ -35,9 +38,10 @@ extension StandInAgent {
     /// The pass cancels free until this long before the workout.
     static let freeCancel: TimeInterval = 60 * 60
 
-    /// Rain on an outdoor workout: buy a day pass under the person's rule and
-    /// move the workout indoors; cancel it if the forecast clears or the person
-    /// undoes it before the free-cancel deadline; close the trail on arrival.
+    /// Rain on an outdoor workout: offer a day pass, and buy it only once the
+    /// person says yes (Evergreen always checks first). Bought, the workout moves
+    /// indoors; it cancels if the forecast clears or the person undoes it
+    /// before the free-cancel deadline; arriving at the gym closes the trail.
     private func dayPassActions(
         _ s: TickSnapshot, known: Set<String>, done: Set<String>, cal: Calendar
     ) async -> [AgentAction] {
@@ -48,67 +52,41 @@ extension StandInAgent {
         for item in s.plan.sorted(by: { $0.slot.start < $1.slot.start })
         where Self.outdoorTypes.contains(item.slot.activityType) && !done.contains(item.id)
             && rainAt >= item.slot.start.addingTimeInterval(-Self.rainLead) && rainAt <= item.slot.end {
-            // Before the person has verified their identity the agent asks
-            // first. The ask is its own purchase id, so a "Not now" on it is
-            // never read as an undone auto-buy that needs a refund.
-            let epoch = Int(rainAt.timeIntervalSince1970)
-            let askBase = "pass-ask-\(item.id)-\(epoch)"
-            let asks = known.contains("purchase-\(askBase)") || !s.identityVerified
-            let id = asks ? askBase : "pass-\(item.id)-\(epoch)"
-            let buyId = "purchase-\(id)"
-            let boughtId = asks ? "\(buyId)-bought" : buyId
-            let cancelId = "\(buyId)-cancel"
-            let outcomeId = "\(buyId)-outcome"
-            let askMandate = s.mandate.filter { $0.category != .dayPass }
+            let id = "pass-\(item.id)-\(Int(rainAt.timeIntervalSince1970))"
+            let askId = "purchase-\(id)"
+            let boughtId = "\(askId)-bought"
+            let cancelId = "\(askId)-cancel"
+            let outcomeId = "\(askId)-outcome"
 
-            if asks {
-                if !known.contains(buyId) {
-                    guard !(s.demo?.forecastClear ?? false), s.now < item.slot.start,
-                          let ask = await dayPass(id: id, item: item, rainAt: rainAt, mandate: askMandate)
-                    else { continue }
-                    actions.append(AgentAction(
-                        id: buyId, kind: .purchase, title: "Found a gym day pass", planItemId: item.id,
-                        reason: "Rain at \(rainAt.clock) would wash out your \(Activity.noun(item.slot.activityType)). I buy passes on my own only after you've verified your identity.",
-                        createdAt: s.now, purchaseId: id, purchase: ask
-                    ))
-                    continue
-                }
-                // "Not now" ends it.
-                if undone.contains(buyId) { continue }
-                // "Order it" buys the pass and moves the workout indoors.
-                if !known.contains(boughtId) {
-                    guard s.approvedPurchaseIds.contains(id), !(s.demo?.forecastClear ?? false), s.now < item.slot.start,
-                          var pass = s.actions.first(where: { $0.id == buyId })?.purchase
-                    else { continue }
-                    pass.status = .bought
-                    var after = item.slot
-                    after.place = Self.gym
-                    actions.append(AgentAction(
-                        id: boughtId, kind: .purchase, title: "Bought a gym day pass", planItemId: item.id,
-                        before: item.slot, after: after,
-                        reason: "You said yes. Demo Gym, no charge; your \(Activity.noun(item.slot.activityType)) moves indoors.",
-                        createdAt: s.now, purchaseId: id, purchase: pass
-                    ))
-                    continue
-                }
-                // Bought: cancelling and the arrival work as for an auto-buy, below.
+            // Ask once, before the workout, while rain is still forecast.
+            // "Not now" undoes the ask, and an undone id is known, so it never asks again.
+            guard known.contains(askId) else {
+                guard !(s.demo?.forecastClear ?? false), s.now < item.slot.start,
+                      let purchase = await dayPass(id: id, item: item, rainAt: rainAt, mandate: s.mandate)
+                else { continue }
+                actions.append(AgentAction(
+                    id: askId, kind: .purchase, title: "Book a day pass at \(Self.gym)?", planItemId: item.id,
+                    reason: "Rain at \(rainAt.clock) would wash out your \(Activity.noun(item.slot.activityType)). \(Self.gym) in \(Self.gymArea) is 0.4 mi from home, so you can run there instead.",
+                    createdAt: s.now, purchaseId: id, purchase: purchase
+                ))
+                continue
             }
+            guard !undone.contains(askId), s.approvedPurchaseIds.contains(id) else { continue }
 
-            // The snapshot only carries actions still in effect, so an undone
-            // pass is rebuilt from the plan item (back at its original slot).
+            // "Buy it": bought, and the workout moves to the gym.
             let bought = s.actions.first { $0.id == boughtId }
             let personUndid = undone.contains(boughtId)
             guard bought != nil || personUndid else {
-                // Buy once, before the workout, while rain is still forecast.
-                guard !known.contains(buyId), !(s.demo?.forecastClear ?? false), s.now < item.slot.start,
-                      let purchase = await dayPass(id: id, item: item, rainAt: rainAt, mandate: s.mandate)
+                guard !known.contains(boughtId), s.now < item.slot.start,
+                      var purchase = s.actions.first(where: { $0.id == askId })?.purchase
                 else { continue }
+                purchase.status = .bought
                 var after = item.slot
                 after.place = Self.gym
                 actions.append(AgentAction(
-                    id: buyId, kind: .purchase, title: "Bought a gym day pass", planItemId: item.id,
+                    id: boughtId, kind: .purchase, title: "Booked your \(Self.gym) day pass", planItemId: item.id,
                     before: item.slot, after: after,
-                    reason: "Rain at \(rainAt.clock) would wash out your \(Activity.noun(item.slot.activityType)), and Demo Gym is 0.4 mi from work.",
+                    reason: "You said yes. Treadmill time at \(Self.gym)!",
                     createdAt: s.now, purchaseId: id, purchase: purchase
                 ))
                 continue
@@ -116,7 +94,8 @@ extension StandInAgent {
             guard !known.contains(cancelId) else { continue }
             var rebuilt = bought?.purchase
             if rebuilt == nil {
-                rebuilt = await dayPass(id: id, item: item, rainAt: rainAt, mandate: asks ? askMandate : s.mandate, live: false)
+                rebuilt = await dayPass(id: id, item: item, rainAt: rainAt, mandate: s.mandate, live: false)
+                rebuilt?.status = .bought
             }
             guard let pass = rebuilt else { continue }
             let original = bought?.before ?? item.slot
@@ -125,7 +104,7 @@ extension StandInAgent {
             let cancelBy = pass.cancelBy ?? item.slot.start
 
             // The person's Undo before the deadline, or a clear forecast: the
-            // agent cancels its own purchase and the workout goes back outside.
+            // agent cancels the pass and the workout goes back outside.
             let cleared = s.demo?.forecastClear == true && !personUndid
             if (personUndid || cleared), s.now < cancelBy {
                 var cancelled = pass
@@ -136,9 +115,9 @@ extension StandInAgent {
                 }
                 actions.append(AgentAction(
                     id: cancelId, kind: .cancelPurchase,
-                    title: "Cancelled the day pass", planItemId: item.id, before: inGym, after: original,
+                    title: "Cancelled your day pass", planItemId: item.id, before: inGym, after: original,
                     reason: personUndid
-                        ? "You cancelled it. \(ActionCopy.money(pass.amountCents)) refunded."
+                        ? "Done. \(ActionCopy.money(pass.amountCents)) is back in your pocket, and your \(Activity.noun(original.activityType)) is outside again."
                         : "Forecast cleared for \(original.start.clock). \(ActionCopy.money(pass.amountCents)) refunded; your \(Activity.noun(original.activityType)) is back outside.",
                     createdAt: s.now, purchaseId: id, purchase: cancelled
                 ))
@@ -155,7 +134,7 @@ extension StandInAgent {
                 used.outcome = "Arrived \(Self.gym) \(visit.at.clock) · pass used"
                 actions.append(AgentAction(
                     id: outcomeId, kind: .purchaseOutcome, title: "Pass used", planItemId: item.id,
-                    reason: "You made it to \(Self.gym), so the pass did its job.",
+                    reason: "You made it to \(Self.gym). Nice work!",
                     createdAt: s.now, purchaseId: id, purchase: used
                 ))
             }
@@ -172,17 +151,17 @@ extension StandInAgent {
         guard let rule else { return nil }
         let auto = rule.category == .dayPass
         let noun = Activity.noun(item.slot.activityType)
-        let live = !useLive ? nil : await evidence?.passages(kind: "dayPass", query: "Demo Gym day pass price and cancellation; rain at \(rainAt.clock)")
+        let live = !useLive ? nil : await evidence?.passages(kind: "dayPass", query: "\(Self.gym) \(Self.gymArea) day pass price and cancellation; rain at \(rainAt.clock)")
         return Purchase(
-            id: id, item: "\(Self.gym) day pass", merchant: "Demo Gym (no charge)", amountCents: Self.dayPassCents,
+            id: id, item: "\(Self.gym) day pass", merchant: "\(Self.gym), \(Self.gymArea) (demo, no charge)", amountCents: Self.dayPassCents,
             status: auto ? .bought : .awaitingApproval,
             rule: Purchase.Rule(id: rule.id, text: rule.text),
-            noticed: "Rain is forecast at \(rainAt.clock), right when your \(item.slot.start.clock) \(noun) starts.",
+            noticed: "Rain is coming \(rainAt.formatted(.dateTime.weekday(.wide))) at \(rainAt.clock), right when your \(noun) starts. A treadmill at \(Self.gym) in \(Self.gymArea), 0.4 mi from home, keeps it on plan.",
             evidence: live ?? [
                 Purchase.Evidence(source: "Demo forecast", passage: "80% chance of rain at \(rainAt.clock)."),
-                Purchase.Evidence(source: "Demo Gym day-pass policy",
+                Purchase.Evidence(source: "Day-pass terms (demo placeholder)",
                                   passage: "Day pass $15. Free cancellation until 60 minutes before your visit."),
-                Purchase.Evidence(source: "Demo Gym listing", passage: "0.4 mi from work. Treadmills and a walking track; open until 10 PM."),
+                Purchase.Evidence(source: "\(Self.gym), \(Self.gymArea)", passage: "0.4 mi from home, with treadmills you can use for your run."),
             ],
             evidenceLive: live != nil,
             options: [
@@ -190,7 +169,7 @@ extension StandInAgent {
                 Purchase.Option(name: "\(noun.capitalized) outside anyway", amountCents: 0,
                                 lostBecause: "80% rain at \(rainAt.clock); a washed-out \(noun) is a second miss"),
                 Purchase.Option(name: "Move it to tomorrow", amountCents: 0,
-                                lostBecause: "Gives up today's comeback and its 2× points"),
+                                lostBecause: "The rest of the week is already planned"),
             ],
             cancelBy: item.slot.start.addingTimeInterval(-Self.freeCancel)
         )
@@ -243,7 +222,7 @@ extension StandInAgent {
         } else if known.contains(askId) {
             return [] // declined with "Not now"
         } else {
-            var picked = await harnessShoes(s, id: id, boughtOn: boughtOn, raceDate: raceDate, cal: cal)
+            var picked = await harnessShoes(s, id: id, miles: miles, boughtOn: boughtOn, raceDate: raceDate, cal: cal)
             if picked == nil {
                 picked = await shoesPurchase(
                     id: id, miles: miles, daysToRace: daysToRace, day: day, race: race, mandate: s.mandate, cal: cal
@@ -302,7 +281,7 @@ extension StandInAgent {
     /// for the break-in runs. Nil without a harness secret, on any failure, or
     /// when the harness reads the pair as fresh: the stand-in's own pick runs.
     private func harnessShoes(
-        _ s: TickSnapshot, id: String, boughtOn: Date, raceDate: Date, cal: Calendar
+        _ s: TickSnapshot, id: String, miles: Int, boughtOn: Date, raceDate: Date, cal: Calendar
     ) async -> Purchase? {
         guard let recommend,
               var picked = await recommend.shoes(
@@ -312,6 +291,7 @@ extension StandInAgent {
               !picked.options.isEmpty
         else { return nil }
         picked.id = id
+        picked.miles = miles
         return picked
     }
 
@@ -353,7 +333,8 @@ extension StandInAgent {
             noticed: "Your shoes hit \(miles) miles. Race day is in \(daysToRace) days.",
             evidence: live ?? Self.cachedShoeEvidence(chosen),
             evidenceLive: live != nil,
-            options: [chosen] + others + lost
+            options: [chosen] + others + lost,
+            miles: miles
         )
     }
 

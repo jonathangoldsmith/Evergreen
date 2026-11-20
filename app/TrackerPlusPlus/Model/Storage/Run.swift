@@ -42,7 +42,7 @@ final class Run {
         self.lastResponse = nil
     }
 
-    var personaKey: PersonaKey { PersonaKey(rawValue: persona) ?? .sam }
+    var personaKey: PersonaKey { PersonaKey(rawValue: persona) ?? .jordan }
 
     var approvedPurchaseIds: [String] {
         get { approvedPurchaseText.split(separator: "\n").map(String.init) }

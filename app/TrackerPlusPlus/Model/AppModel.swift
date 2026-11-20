@@ -17,13 +17,10 @@ final class AppModel {
     private(set) var agentName = ""
     /// Whether the plan is also on the TrackerPlusPlus calendar.
     private(set) var calendarAccess: CalendarAccess
-    /// Set when a workout finishes a plan item; drives the Done sheet.
-    var celebration: Completion?
 
     private let calendar = Calendar.current
     @ObservationIgnored private let calendarSync = CalendarSync()
     @ObservationIgnored private let notifier = Notifier()
-    @ObservationIgnored private let liveActivity = LiveActivityController()
     /// Tony's memory bundle in JavaScriptCore; nil if it doesn't load.
     @ObservationIgnored private let memory = MemoryEngine.standard()
     /// The app's Amplitude client, made once in the app entry; nil without a key.
@@ -40,7 +37,6 @@ final class AppModel {
     var amplitudeOn: Bool { amplitude != nil }
     /// Whether notifications are allowed, for onboarding and the demo controls.
     private(set) var notificationAccess: NotificationAccess = .notAsked
-    private(set) var gymAlertsOn = false
 
     // Copied out of SwiftData on every save, so views depend on this class
     // rather than on individual records. Without the copy, undoing a move
@@ -63,7 +59,7 @@ final class AppModel {
         self.amplitude = amplitude
         let today = Calendar.current.startOfDay(for: Date())
         let saved = (try? context.fetch(FetchDescriptor<Run>()))?.first
-        let run = saved ?? Run(persona: .sam, storyDay: today)
+        let run = saved ?? Run(persona: .jordan, storyDay: today)
         if saved == nil { context.insert(run) }
         self.run = run
         calendarAccess = calendarSync.access
@@ -85,14 +81,6 @@ final class AppModel {
 
     var onboarded: Bool { run.onboarded }
 
-    /// The demo's person. Picking a different one starts a fresh run for them.
-    var personKey: PersonaKey {
-        get { persona.key }
-        set {
-            guard newValue != persona.key else { return }
-            switchPerson(to: newValue)
-        }
-    }
     var clockMinutes: Int? { run.clockMinutes }
     var storyDay: Date { run.storyDay }
 
@@ -158,8 +146,7 @@ final class AppModel {
 
     /// The person's standing spending rule (premise 2), set once in onboarding.
     nonisolated static let mandate = [
-        Mandate(id: "ask-first", text: "Ask me before buying anything else.", category: .any, maxAutoCents: 0),
-        Mandate(id: "day-pass", text: "Day passes up to $20: book it, tell me after.", category: .dayPass, maxAutoCents: 2000),
+        Mandate(id: "ask-first", text: "Always check with me before buying anything.", category: .any, maxAutoCents: 0),
     ]
 
     func isUndone(_ action: AgentAction) -> Bool { undoneIds.contains(action.id) }
@@ -172,15 +159,10 @@ final class AppModel {
         completion(for: item) == nil && item.slot.end.addingTimeInterval(StandInAgent.grace) <= now
     }
 
-    /// The action that created a plan item, if any (for the comeback badge).
-    func creatingAction(for item: PlanItem) -> AgentAction? {
-        appliedActions.first { $0.planItemId == item.id && $0.kind == .bookComeback }
-    }
-
     // MARK: Agent
 
     /// Ticks now, then every minute while the app is on screen, so a window that
-    /// passes with the app open still gets its comeback.
+    /// passes with the app open is still noticed.
     func keepTicking() async {
         while !Task.isCancelled {
             await tick()
@@ -241,13 +223,10 @@ final class AppModel {
         let known = Set(run.actions.map(\.actionId))
         for action in response.actions where !known.contains(action.id) {
             record(action)
+            announceMove(action)
         }
         self.response = response
         run.lastResponse = try? JSONEncoder.contract.encode(response)
-        if let fresh = response.completions.first(where: { !run.seenCompletions.contains($0.planItemId) }) {
-            run.seenCompletions += response.completions.map(\.planItemId)
-            celebration = fresh
-        }
         save()
     }
 
@@ -332,126 +311,49 @@ final class AppModel {
     func refreshNotifications() async {
         await notifier.refreshAccess()
         notificationAccess = notifier.access
-        gymAlertsOn = notifier.gymAlertsOn
         await scheduleNotifications()
     }
-
-    /// Demo control: what the agent last did, as a notification in 5 seconds.
-    func sendTestNotification() {
-        let latest = latestAction.flatMap { $0.kind == .note ? nil : $0 }
-        Task { await notifier.sendTestNotification(for: latest, fallback: nextWorkout, now: now, after: 5) }
-    }
-
-    /// Demo control: what arriving at or leaving the gym sends.
-    func sendGymNotification(arriving: Bool) {
-        Task { await notifier.sendGymNotification(arriving: arriving, next: nextWorkout) }
-    }
-
-    func setGymAlerts(_ on: Bool) async {
-        if on {
-            if notificationAccess != .on { await requestNotificationAccess() }
-            await notifier.enableGymAlerts(next: nextWorkout)
-        } else {
-            notifier.disableGymAlerts()
-        }
-        gymAlertsOn = notifier.gymAlertsOn
-    }
-
-    /// Demo control: show the Live Activity now, however far off the workout is.
-    func startLiveActivity() {
-        syncLiveActivity(startNow: true)
-    }
-
-    var liveActivityAvailable: Bool { liveActivity.isAvailable }
 
     private func scheduleNotifications() async {
         let upcoming = plan.filter { completion(for: $0) == nil }
         await notifier.scheduleReminders(for: upcoming)
-        await notifier.scheduleGymAlerts(next: nextWorkout)
     }
 
-    private func syncLiveActivity(startNow: Bool = false) {
-        var finished: WorkoutActivityAttributes.ContentState?
-        if let id = liveActivity.followingItemId,
-           let item = plan.first(where: { $0.id == id }),
-           let done = completion(for: item) {
-            var state = activityState(for: item)
-            state.phase = .done
-            state.points = done.points
-            state.note = NotificationCopy.activityDone(points: done.points)
-            finished = state
-        }
-        liveActivity.sync(
-            upcoming: nextWorkout.map { ($0, activityState(for: $0)) },
-            finished: finished,
-            storyNow: now,
-            startNow: startNow
-        )
-    }
-
-    private func activityState(for item: PlanItem) -> WorkoutActivityAttributes.ContentState {
-        let movedByAgent = appliedActions.contains {
-            $0.planItemId == item.id && $0.id.hasPrefix("defend-") && !isUndone($0)
-        }
-        return WorkoutActivityAttributes.ContentState(
-            phase: .upcoming,
-            title: item.source == .comeback
-                ? "Comeback \(Activity.noun(item.slot.activityType))"
-                : Activity.title(item.slot.activityType),
-            symbol: Activity.symbol(item.slot.activityType),
-            startText: item.slot.start.clock,
-            minutes: item.slot.minutes,
-            points: item.points,
-            isComeback: item.source == .comeback,
-            // Shifted by the demo clock, so the countdown matches the story time.
-            countdownTo: Date.now.addingTimeInterval(item.slot.start.timeIntervalSince(now)),
-            note: NotificationCopy.activityNote(item, movedByAgent: movedByAgent)
-        )
-    }
-
+    /// Starts clean: a reinstall keeps calendar events, so clear the plan and
+    /// any demo meeting a previous install left before the first plan syncs.
     func completeOnboarding() {
+        calendarSync.removeAllEvents(around: storyDay)
         run.onboarded = true
         save()
     }
 
-    // MARK: Demo controls (eng review D5, D6, D13)
+    // MARK: Demo controls
 
-    func setClock(minutes: Int?) {
-        run.clockMinutes = minutes
-        save()
-        Task { await tick() }
+    /// The test meeting's title, kept so the move notification can name it.
+    /// Calendar sync passes only busy times to the agent, never titles.
+    @ObservationIgnored private var testMeeting: (title: String, start: Date)?
+
+    /// The workout "Add a meeting" lands on: the next one still ahead.
+    var nextUpcomingWorkout: PlanItem? {
+        plan.first { $0.slot.start > now && completion(for: $0) == nil }
     }
 
-    /// The workout "Add a meeting" lands on: the first one after the story day,
-    /// so the demo can show defense before the miss (demo script step 3).
-    var nextDaysFirstWorkout: PlanItem? {
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: storyDay) ?? storyDay
-        return plan.first { $0.slot.start >= tomorrow && completion(for: $0) == nil }
-    }
-
-    /// Puts a 1-hour test meeting on the person's calendar starting 15 minutes
+    /// Puts a 1-hour "Team sync" on the person's calendar starting 15 minutes
     /// before that workout. The calendar change triggers the tick that moves it.
     func addTestMeeting() {
-        guard let item = nextDaysFirstWorkout else { return }
+        guard let item = nextUpcomingWorkout else { return }
         let start = item.slot.start.addingTimeInterval(-15 * 60)
+        testMeeting = (CalendarSync.testMeetingTitle, start)
         calendarSync.addTestMeeting(start: start, end: start.addingTimeInterval(60 * 60))
     }
 
-    /// Adds a finished workout ending now, shaped like the real HealthKit import.
-    func logWorkout() {
-        let next = todayPlan.first { completion(for: $0) == nil && !isMissed($0) }
-        let type = next?.slot.activityType ?? "Walking"
-        let minutes = Double(next?.slot.minutes ?? 15)
-        let end = now
-        let workout = LoggedWorkout(Workout(
-            id: "demo-\(UUID().uuidString)", activityType: type,
-            start: end.addingTimeInterval(-minutes * 60), end: end,
-            effort: 4, avgHeartRate: nil, source: .demo
-        ))
-        context.insert(workout)
-        run.workouts.append(workout)
-        save()
-        Task { await tick() }
+    /// When the agent moves a workout off a meeting, says so as a notification:
+    /// "Team sync landed on your run … I moved it to 6:45 PM."
+    private func announceMove(_ action: AgentAction) {
+        guard action.id.hasPrefix("defend-"), let before = action.before, let after = action.after else { return }
+        let meeting = testMeeting.flatMap { $0.start < before.end ? $0 : nil }
+        let copy = NotificationCopy.moved(before: before, after: after, meeting: meeting)
+        Task { await notifier.send(copy, id: action.id) }
     }
 
     func switchPerson(to key: PersonaKey, clock: Int? = nil, demo: ((Persona) -> DemoConditions)? = nil) {
@@ -464,17 +366,22 @@ final class AppModel {
         Task { await tick() }
     }
 
-    /// Demo preset: Sam at 1:30 PM, so the missed lunch walk already has its
-    /// 6:30 PM comeback for the rain beat.
-    func showRainDemo() {
-        switchPerson(to: .sam, clock: 13 * 60 + 30)
+    /// The rain the day-pass rule reacts to: the start of tomorrow's first
+    /// outdoor workout (Jordan's Saturday 8:30 AM long run).
+    var rainTime: Date? {
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: storyDay) ?? storyDay
+        return plan.first {
+            StandInAgent.outdoorTypes.contains($0.slot.activityType)
+                && calendar.isDate($0.slot.start, inSameDayAs: tomorrow) && $0.slot.start > now
+        }?.slot.start
     }
 
-    /// The 6:30 PM rain the day-pass rule reacts to.
-    var rainTime: Date { calendar.date(bySettingHour: 18, minute: 30, second: 0, of: storyDay) ?? storyDay }
+    /// Race day in the shoes demo.
+    var raceDate: Date? { run.demo?.raceDate }
 
-    /// Demo control: rain at 6:30 PM; the agent may buy a day pass.
+    /// Demo control: rain on Saturday's run; the agent suggests a day pass.
     func forecastRain() {
+        guard let rainTime else { return }
         var demo = run.demo ?? DemoConditions()
         demo.rainAt = rainTime
         demo.forecastClear = false
@@ -483,30 +390,33 @@ final class AppModel {
         Task { await tick() }
     }
 
-    /// Demo control: the forecast clears; the agent may cancel its own pass.
-    func clearForecast() {
-        var demo = run.demo ?? DemoConditions()
-        demo.forecastClear = true
-        run.demo = demo
-        save()
-        Task { await tick() }
+    // MARK: Demo beats
+    // Each beat starts from a clean run for Jordan, so the beats can be shown
+    // in any order and an earlier one never covers the next.
+
+    /// The plan: "Let's do three workouts this week."
+    func showPlan() {
+        resetDemo()
     }
 
-    var rainForecast: Bool { run.demo?.rainAt != nil && run.demo?.forecastClear == false }
-
-    /// Demo control: arrive at the gym now. Records the visit the day-pass
-    /// outcome reads, and sends the arrival notification when allowed. The
-    /// real geofence only notifies; it runs no app code.
-    func arriveAtGym() {
-        run.visits.append(Visit(place: StandInAgent.gym, at: now))
-        save()
-        if notificationAccess == .on { sendGymNotification(arriving: true) }
-        Task { await tick() }
+    /// Friday, 4 PM: a "Team sync" lands on tonight's 6 PM run; Evergreen moves the
+    /// run and sends a notification about it.
+    func showMovedDemo() {
+        calendarSync.removeAllEvents(around: storyDay)
+        switchPerson(to: .jordan, clock: 16 * 60)
+        addTestMeeting()
     }
 
-    /// Demo preset: Jordan's shoes near 400 miles with a race in 9 days. His
-    /// 30-day history adds about 125 miles to the 267 already on the pair.
+    /// Rain on Saturday's run: the agent suggests a gym day pass.
+    func showRainDemo() {
+        resetDemo()
+        forecastRain()
+    }
+
+    /// Jordan's shoes near 400 miles with a race in 9 days. His 30-day history
+    /// adds about 125 miles to the 267 already on the pair.
     func showShoesDemo() {
+        calendarSync.removeAllEvents(around: storyDay)
         switchPerson(to: .jordan) { [calendar, storyDay] person in
             DemoConditions(
                 shoesBoughtOn: person.historyStart,
@@ -516,12 +426,12 @@ final class AppModel {
         }
     }
 
-    /// Clears the run: actions, logged workouts, points and the clock. Calendar
-    /// cleanup joins this when calendar writes land (P0b).
+    /// Clears the run (actions, logged workouts, the clock), the TrackerPlusPlus
+    /// calendar and the test meeting.
     func resetDemo() {
         calendarSync.removeAllEvents(around: storyDay)
-        liveActivity.endAll()
-        switchPerson(to: persona.key)
+        testMeeting = nil
+        switchPerson(to: .jordan)
     }
 
     // MARK: Storage
@@ -562,7 +472,6 @@ final class AppModel {
         }
         refreshFromStore()
         syncCalendar()
-        syncLiveActivity()
         Task { await scheduleNotifications() }
     }
 
@@ -573,7 +482,7 @@ final class AppModel {
         loggedWorkouts = run.workouts.map(\.workout).sorted { $0.start < $1.start }
     }
 
-    /// Puts the plan on the calendar: the pinned week, comebacks and moves,
+    /// Puts the plan on the calendar: the pinned week and the agent's moves,
     /// minus anything undone. Without access the plan stays in the app.
     private func syncCalendar() {
         calendarAccess = calendarSync.access

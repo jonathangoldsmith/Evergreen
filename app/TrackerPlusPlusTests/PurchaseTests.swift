@@ -86,130 +86,109 @@ struct PurchaseTests {
         #expect(actions.first?.purchase?.status == .cancelled)
     }
 
-    // MARK: Day pass (Sam's rain)
+    // MARK: Day pass (rain on Jordan's run)
 
-    /// Sam's 6:30 PM comeback walk, booked after the missed lunch walk.
-    static let comeback = PlanItem(
-        id: "comeback-plan-walk",
-        slot: Slot(start: Fixture.at(18, 30), end: Fixture.at(18, 45), activityType: "Walking"),
-        points: StandInAgent.basePoints * 2,
-        source: .comeback
+    /// An evening run, the outdoor workout the rain lands on.
+    static let eveningRun = PlanItem(
+        id: "plan-run",
+        slot: Slot(start: Fixture.at(18, 30), end: Fixture.at(19, 15), activityType: "Running"),
+        points: StandInAgent.basePoints,
+        source: .plan
     )
 
-    static func sam(
+    static func rain(
         now: Date = Fixture.at(13, 30), inGym: Bool = false, actions: [AgentAction] = [], undone: [String] = [],
-        forecastClear: Bool = false, visits: [Visit] = [], verified: Bool = true, approved: [String] = []
+        approved: [String] = [], forecastClear: Bool = false, visits: [Visit] = []
     ) -> TickSnapshot {
-        var item = comeback
+        var item = eveningRun
         if inGym { item.slot.place = StandInAgent.gym }
         var snapshot = Fixture.snapshot(now: now, plan: [item], actions: actions, undoneActionIds: undone)
         snapshot.mandate = AppModel.mandate
+        snapshot.approvedPurchaseIds = approved
         snapshot.demo = DemoConditions(rainAt: Fixture.at(18, 30), forecastClear: forecastClear)
         snapshot.visits = visits
-        snapshot.identityVerified = verified
-        snapshot.approvedPurchaseIds = approved
         return snapshot
     }
 
-    private func boughtPass() async throws -> AgentAction {
-        try #require(try await agent.tick(Self.sam()).actions.first { $0.purchaseId != nil })
+    private func passOffer() async throws -> AgentAction {
+        try #require(try await agent.tick(Self.rain()).actions.first { $0.purchaseId != nil })
     }
 
-    @Test func rainBuysADayPassWithoutAsking() async throws {
-        let pass = try await boughtPass()
-
-        #expect(pass.kind == .purchase)
-        #expect(pass.purchase?.status == .bought)
-        #expect(pass.purchase?.amountCents == 1500)
-        #expect(pass.purchase?.rule.id == "day-pass")
-        #expect(pass.purchase?.cancelBy == Fixture.at(17, 30))
-        #expect(pass.planItemId == Self.comeback.id)
-        #expect(pass.after?.place == StandInAgent.gym)
-        #expect(pass.after?.start == Self.comeback.slot.start)
+    /// The offer, then "Buy it": both actions, as the phone would hold them.
+    private func boughtPass() async throws -> (offer: AgentAction, bought: AgentAction) {
+        let offer = try await passOffer()
+        let passId = try #require(offer.purchaseId)
+        let bought = try #require(purchaseActions(try await agent.tick(Self.rain(
+            now: Fixture.at(13, 35), actions: [offer], approved: [passId]
+        ))).first)
+        return (offer, bought)
     }
 
-    @Test func clearForecastMakesTheAgentCancelItsOwnPass() async throws {
-        let pass = try await boughtPass()
-        let actions = purchaseActions(try await agent.tick(Self.sam(
-            now: Fixture.at(13, 45), inGym: true, actions: [pass], forecastClear: true
+    @Test func rainOffersADayPassAndBuysNothingYet() async throws {
+        let offer = try await passOffer()
+
+        #expect(offer.kind == .purchase)
+        #expect(offer.purchase?.status == .awaitingApproval)
+        #expect(offer.purchase?.amountCents == 1500)
+        #expect(offer.purchase?.rule.id == "ask-first")
+        #expect(offer.purchase?.cancelBy == Fixture.at(17, 30))
+        #expect(offer.planItemId == Self.eveningRun.id)
+        // Nothing moves until the person says yes.
+        #expect(offer.after == nil)
+    }
+
+    @Test func notNowMeansNoPassAndNoSecondAsk() async throws {
+        let offer = try await passOffer()
+        let response = try await agent.tick(Self.rain(now: Fixture.at(14), undone: [offer.id]))
+
+        #expect(purchaseActions(response).isEmpty)
+    }
+
+    @Test func buyItBuysThePassAndMovesTheRunIndoors() async throws {
+        let (offer, bought) = try await boughtPass()
+
+        #expect(bought.id == "\(offer.id)-bought")
+        #expect(bought.purchase?.status == .bought)
+        #expect(bought.after?.place == StandInAgent.gym)
+        #expect(bought.after?.start == Self.eveningRun.slot.start)
+    }
+
+    @Test func clearForecastMakesTheAgentCancelThePass() async throws {
+        let (offer, bought) = try await boughtPass()
+        let passId = try #require(offer.purchaseId)
+        let actions = purchaseActions(try await agent.tick(Self.rain(
+            now: Fixture.at(13, 45), inGym: true, actions: [offer, bought], approved: [passId], forecastClear: true
         )))
 
-        #expect(actions.map(\.id) == ["\(pass.id)-cancel"])
+        #expect(actions.map(\.id) == ["\(offer.id)-cancel"])
         #expect(actions.first?.purchase?.status == .cancelled)
         #expect(actions.first?.purchase?.outcome == "$15 refunded")
         #expect(actions.first?.after?.place == nil)
     }
 
     @Test func undoBeforeTheDeadlineRefunds() async throws {
-        let pass = try await boughtPass()
-        // Undone actions aren't in the snapshot, and replay puts the walk back outside.
-        let actions = purchaseActions(try await agent.tick(Self.sam(now: Fixture.at(14), undone: [pass.id])))
+        let (offer, bought) = try await boughtPass()
+        let passId = try #require(offer.purchaseId)
+        // Undone actions aren't in the snapshot, and replay puts the run back outside.
+        let actions = purchaseActions(try await agent.tick(Self.rain(
+            now: Fixture.at(14), actions: [offer], undone: [bought.id], approved: [passId]
+        )))
 
-        #expect(actions.map(\.id) == ["\(pass.id)-cancel"])
+        #expect(actions.map(\.id) == ["\(offer.id)-cancel"])
         #expect(actions.first?.purchase?.status == .cancelled)
     }
 
     @Test func arrivingAtTheGymClosesTheTrail() async throws {
-        let pass = try await boughtPass()
-        let actions = purchaseActions(try await agent.tick(Self.sam(
-            now: Fixture.at(18, 45), inGym: true, actions: [pass],
+        let (offer, bought) = try await boughtPass()
+        let passId = try #require(offer.purchaseId)
+        let actions = purchaseActions(try await agent.tick(Self.rain(
+            now: Fixture.at(18, 45), inGym: true, actions: [offer, bought], approved: [passId],
             visits: [Visit(place: StandInAgent.gym, at: Fixture.at(18, 45))]
         )))
 
-        #expect(actions.map(\.id) == ["\(pass.id)-outcome"])
+        #expect(actions.map(\.id) == ["\(offer.id)-outcome"])
         #expect(actions.first?.kind == .purchaseOutcome)
         #expect(actions.first?.purchase?.outcome?.hasSuffix("pass used") == true)
-    }
-
-    // MARK: Day pass before identity verification (Persona)
-
-    static let askId = "pass-ask-\(comeback.id)-\(Int(Fixture.at(18, 30).timeIntervalSince1970))"
-
-    private func ask() async throws -> AgentAction {
-        try #require(try await agent.tick(Self.sam(verified: false)).actions.first { $0.purchaseId != nil })
-    }
-
-    @Test func unverifiedRainAsksFirstAndMovesNothing() async throws {
-        let ask = try await ask()
-
-        #expect(ask.id == "purchase-\(Self.askId)")
-        #expect(ask.purchase?.status == .awaitingApproval)
-        #expect(ask.purchase?.rule.id == "ask-first")
-        #expect(ask.purchase?.amountCents == 1500)
-        #expect(ask.after == nil)
-    }
-
-    @Test func orderItOnTheAskBuysAndMovesTheWalk() async throws {
-        let ask = try await ask()
-        let actions = purchaseActions(try await agent.tick(Self.sam(
-            now: Fixture.at(13, 40), actions: [ask], verified: true, approved: [Self.askId]
-        )))
-
-        #expect(actions.map(\.id) == ["purchase-\(Self.askId)-bought"])
-        #expect(actions.first?.purchase?.status == .bought)
-        #expect(actions.first?.after?.place == StandInAgent.gym)
-    }
-
-    @Test func notNowOnTheAskNeverBuysOrRefunds() async throws {
-        let ask = try await ask()
-        let actions = purchaseActions(try await agent.tick(Self.sam(
-            now: Fixture.at(13, 40), undone: [ask.id], verified: true
-        )))
-
-        #expect(actions.isEmpty)
-    }
-
-    @Test func cancelOrderOnAnApprovedPassRefunds() async throws {
-        let ask = try await ask()
-        let bought = try #require(purchaseActions(try await agent.tick(Self.sam(
-            now: Fixture.at(13, 40), actions: [ask], verified: true, approved: [Self.askId]
-        ))).first)
-        let actions = purchaseActions(try await agent.tick(Self.sam(
-            now: Fixture.at(14), inGym: false, actions: [ask], undone: [bought.id], verified: true, approved: [Self.askId]
-        )))
-
-        #expect(actions.map(\.id) == ["purchase-\(Self.askId)-cancel"])
-        #expect(actions.first?.purchase?.outcome == "$15 refunded")
     }
 
     // MARK: Regression guard (D6)

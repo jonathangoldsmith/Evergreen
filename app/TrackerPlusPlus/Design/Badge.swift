@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "2× comeback": accent outline, 8pt radius.
+/// "Moved": accent outline, 8pt radius.
 struct Badge: View {
     let text: String
 

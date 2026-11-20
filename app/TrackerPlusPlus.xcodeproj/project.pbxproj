@@ -7,9 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7A100000000000000000003D /* TrackerPlusPlusWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A1000000000000000000030 /* TrackerPlusPlusWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B8F1030630B0ECDB0058A375 /* AmplitudeSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030530B0ECDB0058A375 /* AmplitudeSwift */; };
-		B8F1030830B0ECF60058A375 /* TrackerPlusPlus.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */; };
 		B8F1030930B0ECF60058A375 /* TrackerPlusPlus.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */; };
 		B8F1030C30B0F1490058A375 /* PersonaInquirySDK2 in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */; };
 /* End PBXBuildFile section */
@@ -22,34 +20,12 @@
 			remoteGlobalIDString = 7A1000000000000000000006;
 			remoteInfo = TrackerPlusPlus;
 		};
-		7A100000000000000000003B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 7A100000000000000000000A /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 7A1000000000000000000036;
-			remoteInfo = TrackerPlusPlusWidgets;
-		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		7A100000000000000000003C /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				7A100000000000000000003D /* TrackerPlusPlusWidgets.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		7A1000000000000000000001 /* TrackerPlusPlus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrackerPlusPlus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A1000000000000000000010 /* TrackerPlusPlus.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TrackerPlusPlus.entitlements; sourceTree = "<group>"; };
 		7A1000000000000000000020 /* TrackerPlusPlusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackerPlusPlusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7A1000000000000000000030 /* TrackerPlusPlusWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TrackerPlusPlusWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = TrackerPlusPlus.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -62,16 +38,6 @@
 		7A1000000000000000000021 /* TrackerPlusPlusTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TrackerPlusPlusTests;
-			sourceTree = "<group>";
-		};
-		7A1000000000000000000031 /* Shared */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Shared;
-			sourceTree = "<group>";
-		};
-		7A1000000000000000000032 /* TrackerPlusPlusWidgets */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = TrackerPlusPlusWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -93,13 +59,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7A1000000000000000000033 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -108,8 +67,6 @@
 			children = (
 				7A1000000000000000000002 /* TrackerPlusPlus */,
 				7A1000000000000000000021 /* TrackerPlusPlusTests */,
-				7A1000000000000000000031 /* Shared */,
-				7A1000000000000000000032 /* TrackerPlusPlusWidgets */,
 				7A1000000000000000000010 /* TrackerPlusPlus.entitlements */,
 				B8F1030430B0ECDB0058A375 /* Frameworks */,
 				B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */,
@@ -122,7 +79,6 @@
 			children = (
 				7A1000000000000000000001 /* TrackerPlusPlus.app */,
 				7A1000000000000000000020 /* TrackerPlusPlusTests.xctest */,
-				7A1000000000000000000030 /* TrackerPlusPlusWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -144,16 +100,13 @@
 				7A1000000000000000000008 /* Sources */,
 				7A1000000000000000000003 /* Frameworks */,
 				7A1000000000000000000009 /* Resources */,
-				7A100000000000000000003C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				7A100000000000000000003A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7A1000000000000000000002 /* TrackerPlusPlus */,
-				7A1000000000000000000031 /* Shared */,
 			);
 			name = TrackerPlusPlus;
 			packageProductDependencies = (
@@ -187,29 +140,6 @@
 			productReference = 7A1000000000000000000020 /* TrackerPlusPlusTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		7A1000000000000000000036 /* TrackerPlusPlusWidgets */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 7A1000000000000000000037 /* Build configuration list for PBXNativeTarget "TrackerPlusPlusWidgets" */;
-			buildPhases = (
-				7A1000000000000000000034 /* Sources */,
-				7A1000000000000000000033 /* Frameworks */,
-				7A1000000000000000000035 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				7A1000000000000000000031 /* Shared */,
-				7A1000000000000000000032 /* TrackerPlusPlusWidgets */,
-			);
-			name = TrackerPlusPlusWidgets;
-			packageProductDependencies = (
-			);
-			productName = TrackerPlusPlusWidgets;
-			productReference = 7A1000000000000000000030 /* TrackerPlusPlusWidgets.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -226,9 +156,6 @@
 					7A1000000000000000000025 = {
 						CreatedOnToolsVersion = 27.0;
 						TestTargetID = 7A1000000000000000000006;
-					};
-					7A1000000000000000000036 = {
-						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -252,7 +179,6 @@
 			targets = (
 				7A1000000000000000000006 /* TrackerPlusPlus */,
 				7A1000000000000000000025 /* TrackerPlusPlusTests */,
-				7A1000000000000000000036 /* TrackerPlusPlusWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -273,14 +199,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7A1000000000000000000035 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B8F1030830B0ECF60058A375 /* TrackerPlusPlus.xcconfig in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -298,13 +216,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7A1000000000000000000034 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -312,11 +223,6 @@
 			isa = PBXTargetDependency;
 			target = 7A1000000000000000000006 /* TrackerPlusPlus */;
 			targetProxy = 7A1000000000000000000027 /* PBXContainerItemProxy */;
-		};
-		7A100000000000000000003A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 7A1000000000000000000036 /* TrackerPlusPlusWidgets */;
-			targetProxy = 7A100000000000000000003B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -373,11 +279,9 @@
 				DEVELOPMENT_TEAM = 88WYGUZU9A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Tracker++";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "I add workouts to my own TrackerPlusPlus calendar and move them when something else lands on top.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "I read your workouts to learn your normal. Nothing leaves your phone except summaries.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "I remind you about your workout when you get to the gym. Your location stays on your phone.";
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Evergreen;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "I put your workouts on an Evergreen calendar and move them when a meeting lands on top. Your events stay on your phone.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "I read your workouts, heart rate and effort to pick the right next workout. Nothing leaves your phone except summaries.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -405,11 +309,9 @@
 				DEVELOPMENT_TEAM = 88WYGUZU9A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Tracker++";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "I add workouts to my own TrackerPlusPlus calendar and move them when something else lands on top.";
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "I read your workouts to learn your normal. Nothing leaves your phone except summaries.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "I remind you about your workout when you get to the gym. Your location stays on your phone.";
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Evergreen;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "I put your workouts on an Evergreen calendar and move them when a meeting lands on top. Your events stay on your phone.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "I read your workouts, heart rate and effort to pick the right next workout. Nothing leaves your phone except summaries.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -468,58 +370,6 @@
 			};
 			name = Release;
 		};
-		7A1000000000000000000038 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 88WYGUZU9A;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "TrackerPlusPlusWidgets-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Tracker++";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.trackerplusplus.app.widgets;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Debug;
-		};
-		7A1000000000000000000039 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 88WYGUZU9A;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "TrackerPlusPlusWidgets-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Tracker++";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.trackerplusplus.app.widgets;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -546,15 +396,6 @@
 			buildConfigurations = (
 				7A1000000000000000000029 /* Debug */,
 				7A100000000000000000002A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		7A1000000000000000000037 /* Build configuration list for PBXNativeTarget "TrackerPlusPlusWidgets" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				7A1000000000000000000038 /* Debug */,
-				7A1000000000000000000039 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

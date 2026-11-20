@@ -41,16 +41,16 @@ struct MemoryEngineTests {
         return try #require(MemoryEngine(root: root, secret: "test-secret-0123456789abcdef"))
     }
 
-    static func sam(now: Date = Fixture.at(13, 30)) -> MemoryInput {
-        let person = Persona.load(.sam, storyDay: Fixture.storyDay, calendar: Fixture.calendar)
-        return MemoryInput(personaKey: "sam", historyStart: person.historyStart, now: now,
+    static func jordan(now: Date = Fixture.at(13, 30)) -> MemoryInput {
+        let person = Persona.load(.jordan, storyDay: Fixture.storyDay, calendar: Fixture.calendar)
+        return MemoryInput(personaKey: "jordan", historyStart: person.historyStart, now: now,
                            workouts: person.workouts, calendar: Fixture.calendar)
     }
 
     @Test func syncSendsWorkoutsAndTheRolledDayOnce() async throws {
         let engine = try Self.engine()
         let sink = RecordingSink()
-        let input = Self.sam()
+        let input = Self.jordan()
         let counted = input.workouts.filter { $0.minutes >= 10 }.count
 
         let first = await engine.sync(input, sink: sink)
@@ -61,7 +61,7 @@ struct MemoryEngineTests {
         #expect(types.filter { $0 == "memory_rolled" }.count == 1)
         #expect(first.sent == types.count)
 
-        let user = await engine.userId("sam")
+        let user = await engine.userId("jordan")
         let events = await sink.events
         #expect(events.allSatisfy { $0.user == user })
 
@@ -75,13 +75,13 @@ struct MemoryEngineTests {
         let engine = try Self.engine()
         let sink = RecordingSink(accept: false)
 
-        let refused = await engine.sync(Self.sam(), sink: sink)
+        let refused = await engine.sync(Self.jordan(), sink: sink)
         #expect(refused.sent == 0)
         #expect(refused.pending > 0)
         #expect(refused.problem != nil)
 
         await sink.setAccept(true)
-        let delivered = await engine.sync(Self.sam(), sink: sink)
+        let delivered = await engine.sync(Self.jordan(), sink: sink)
         #expect(delivered.pending == 0)
         #expect(delivered.sent > 0)
         #expect(await sink.types.contains("workout_completed"))
@@ -90,7 +90,7 @@ struct MemoryEngineTests {
     @Test func aLoggedWorkoutIsSentAfterTheFirstSync() async throws {
         let engine = try Self.engine()
         let sink = RecordingSink()
-        var input = Self.sam(now: Fixture.at(18, 50))
+        var input = Self.jordan(now: Fixture.at(18, 50))
         _ = await engine.sync(input, sink: sink)
         let before = await sink.events.count
 
@@ -109,7 +109,7 @@ struct MemoryEngineTests {
 
     @Test func withoutAKeyMemoryStillRollsAndNothingIsStaged() async throws {
         let engine = try Self.engine()
-        let report = await engine.sync(Self.sam(), sink: nil)
+        let report = await engine.sync(Self.jordan(), sink: nil)
         #expect(report.problem == nil)
         #expect(report.sent == 0)
         #expect(report.pending == 0)
