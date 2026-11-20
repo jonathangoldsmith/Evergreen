@@ -127,7 +127,7 @@ struct DemoSheet: View {
                 } header: {
                     Text("Amplitude")
                 } footer: {
-                    Text("Each tick rolls the person's memory and sends workout and memory events. Turn it on with an API key in iOS Settings → Tracker++. Ids are opaque; no names or health readings leave the phone.")
+                    Text("Each tick rolls the person's memory and hands workout and memory events to the Amplitude SDK; Order it sends Purchase Approved. The key comes from app/Secrets.xcconfig at build time. Ids are opaque; no names or health readings leave the phone.")
                 }
 
                 Section {
