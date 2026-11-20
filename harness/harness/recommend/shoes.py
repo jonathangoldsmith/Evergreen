@@ -1,0 +1,178 @@
+"""Shoe recommendation workflow.
+
+  ① fake data → ② profile + ③ wear (code) → ④ hard filters (code) + SIE rerank
+  → ⑤ SIE chat decides and explains (JSON schema) → ⑥ guardrails (code) → ⑦ Purchase
+
+Any SIE failure, timeout or guardrail failure falls back to the deterministic choice, so the
+route always answers within its budget."""
+from __future__ import annotations
+
+import concurrent.futures as cf
+import time
+from datetime import datetime, timedelta
+
+from harness import data
+from harness.clients import sie
+from harness.evidence import senso
+from harness.models import Evidence, Mandate, Option, Purchase, Rule, ShoesRequest, ShoesResponse
+from harness.recommend.condition import condition, profile
+
+BUDGET_S = 5.0           # whole route; the phone's RecommendClient waits 6 s
+BREAK_IN_DAYS = 3        # a new pair must arrive at least this long before race day
+RACE_WINDOW_DAYS = 14
+MERCHANT = "Demo store, no charge"
+_pool = cf.ThreadPoolExecutor(max_workers=4)
+
+RERANK_INSTRUCTION = "Given a runner's training profile and needs, score how well this running shoe fits them."
+
+
+def _money(cents: int) -> str:
+    return f"${cents / 100:.0f}"
+
+
+def _filter(shoes: list[dict], fit: dict, day: datetime, race: datetime) -> tuple[list[dict], list[dict]]:
+    """Hard rules stay in code. Returns (eligible, rejected with lostBecause)."""
+    latest = race - timedelta(days=BREAK_IN_DAYS)
+    ok, lost = [], []
+    for s in shoes:
+        arrives = day + timedelta(days=s["arrivesInDays"])
+        s = {**s, "arrives": arrives}
+        if fit.get("wideToeBox") and not s["wideToeBox"]:
+            s["lostBecause"] = "Narrow toe box (your fit notes say wide)"
+        elif fit.get("carbonPlate") is False and s["carbonPlate"]:
+            s["lostBecause"] = "Carbon plate (your fit notes say no plate)"
+        elif fit.get("surface") and s["surface"] != fit["surface"]:
+            s["lostBecause"] = f"Built for {s['surface']}; you run on {fit['surface']}"
+        elif arrives > latest:
+            days = (race.date() - arrives.date()).days
+            s["lostBecause"] = f"Arrives {arrives:%A}, {days} days before the race: no time to break in"
+        (lost if "lostBecause" in s else ok).append(s)
+    return ok, lost
+
+
+def _need(p, cond, fit, days_to_race) -> str:
+    return (f"Runner does {p.weeklyKm} km a week over {p.runsPerWeek} runs, longest run {p.longestRunKm} km, "
+            f"average pace {p.avgPaceMinPerKm} min/km, race in {days_to_race} days. Current pair at "
+            f"{cond.percentLife}% of its life. Fit notes: {fit.get('text')}")
+
+
+def _fallback_pick(eligible: list[dict], p) -> tuple[dict, dict[str, str]]:
+    """Deterministic: long runs ≥15 km want high cushion; then cheapest."""
+    want = "high" if p.longestRunKm >= 15 else None
+    pool = [s for s in eligible if s["cushion"] == want] or eligible
+    chosen = min(pool, key=lambda s: s["amountCents"])
+    lost = {}
+    for s in eligible:
+        if s is chosen:
+            continue
+        if want and s["cushion"] != want:
+            lost[s["id"]] = f"{s['cushion'].capitalize()} cushioning for {p.longestRunKm} km long runs"
+        else:
+            lost[s["id"]] = f"Costs more than {chosen['name']}"
+    return chosen, lost
+
+
+def _decide_schema(ids: list[str]) -> dict:
+    return {
+        "type": "object",
+        "properties": {
+            "chosenId": {"type": "string", "enum": ids},
+            "whyChosen": {"type": "string"},
+            "lost": {"type": "array", "items": {
+                "type": "object",
+                "properties": {"id": {"type": "string", "enum": ids}, "lostBecause": {"type": "string"}},
+                "required": ["id", "lostBecause"], "additionalProperties": False}},
+        },
+        "required": ["chosenId", "whyChosen", "lost"],
+        "additionalProperties": False,
+    }
+
+
+def _decide_prompt(need: str, eligible: list[dict], scores: dict[str, float]) -> str:
+    rows = "\n".join(
+        f"- id={s['id']} name={s['name']} price={_money(s['amountCents'])} cushion={s['cushion']} drop={s['dropMm']}mm "
+        f"life={s['lifeKm']}km arrives={s['arrives']:%a %b %d} fitScore={scores.get(s['id'], 0):.2f} :: {s['blurb']}"
+        for s in eligible)
+    return (
+        "You pick one replacement running shoe for a runner. Every shoe below already passed the hard rules "
+        "(fit notes, arrives in time to break in before the race). Choose the best fit for how they train; "
+        "prefer the cheaper shoe only when fit is about equal. For every other shoe give one short reason it "
+        "lost (under 12 words, factual, no second person pronoun except 'your'). whyChosen: one sentence under 25 words, speaking to the runner as 'your' (never 'the runner').\n\n"
+        f"Runner: {need}\n\nShoes:\n{rows}\n\nAnswer in JSON."
+    )
+
+
+def _guard(answer: dict, eligible: list[dict]) -> dict[str, str]:
+    """Reject anything off the shortlist, missing a reason, or too long. Returns {id: lostBecause}."""
+    ids = {s["id"] for s in eligible}
+    if answer.get("chosenId") not in ids:
+        raise ValueError("chosen shoe is not on the shortlist")
+    lost = {l["id"]: l["lostBecause"].strip() for l in answer.get("lost", []) if l.get("id") in ids}
+    lost.pop(answer["chosenId"], None)
+    if set(lost) != ids - {answer["chosenId"]}:
+        raise ValueError("a shortlisted shoe has no reason")
+    if any(not r or len(r) > 120 for r in lost.values()) or not 0 < len(answer.get("whyChosen", "")) <= 220:
+        raise ValueError("reason empty or too long")
+    return lost
+
+
+def recommend(req: ShoesRequest) -> ShoesResponse:
+    t0 = time.monotonic()
+    left = lambda: max(0.1, BUDGET_S - (time.monotonic() - t0))
+    now = req.now
+    ws = data.workouts(req.persona, now)
+    prof = profile(ws, now)
+    cond = condition(ws, req.shoes, now)
+    day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    race = datetime.combine(req.raceDate, datetime.min.time(), tzinfo=now.tzinfo)
+    days_to_race = (req.raceDate - now.date()).days
+
+    if cond.status != "replace" or not 0 <= days_to_race <= RACE_WINDOW_DAYS:
+        return ShoesResponse(condition=cond, profile=prof, purchase=None, live=False, source="fresh")
+
+    fit = data.fit_notes(req.persona)
+    eligible, rejected = _filter(data.catalog(), fit, day, race)
+    if not eligible:
+        return ShoesResponse(condition=cond, profile=prof, purchase=None, live=False, source="rules")
+    need = _need(prof, cond, fit, days_to_race)
+
+    # Evidence runs alongside the models.
+    ev_future = _pool.submit(senso.search, "shoes", f"replace running shoes mileage; {fit.get('text')}; arrives by {race:%b %d}")
+
+    source, why, lost_map = "rules", None, None
+    try:
+        scores = _pool.submit(sie.rerank, need, {s["id"]: f"{s['name']}: {s['blurb']}" for s in eligible},
+                              RERANK_INSTRUCTION).result(timeout=left())
+        answer = _pool.submit(sie.chat_json, _decide_prompt(need, eligible, scores), _decide_schema([s["id"] for s in eligible]),
+                              "shoe_pick").result(timeout=left())
+        lost_map = _guard(answer, eligible)
+        chosen = next(s for s in eligible if s["id"] == answer["chosenId"])
+        why, source = answer["whyChosen"].strip(), "sie"
+    except Exception:
+        chosen, lost_map = _fallback_pick(eligible, prof)
+
+    try:
+        evidence, ev_live = ev_future.result(timeout=left())
+    except Exception:
+        evidence, ev_live = [Evidence(**p) for p in data.passages("shoes")], False
+    evidence = evidence + [Evidence(source=f"{chosen['name']} listing",
+                                    passage=f"{chosen['blurb']} {_money(chosen['amountCents'])}. Arrives {chosen['arrives']:%a %b %d}. Free returns for 30 days.")]
+
+    rule = next((m for m in req.mandate if m.category == "any"), None) or Mandate(
+        id="ask-first", text="Ask me before buying anything.", category="any", maxAutoCents=0)
+    others = [s for s in eligible if s is not chosen]
+    options = [Option(name=chosen["name"], amountCents=chosen["amountCents"], arrives=chosen["arrives"])]
+    options += [Option(name=s["name"], amountCents=s["amountCents"], arrives=s["arrives"], lostBecause=lost_map[s["id"]]) for s in others]
+    options += [Option(name=s["name"], amountCents=s["amountCents"], arrives=s["arrives"], lostBecause=s["lostBecause"]) for s in rejected]
+
+    noticed = f"Your shoes hit {cond.miles} miles ({cond.percentLife}% of their life). Race day is in {days_to_race} days."
+    if why:
+        noticed += f" {why}"
+    purchase = Purchase(
+        id=f"shoes-{req.shoes.boughtOn.isoformat()}", item=chosen["name"], merchant=MERCHANT,
+        amountCents=chosen["amountCents"],
+        status="bought" if chosen["amountCents"] <= rule.maxAutoCents else "awaitingApproval",
+        rule=Rule(id=rule.id, text=rule.text), noticed=noticed,
+        evidence=evidence, evidenceLive=ev_live, options=options,
+    )
+    return ShoesResponse(condition=cond, profile=prof, purchase=purchase, live=source == "sie", source=source)

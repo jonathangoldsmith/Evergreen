@@ -1,0 +1,3 @@
+{"jordan": {"wideToeBox": true, "carbonPlate": false, "surface": "road", "text": "Wide toe box, no carbon plate."},
+ "alex":   {"wideToeBox": false, "carbonPlate": null, "surface": "road", "text": "Standard fit."},
+ "sam":    {"wideToeBox": false, "carbonPlate": false, "surface": "road", "text": "Standard fit, comfort first."}}
