@@ -14,10 +14,23 @@ final class AppModel {
     private(set) var response: TickResponse?
     private(set) var offline = false
     private(set) var agentName = ""
+    /// Whether the plan is also on the TrackerPlusPlus calendar.
+    private(set) var calendarAccess: CalendarAccess
     /// Set when a workout finishes a plan item; drives the Done sheet.
     var celebration: Completion?
 
     private let calendar = Calendar.current
+    @ObservationIgnored private let calendarSync = CalendarSync()
+
+    // Copied out of SwiftData on every save, so views depend on this class
+    // rather than on individual records. Without the copy, undoing a move
+    // changed the stored record but Today didn't redraw until the next reply
+    // from the agent differed from the last one.
+
+    /// Every applied action, oldest first, undone ones included.
+    private(set) var appliedActions: [AgentAction] = []
+    private(set) var undoneIds: Set<String> = []
+    private(set) var loggedWorkouts: [Workout] = []
     /// Counts ticks so only the newest one's answer is applied. Ticks overlap
     /// (a clock change right after a logged workout), and a slow harness reply
     /// to an older snapshot must not replace a newer one.
@@ -30,6 +43,7 @@ final class AppModel {
         let run = saved ?? Run(persona: .sam, storyDay: today)
         if saved == nil { context.insert(run) }
         self.run = run
+        calendarAccess = calendarSync.access
         persona = Persona.load(run.personaKey, storyDay: today)
         response = nil
         if run.storyDay != today {
@@ -89,13 +103,10 @@ final class AppModel {
     var todayPlan: [PlanItem] { plan.filter { calendar.isDate($0.slot.start, inSameDayAs: storyDay) } }
 
     var workouts: [Workout] {
-        persona.workouts + run.workouts.map(\.workout).sorted { $0.start < $1.start }
+        persona.workouts + loggedWorkouts
     }
 
     /// Every applied action, oldest first, undone ones included.
-    private var records: [ActionRecord] { run.actions.sorted { $0.sequence < $1.sequence } }
-    private var appliedActions: [AgentAction] { records.map(\.action) }
-    private var undoneIds: Set<String> { Set(run.actions.filter(\.undone).map(\.actionId)) }
 
     /// Newest first.
     var feed: [AgentAction] { appliedActions.reversed() }
@@ -143,7 +154,7 @@ final class AppModel {
             plan: plan,
             workouts: workouts,
             actions: appliedActions.filter { !isUndone($0) },
-            undoneActionIds: records.filter(\.undone).map(\.actionId)
+            undoneActionIds: appliedActions.map(\.id).filter(undoneIds.contains)
         )
         do {
             let response = try await agent.tick(snapshot)
@@ -192,6 +203,13 @@ final class AppModel {
         Task { await tick() }
     }
 
+    /// Onboarding's calendar step, and "Turn on Calendar" before anyone has
+    /// been asked. Puts the plan on the calendar if access is granted.
+    func requestCalendarAccess() async {
+        await calendarSync.requestAccess()
+        syncCalendar()
+    }
+
     func completeOnboarding() {
         run.onboarded = true
         save()
@@ -233,6 +251,7 @@ final class AppModel {
     /// Clears the run: actions, logged workouts, points and the clock. Calendar
     /// cleanup joins this when calendar writes land (P0b).
     func resetDemo() {
+        calendarSync.removeAllEvents(around: storyDay)
         switchPerson(to: persona.key)
     }
 
@@ -260,11 +279,36 @@ final class AppModel {
         response = nil
     }
 
+    /// Saves the run, refreshes what views read, then brings the
+    /// TrackerPlusPlus calendar in line with the plan. Every change to the run
+    /// goes through here.
     private func save() {
         do {
             try context.save()
         } catch {
             assertionFailure("Couldn't save the run: \(error)")
         }
+        refreshFromStore()
+        syncCalendar()
+    }
+
+    private func refreshFromStore() {
+        let records = run.actions.sorted { $0.sequence < $1.sequence }
+        appliedActions = records.map(\.action)
+        undoneIds = Set(records.filter(\.undone).map(\.actionId))
+        loggedWorkouts = run.workouts.map(\.workout).sorted { $0.start < $1.start }
+    }
+
+    /// Puts the plan on the calendar: the pinned week, comebacks and moves,
+    /// minus anything undone. Without access the plan stays in the app.
+    private func syncCalendar() {
+        calendarAccess = calendarSync.access
+        guard calendarAccess == .on else { return }
+        var reasons: [String: String] = [:]
+        for action in appliedActions where !isUndone(action) {
+            if let id = action.planItemId { reasons[id] = action.reason }
+        }
+        let entries = CalendarEntry.entries(for: plan, reasons: reasons, storyDay: storyDay, calendar: calendar)
+        calendarSync.sync(entries, from: storyDay)
     }
 }

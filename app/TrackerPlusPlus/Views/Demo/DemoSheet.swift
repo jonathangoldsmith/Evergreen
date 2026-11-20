@@ -69,7 +69,7 @@ struct DemoSheet: View {
                 Section {
                     Button("Reset demo", role: .destructive) { confirmReset = true }
                 } footer: {
-                    Text("Clears the agent's actions, logged workouts, points and the clock.")
+                    Text("Clears the agent's actions, logged workouts, points, the clock and the TrackerPlusPlus calendar.")
                 }
             }
             .navigationTitle("Demo")

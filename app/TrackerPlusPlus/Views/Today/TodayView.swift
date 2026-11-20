@@ -21,6 +21,9 @@ struct TodayView: View {
                         QuietState()
                     }
                     TodayPlanSection()
+                    if model.calendarAccess != .on {
+                        CalendarOffNotice()
+                    }
                     WeekLink()
                     Text("Using \(model.persona.name)'s demo data")
                         .font(.footnote)
