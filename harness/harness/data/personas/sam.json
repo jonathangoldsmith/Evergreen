@@ -1,0 +1,72 @@
+{
+ "persona": "sam",
+ "exportDate": "2026-11-18T07:30:00-08:00",
+ "race": null,
+ "workouts": [
+  {
+   "activityType": "Walking",
+   "start": "2026-10-24T10:13:50.216112-08:00",
+   "end": "2026-10-24T10:55:32.216112-08:00",
+   "durationMin": 41.71,
+   "indoor": false,
+   "distanceKm": 3.401,
+   "paceMinPerKm": 12.26,
+   "elevationAscendedM": 24.9
+  },
+  {
+   "activityType": "Elliptical",
+   "start": "2026-10-25T10:43:07.417562-08:00",
+   "end": "2026-10-25T11:09:35.417562-08:00",
+   "durationMin": 26.47,
+   "indoor": true
+  },
+  {
+   "activityType": "TraditionalStrengthTraining",
+   "start": "2026-10-29T18:04:00-08:00",
+   "end": "2026-10-29T18:42:39-08:00",
+   "durationMin": 38.66,
+   "indoor": true
+  },
+  {
+   "activityType": "Walking",
+   "start": "2026-11-01T10:43:15.297980-08:00",
+   "end": "2026-11-01T11:10:43.297980-08:00",
+   "durationMin": 27.47,
+   "indoor": false,
+   "distanceKm": 2.282,
+   "paceMinPerKm": 12.04,
+   "elevationAscendedM": 17.1
+  },
+  {
+   "activityType": "Walking",
+   "start": "2026-11-04T18:36:00-08:00",
+   "end": "2026-11-04T19:15:31-08:00",
+   "durationMin": 39.52,
+   "indoor": false,
+   "distanceKm": 3.099,
+   "paceMinPerKm": 12.75,
+   "elevationAscendedM": 32.1
+  },
+  {
+   "activityType": "Elliptical",
+   "start": "2026-11-07T10:31:16.531578-08:00",
+   "end": "2026-11-07T10:51:21.531578-08:00",
+   "durationMin": 20.09,
+   "indoor": true
+  },
+  {
+   "activityType": "Elliptical",
+   "start": "2026-11-12T18:36:00-08:00",
+   "end": "2026-11-12T19:01:02-08:00",
+   "durationMin": 25.04,
+   "indoor": true
+  },
+  {
+   "activityType": "TraditionalStrengthTraining",
+   "start": "2026-11-15T09:47:29.586999-08:00",
+   "end": "2026-11-15T10:14:41.586999-08:00",
+   "durationMin": 27.21,
+   "indoor": true
+  }
+ ]
+}
