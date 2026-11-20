@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// Words for an agent action: the five parts of design D9, in the calm tone of
-/// design D7 (no minus numbers, "No problem" at a miss).
+/// Words for an agent action: the parts of design D9, in the calm tone of
+/// design D7.
 enum ActionCopy {
     static func headline(_ action: AgentAction) -> String {
         switch action.kind {
         case .bookComeback: "Booked comeback"
-        case .move: "Moved"
-        case .shrink: "Shrunk"
+        case .move: "Saved your workout"
+        case .shrink: "Made it fit"
         case .addRoutine: "Added routine"
         case .note: action.title ?? "Noted"
         case .purchase: action.title ?? "Bought \(action.purchase?.item ?? "something")"
@@ -31,14 +31,11 @@ enum ActionCopy {
         }
     }
 
-    /// "Your 12:00 PM walk didn't happen. No problem." for a comeback, and
     /// "Something landed on tomorrow's 7:30 AM elliptical session." when the
     /// agent defends a slot (the person's own moves need no lead).
     static func lead(_ action: AgentAction, now: Date) -> String? {
         guard let before = action.before else { return nil }
         switch action.kind {
-        case .bookComeback:
-            return "Your \(before.start.clock) \(Activity.noun(before.activityType)) didn't happen. No problem."
         case .move where action.id.hasPrefix("defend-"), .shrink where action.id.hasPrefix("defend-"):
             return "Something landed on \(when(before.start, now: now))'s \(before.start.clock) \(Activity.noun(before.activityType))."
         default:
@@ -59,12 +56,6 @@ enum ActionCopy {
         default:
             nil
         }
-    }
-
-    /// Loss-framed points line: "Keep your 40 points: 15 minutes tonight."
-    static func keep(_ action: AgentAction, now: Date) -> String? {
-        guard action.kind == .bookComeback, let after = action.after, let points = action.points else { return nil }
-        return "Keep your \(points) points: \(after.minutes) minutes \(when(after.start, now: now))."
     }
 
     static func when(_ date: Date, now: Date) -> String {
@@ -89,7 +80,6 @@ enum ActionCopy {
         if let after = action.after {
             parts.append("\(after.start.clock), \(after.minutes) minutes")
         }
-        if action.kind == .bookComeback { parts.append("double points") }
         if let purchase = action.purchase, action.kind == .purchase {
             parts.append("\(purchase.item), \(money(purchase.amountCents)), \(purchase.merchant)")
         }
@@ -97,30 +87,90 @@ enum ActionCopy {
     }
 }
 
+// MARK: Moves
+
+extension ActionCopy {
+    /// "Thu 12:15 PM → Fri 12:15 PM", old time struck through; a shrink adds
+    /// the new length.
+    static func moveChange(_ action: AgentAction) -> Text? {
+        guard let before = action.before, let after = action.after else { return nil }
+        let old = dayClock(before.start)
+        var new = dayClock(after.start)
+        if after.minutes != before.minutes { new += ", \(after.minutes) min" }
+        return Text("\(Text(old).strikethrough().foregroundStyle(Theme.textMuted)) → \(Text(new).fontWeight(.semibold))")
+    }
+
+    /// "A new meeting overlaps your Thursday workout." when the agent defended
+    /// the slot; the agent's own reason otherwise.
+    static func moveReason(_ action: AgentAction) -> String {
+        guard action.id.hasPrefix("defend-"), let before = action.before else { return action.reason }
+        let day = before.start.formatted(.dateTime.weekday(.wide))
+        let next = action.after.map { " \($0.start.clock) is your next open time." } ?? ""
+        return "A meeting landed on your \(day) workout.\(next)"
+    }
+
+    /// "Still three this week. You're on track. · Demo Gym"
+    static func moveKeep(_ action: AgentAction, countWord: String) -> String {
+        ["Still \(countWord) this week. You’re on track.", action.after?.place].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    /// "Thu 12:15 PM"
+    static func dayClock(_ date: Date) -> String {
+        "\(date.formatted(.dateTime.weekday(.abbreviated))) \(date.clock)"
+    }
+}
+
 // MARK: Purchases
 
 extension ActionCopy {
-    /// Day passes are bought under the person's rule; everything else asks first.
-    static func boughtWithoutAsking(_ purchase: Purchase) -> Bool {
-        purchase.rule.id == "day-pass"
+    /// A gym day pass (rain), as opposed to new shoes.
+    static func isDayPass(_ purchase: Purchase) -> Bool {
+        purchase.id.hasPrefix("pass-")
     }
 
-    /// "$138 · asks first" or "$15 · under your $20 rule".
+    /// "$138 · you approved it" once bought, else "$138".
     static func ruleBadge(_ purchase: Purchase) -> String {
-        boughtWithoutAsking(purchase)
-            ? "\(money(purchase.amountCents)) · under your $20 rule"
-            : "\(money(purchase.amountCents)) · asks first"
+        purchase.status == .bought
+            ? "\(money(purchase.amountCents)) · you approved it"
+            : money(purchase.amountCents)
     }
 
-    /// Whether the person can still undo a pass the agent bought without asking.
+    /// Whether the person can still undo a day pass for free.
     static func canCancelFree(_ purchase: Purchase, now: Date) -> Bool {
-        guard boughtWithoutAsking(purchase), purchase.status == .bought, purchase.outcome == nil,
+        guard isDayPass(purchase), purchase.status == .bought, purchase.outcome == nil,
               let cancelBy = purchase.cancelBy else { return false }
         return now < cancelBy
     }
 
     static func whyLabel(_ purchase: Purchase) -> String {
-        boughtWithoutAsking(purchase) ? "Why" : "Why this pair"
+        isDayPass(purchase) ? "Why" : "Why this pair"
+    }
+
+    /// "~~Outside~~ → **Demo Gym**, Fri 6:00 PM", or back outside once cancelled.
+    static func passChange(_ slot: Slot, cancelled: Bool) -> Text {
+        let gym = StandInAgent.gym
+        let (from, to) = cancelled ? (gym, "Outside") : ("Outside", slot.place ?? gym)
+        return Text("\(Text(from).strikethrough().foregroundStyle(Theme.textMuted)) → \(Text(to).fontWeight(.semibold)), \(dayClock(slot.start))")
+    }
+
+    /// "$15 · under your $20 rule · cancel free until 5:00 PM"
+    static func passTerms(_ purchase: Purchase, now: Date) -> String {
+        var parts = [ruleBadge(purchase)]
+        if let cancelBy = purchase.cancelBy {
+            parts.append(now < cancelBy ? "cancel free until \(cancelBy.clock)" : "free cancel ended \(cancelBy.clock)")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// "**392 miles** on your current pair. That's a lot of running!"
+    static func shoesMilesText(_ purchase: Purchase) -> Text {
+        guard let miles = purchase.miles else { return Text("Your current pair has worked hard.") }
+        return Text("\(Text("\(miles) miles").fontWeight(.semibold)) on your current pair. That’s a lot of running!")
+    }
+
+    /// The same line for VoiceOver.
+    static func shoesMilesLine(_ purchase: Purchase) -> String {
+        purchase.miles.map { "\($0) miles on your current pair. That’s a lot of running!" } ?? "Your current pair has worked hard."
     }
 
     /// "Monday", when the chosen option arrives.
@@ -138,7 +188,7 @@ extension ActionCopy {
 
     /// The line under the change: what the purchase keeps possible.
     static func purchaseKeep(_ purchase: Purchase, breakInRuns: Int, now: Date) -> String? {
-        if boughtWithoutAsking(purchase), purchase.status == .bought {
+        if isDayPass(purchase), purchase.status == .bought {
             if let outcome = purchase.outcome { return outcome }
             guard let cancelBy = purchase.cancelBy else { return nil }
             return now < cancelBy ? "Cancel free until \(cancelBy.clock)." : "Free cancel ended \(cancelBy.clock)."

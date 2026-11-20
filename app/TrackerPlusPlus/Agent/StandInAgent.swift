@@ -1,14 +1,13 @@
 import Foundation
 
-/// Offline stand-in for the harness's `decide()`, so the miss loop runs on the
+/// Offline stand-in for the harness's `decide()`, so the agent runs on the
 /// phone before the harness is deployed (P0a, eng review D14) and with no network
 /// (one candidate answer to the open R2 question).
 ///
-/// It implements the P0 rules from the plan: normal and goal with the
-/// very-active cap, thin-history defaults (D8), duplicate merging (D9), misses,
-/// comebacks at 2× points and points from completions, plus slot defense (P1
-/// item 8, in StandInAgent+SlotDefense.swift). Routines and the load guardrail
-/// stay with the harness. When the two disagree, the harness wins.
+/// It implements the demo's rules: normal and goal with the very-active cap,
+/// thin-history defaults (D8), duplicate merging (D9), completions, slot
+/// defense (StandInAgent+SlotDefense.swift) and purchases
+/// (StandInAgent+Purchases.swift). When the two disagree, the harness wins.
 struct StandInAgent: Agent {
     var name: String { "Offline stand-in" }
     /// Where live Senso evidence comes from; nil uses the bundled passages.
@@ -65,13 +64,6 @@ struct StandInAgent: Agent {
             ))
         }
 
-        // Misses: the window ended (plus grace) after the plan was made, with no workout.
-        let missed = plan.filter {
-            !done.contains($0.id)
-                && $0.slot.end.addingTimeInterval(Self.grace) <= s.now
-                && $0.slot.end > s.planCreatedAt
-        }
-
         var actions: [AgentAction] = []
         let known = Set(s.actions.map(\.id)).union(s.undoneActionIds)
 
@@ -84,33 +76,6 @@ struct StandInAgent: Agent {
         }
 
         var booked = plan
-        for item in missed {
-            if item.source == .comeback {
-                // State table: an also-missed comeback gets no new card, only a feed note.
-                let id = "note-missed-\(item.id)"
-                if !known.contains(id) {
-                    actions.append(AgentAction(
-                        id: id, kind: .note, title: "Comeback skipped", planItemId: item.id,
-                        before: item.slot,
-                        reason: "That's fine. Your next workout stays as planned.",
-                        createdAt: s.now
-                    ))
-                }
-                continue
-            }
-            let id = "comeback-\(item.id)"
-            guard !known.contains(id),
-                  let slot = comebackSlot(for: item, history: history, booked: booked, busy: s.busy, now: s.now, cal: cal)
-            else { continue }
-            let points = item.points * 2
-            booked.append(PlanItem(id: id, slot: slot, points: points, source: .comeback))
-            actions.append(AgentAction(
-                id: id, kind: .bookComeback, planItemId: id,
-                before: item.slot, after: slot,
-                reason: "Shorter sessions are easier to finish after a miss, and you usually work out around \(slot.start.formatted(date: .omitted, time: .shortened)).",
-                points: points, createdAt: s.now
-            ))
-        }
 
         // Slot defense: an upcoming workout a busy time landed on moves before
         // it can be missed. One action per workout and conflict, so an undone
@@ -150,46 +115,6 @@ struct StandInAgent: Agent {
             weekDone: weekDone,
             normal: normal
         )
-    }
-
-    /// About 60% of the person's median workout, rounded to 5 minutes, in their
-    /// usual evening slot if it's still free today, otherwise the next free half
-    /// hour before 9 PM, otherwise tomorrow at the usual time.
-    private func comebackSlot(
-        for item: PlanItem, history: [Workout], booked: [PlanItem], busy: [Busy], now: Date, cal: Calendar
-    ) -> Slot? {
-        let lengths = history.map(\.minutes).sorted()
-        let median = lengths.isEmpty ? 25 : lengths[lengths.count / 2]
-        let minutes = max(10, Int((median * 0.6 / 5).rounded()) * 5)
-
-        let eveningStarts = history
-            .map { cal.component(.hour, from: $0.start) * 60 + cal.component(.minute, from: $0.start) }
-            .filter { $0 >= 15 * 60 }
-            .sorted()
-        let usual = eveningStarts.isEmpty ? 18 * 60 + 30 : eveningStarts[eveningStarts.count / 2]
-        let preferred = Int((Double(usual) / 30).rounded()) * 30
-
-        let today = cal.startOfDay(for: now)
-        let earliest = now.addingTimeInterval(30 * 60)
-        func slot(on day: Date, at minuteOfDay: Int) -> Slot {
-            let start = cal.date(byAdding: .minute, value: minuteOfDay, to: day)!
-            return Slot(start: start, end: start.addingTimeInterval(Double(minutes) * 60),
-                        activityType: item.slot.activityType)
-        }
-        func free(_ candidate: Slot) -> Bool {
-            candidate.start >= earliest
-                && !booked.contains { $0.slot.start < candidate.end && $0.slot.end > candidate.start }
-                && !busy.contains { $0.start < candidate.end && $0.end > candidate.start }
-        }
-
-        let preferredToday = slot(on: today, at: preferred)
-        if free(preferredToday) { return preferredToday }
-        for minuteOfDay in stride(from: 6 * 60, through: 21 * 60, by: 30) {
-            let candidate = slot(on: today, at: minuteOfDay)
-            if free(candidate) { return candidate }
-        }
-        let tomorrow = cal.date(byAdding: .day, value: 1, to: today)!
-        return slot(on: tomorrow, at: preferred)
     }
 
     /// Same-type workouts overlapping by more than half of the shorter one count

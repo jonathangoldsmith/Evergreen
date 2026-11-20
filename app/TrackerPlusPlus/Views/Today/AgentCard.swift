@@ -1,6 +1,8 @@
 import SwiftUI
 
 /// The one card in the app (design D8): the agent's latest action on Today.
+/// Headline (accent, agent face) · before → after · why · what it keeps ·
+/// Undo + Pick another time.
 struct AgentCard: View {
     let action: AgentAction
 
@@ -18,57 +20,51 @@ struct AgentCard: View {
         item.flatMap { model.completion(for: $0) }
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label {
-                Text(ActionCopy.headline(action))
-                    .agentFont(22, relativeTo: .title2)
-            } icon: {
-                Image(systemName: ActionCopy.symbol(action))
-            }
-            .foregroundStyle(Theme.accent)
+    private var isMove: Bool { action.kind == .move || action.kind == .shrink }
 
-            if let lead = ActionCopy.lead(action, now: model.now) {
-                Text(lead).font(.body).foregroundStyle(Theme.text)
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.sm) {
+            Text(ActionCopy.headline(action))
+                .agentFont(24, relativeTo: .title2)
+                .foregroundStyle(Theme.accent)
+
+            if isMove {
+                if let change = ActionCopy.moveChange(action) {
+                    change.font(.body).foregroundStyle(Theme.text)
+                }
+                Text(ActionCopy.moveReason(action)).font(.body).foregroundStyle(Theme.text)
+                Text(ActionCopy.moveKeep(action, countWord: model.planCountWord))
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textMuted)
+            } else {
+                if let lead = ActionCopy.lead(action, now: model.now) {
+                    Text(lead).font(.body).foregroundStyle(Theme.text)
+                }
+                if let change = ActionCopy.beforeAfter(action) {
+                    change.font(.body).foregroundStyle(Theme.text)
+                }
+                Text(action.reason)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textMuted)
             }
-            if let change = ActionCopy.beforeAfter(action) {
-                change.font(.body).foregroundStyle(Theme.text)
-            }
-            if action.kind == .bookComeback {
-                Badge(text: "2× comeback")
-            }
-            if let finished {
-                Label("Done: \(finished.points) points earned.", systemImage: "checkmark.circle.fill")
+
+            if finished != nil {
+                Label("Done.", systemImage: "checkmark.circle.fill")
                     .font(.body.weight(.medium))
                     .foregroundStyle(Theme.success)
-            } else if let keep = ActionCopy.keep(action, now: model.now) {
-                Text(keep).font(.body.weight(.medium)).foregroundStyle(Theme.text)
             }
-            Text(action.reason)
-                .font(.footnote)
-                .foregroundStyle(Theme.textMuted)
-            Text(action.createdAt.clock)
-                .font(.footnote.monospacedDigit())
-                .foregroundStyle(Theme.textMuted)
 
             if action.kind != .note && finished == nil {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: Theme.sm) { buttons }
                     VStack(spacing: Theme.sm) { buttons }
                 }
-                .padding(.top, Theme.xs)
+                .padding(.top, Theme.sm)
             }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous))
-        .overlay {
-            if colorScheme == .dark {
-                RoundedRectangle(cornerRadius: Theme.radiusCard, style: .continuous)
-                    .strokeBorder(Theme.rule, lineWidth: 1)
-            }
-        }
-        .shadow(color: .black.opacity(colorScheme == .dark ? 0 : 0.06), radius: 4, y: 2)
+        .agentCardBackground(colorScheme)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(ActionCopy.spoken(action))
         .accessibilityActions {

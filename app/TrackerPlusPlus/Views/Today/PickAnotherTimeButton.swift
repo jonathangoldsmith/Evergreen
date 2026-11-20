@@ -1,29 +1,50 @@
 import SwiftUI
 
-/// "Pick another time" on the agent card, with its choices attached to the
+/// "Pick another time" on the Moved card, with its choices attached to the
 /// button so the dialog presents from it. The card's VoiceOver action opens it
 /// through the same binding.
 struct PickAnotherTimeButton: View {
     let item: PlanItem
     @Binding var isPresented: Bool
 
-    @Environment(AppModel.self) private var model
-
     var body: some View {
         Button("Pick another time", action: open)
             .buttonStyle(GhostButtonStyle())
-            .confirmationDialog("Pick another time", isPresented: $isPresented, titleVisibility: .visible) {
-                ForEach(alternatives, id: \.self) { start in
-                    Button(label(for: start)) { model.move(item, to: start) }
-                }
-            }
+            .pickAnotherTime(for: item, isPresented: $isPresented)
     }
 
     private func open() {
         isPresented = true
     }
+}
 
-    /// An hour earlier, an hour or two later, or tomorrow at the same time.
+extension View {
+    /// The "Pick another time" choices for a workout: an hour earlier, an hour
+    /// or two later, or tomorrow at the same time.
+    func pickAnotherTime(for item: PlanItem, isPresented: Binding<Bool>) -> some View {
+        modifier(PickAnotherTime(item: item, isPresented: isPresented))
+    }
+}
+
+private struct PickAnotherTime: ViewModifier {
+    let item: PlanItem
+    @Binding var isPresented: Bool
+
+    @Environment(AppModel.self) private var model
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog(title, isPresented: $isPresented, titleVisibility: .visible) {
+            ForEach(alternatives, id: \.self) { start in
+                Button(label(for: start)) { model.move(item, to: start) }
+            }
+        }
+    }
+
+    /// "Move Saturday's run"
+    private var title: String {
+        "Move \(item.slot.start.formatted(.dateTime.weekday(.wide)))’s \(Activity.noun(item.slot.activityType))"
+    }
+
     private var alternatives: [Date] {
         let calendar = Calendar.current
         let start = item.slot.start

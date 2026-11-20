@@ -110,13 +110,4 @@ struct SlotDefenseTests {
         #expect(response.actions.isEmpty)
     }
 
-    @Test func comebacksAvoidBusyTimes() async throws {
-        let evening = Fixture.busy(Fixture.at(18), Fixture.at(20))
-        let response = try await agent.tick(Fixture.snapshot(
-            now: Fixture.at(13, 30), plan: [Fixture.lunchWalk], busy: [evening]
-        ))
-
-        let comeback = try #require(response.actions.first { $0.kind == .bookComeback }?.after)
-        #expect(comeback.end <= evening.start || comeback.start >= evening.end)
-    }
 }

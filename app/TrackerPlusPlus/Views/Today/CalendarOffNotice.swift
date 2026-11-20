@@ -8,10 +8,10 @@ struct CalendarOffNotice: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.sm) {
-            Label("Your plan is only in the app", systemImage: "calendar.badge.exclamationmark")
+            Label("Your plan lives in the app for now", systemImage: "calendar.badge.exclamationmark")
                 .font(.headline)
                 .foregroundStyle(Theme.text)
-            Text("Turn on Calendar and I'll keep your workouts on a TrackerPlusPlus calendar.")
+            Text("Turn on Calendar and I'll put your workouts on an Evergreen calendar, then guard them from meetings.")
                 .font(.body)
                 .foregroundStyle(Theme.textMuted)
             Button("Turn on Calendar", action: turnOn)

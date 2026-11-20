@@ -125,6 +125,8 @@ struct Purchase: Codable, Hashable {
     /// The free-cancel deadline for purchases made without asking.
     var cancelBy: Date?
     var outcome: String?
+    /// Miles on the pair being replaced, for a shoes purchase.
+    var miles: Int?
 }
 
 /// One line of the person's standing spending rule.

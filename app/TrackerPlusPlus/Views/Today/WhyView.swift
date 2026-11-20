@@ -8,6 +8,7 @@ struct WhyView: View {
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @State private var showCheckout = false
 
     var body: some View {
         NavigationStack {
@@ -25,6 +26,15 @@ struct WhyView: View {
                     .padding(.vertical, Theme.lg)
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                if purchase?.status == .awaitingApproval, let purchase, !ActionCopy.isDayPass(purchase) {
+                    Button("Order it") { showCheckout = true }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(Theme.md)
+                    .background(Theme.surface)
+                }
+            }
+            .sheet(isPresented: $showCheckout, onDismiss: closeIfOrdered) { ShoeCheckout(purchaseId: purchaseId) }
             .background(Theme.surface)
             .navigationTitle((purchase ?? firstPurchase).map(ActionCopy.whyLabel) ?? "Why")
             .navigationBarTitleDisplayMode(.inline)
@@ -37,6 +47,11 @@ struct WhyView: View {
     }
 
     private var purchase: Purchase? { model.purchaseState(purchaseId) }
+
+    /// Back on Today once the order is placed.
+    private func closeIfOrdered() {
+        if purchase?.status == .bought { dismiss() }
+    }
 
     /// The ask itself, so a declined purchase ("Not now") keeps its trail.
     private var firstPurchase: Purchase? {
@@ -109,13 +124,15 @@ struct WhyView: View {
     private func didText(_ purchase: Purchase) -> String {
         switch purchase.status {
         case .awaitingApproval:
-            "Order it from the demo store (no charge), then add 2 break-in runs before race day."
+            ActionCopy.isDayPass(purchase)
+                ? "Buy a \(purchase.item) (demo, no charge) once you say yes, and move your workout there."
+                : "Order it from the demo store (no charge), then add 2 break-in runs before race day."
         case .bought:
-            ActionCopy.boughtWithoutAsking(purchase)
-                ? "Bought a \(purchase.item) (demo, no charge) under your rule and moved your workout there."
+            ActionCopy.isDayPass(purchase)
+                ? "Bought a \(purchase.item) (demo, no charge) after you said yes, and moved your workout there."
                 : "Ordered from the demo store, no charge."
         case .cancelled:
-            ActionCopy.boughtWithoutAsking(purchase)
+            ActionCopy.isDayPass(purchase)
                 ? "Cancelled the pass and moved your workout back."
                 : "Cancelled the order."
         }
@@ -127,7 +144,7 @@ struct WhyView: View {
         switch purchase.status {
         case .awaitingApproval: return declined ? "You said not now." : "Waiting for you."
         case .bought:
-            if ActionCopy.boughtWithoutAsking(purchase) {
+            if ActionCopy.isDayPass(purchase) {
                 return ActionCopy.purchaseKeep(purchase, breakInRuns: 0, now: model.now) ?? "Bought."
             }
             return ActionCopy.arrivalDay(purchase).map { "Arrives \($0)." } ?? "Ordered."

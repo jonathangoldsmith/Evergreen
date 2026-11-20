@@ -1,19 +1,14 @@
-import CoreLocation
 import UserNotifications
 import os
 
-/// Local notifications; there's no push backend yet. Three kinds of trigger:
-/// a calendar time (the reminder before each workout), a timer (the demo's
-/// "send a test notification"), and a place (arriving at or leaving the gym).
-/// Mock pushes in app/MockPushes go through the same delegate.
+/// Local notifications; there's no push backend yet: a reminder before each
+/// workout. Mock pushes in app/MockPushes go through the same delegate.
 @MainActor
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let reminderLead: TimeInterval = 30 * 60
-    private static let gymAlertsKey = "gym_alerts"
     private static let log = Logger(subsystem: "com.trackerplusplus.app", category: "notifications")
 
     private let center = UNUserNotificationCenter.current()
-    private let location = LocationPermission()
     private(set) var access: NotificationAccess = .notAsked
 
     /// Called when someone taps a notification, so the app can look again.
@@ -22,10 +17,6 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     override init() {
         super.init()
         center.delegate = self
-    }
-
-    var gymAlertsOn: Bool {
-        UserDefaults.standard.bool(forKey: Self.gymAlertsKey) && location.isAuthorized
     }
 
     // MARK: Access
@@ -68,60 +59,13 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    // MARK: Timer trigger: test notification
+    // MARK: Now
 
-    /// Demo control: what the agent last did, as a notification in a few
-    /// seconds, so the presenter can lock the phone first.
-    func sendTestNotification(for action: AgentAction?, fallback: PlanItem?, now: Date, after seconds: TimeInterval) async {
-        let copy = action.map { NotificationCopy.action($0, now: now) }
-            ?? fallback.map(NotificationCopy.reminder)
-            ?? ("TrackerPlusPlus", "This is a test notification.")
-        await add("test-\(UUID().uuidString)", copy,
-                  trigger: UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false))
-    }
-
-    // MARK: Location trigger: gym arrival and departure
-
-    /// Turns on gym alerts: asks for location the first time, then watches the
-    /// demo gym. Returns whether they're on.
-    @discardableResult
-    func enableGymAlerts(next: PlanItem?) async -> Bool {
-        guard await location.request() else { return false }
-        UserDefaults.standard.set(true, forKey: Self.gymAlertsKey)
-        await scheduleGymAlerts(next: next)
-        return true
-    }
-
-    /// Demo control: the arrival or departure notification in 3 seconds. The
-    /// iOS 27 simulator doesn't fire location triggers ("Couldn't get fences"
-    /// in locationd), so this is how the demo shows them; a phone uses the
-    /// real geofence above.
-    func sendGymNotification(arriving: Bool, next: PlanItem?) async {
-        let copy = arriving ? NotificationCopy.gymArrival(next: next) : NotificationCopy.gymExit
-        await add("gym-demo-\(UUID().uuidString)", copy,
-                  trigger: UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false))
-    }
-
-    func disableGymAlerts() {
-        UserDefaults.standard.set(false, forKey: Self.gymAlertsKey)
-        center.removePendingNotificationRequests(withIdentifiers: ["gym-arrive", "gym-leave"])
-    }
-
-    /// Re-adds both geofences so the arrival line names the current next workout.
-    func scheduleGymAlerts(next: PlanItem?) async {
-        guard gymAlertsOn, access == .on else { return }
-        await add("gym-arrive", NotificationCopy.gymArrival(next: next), trigger: gymTrigger(entry: true))
-        await add("gym-leave", NotificationCopy.gymExit, trigger: gymTrigger(entry: false))
-        let pending = await center.pendingNotificationRequests().count
-        Self.log.info("Scheduled gym alerts; \(pending) notifications pending")
-    }
-
-    private func gymTrigger(entry: Bool) -> UNLocationNotificationTrigger {
-        let region = CLCircularRegion(center: Gym.center, radius: Gym.radius,
-                                      identifier: entry ? "gym-arrive" : "gym-leave")
-        region.notifyOnEntry = entry
-        region.notifyOnExit = !entry
-        return UNLocationNotificationTrigger(region: region, repeats: true)
+    /// A notification right away, such as "I moved your run". It shows as a
+    /// banner even with the app open.
+    func send(_ copy: (title: String, body: String), id: String) async {
+        guard access == .on else { return }
+        await add("now-\(id)", copy, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false))
     }
 
     // MARK: Shared

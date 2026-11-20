@@ -7,7 +7,7 @@ import os
 /// events that carry the app's URL key, and never the person's other calendars.
 @MainActor
 final class CalendarSync {
-    static let calendarTitle = "TrackerPlusPlus"
+    static let calendarTitle = "Evergreen"
     /// How far ahead a sync looks. The pinned plan covers the story week.
     private static let window = 21
 
@@ -129,6 +129,7 @@ final class CalendarSync {
     }
 
     static let testMeetingScheme = "trackerplusplus-demo"
+    static let testMeetingTitle = "Team sync"
 
     /// Demo control (demo script step 3): puts a "Team sync" on the person's own
     /// calendar, the way a real meeting would land on a workout. Reset demo
@@ -142,7 +143,7 @@ final class CalendarSync {
         guard let calendar else { return false }
         let meeting = EKEvent(eventStore: store)
         meeting.calendar = calendar
-        meeting.title = "Team sync"
+        meeting.title = Self.testMeetingTitle
         meeting.startDate = start
         meeting.endDate = end
         meeting.url = URL(string: "\(Self.testMeetingScheme)://test-meeting")
@@ -179,7 +180,7 @@ final class CalendarSync {
         // DESIGN.md accent, light mode.
         calendar.cgColor = CGColor(srgbRed: 0x1F / 255, green: 0x6F / 255, blue: 0x5C / 255, alpha: 1)
         try store.saveCalendar(calendar, commit: true)
-        Self.log.info("Created the TrackerPlusPlus calendar on \(source.title)")
+        Self.log.info("Created the Evergreen calendar on \(source.title)")
         return calendar
     }
 

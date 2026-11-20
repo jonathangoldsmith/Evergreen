@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Onboarding until it's done, then Today, with the Done sheet and the demo
-/// controls on top.
+/// Onboarding until it's done, then Today, with the demo controls on top.
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
@@ -18,7 +17,6 @@ struct RootView: View {
                 OnboardingView()
             }
         }
-        .sheet(item: $model.celebration, content: DoneSheet.init)
         .overlay(alignment: .bottomTrailing) {
             if demoEnabled && model.onboarded {
                 DemoButton(action: openDemo)

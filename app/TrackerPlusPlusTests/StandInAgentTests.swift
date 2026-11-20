@@ -49,77 +49,25 @@ struct StandInAgentTests {
         #expect(response.weekDone == 1)
     }
 
-    // MARK: Misses and comebacks
+    // MARK: Misses and completions
 
-    @Test func missedWalkBooksAShorterDoublePointsComeback() async throws {
+    @Test func aMissedWorkoutGetsNoAction() async throws {
         let response = try await agent.tick(Fixture.snapshot(now: Fixture.at(13, 30), plan: [Fixture.lunchWalk]))
 
-        let comeback = try #require(response.actions.first)
-        #expect(response.actions.count == 1)
-        #expect(comeback.id == "comeback-plan-walk")
-        #expect(comeback.kind == .bookComeback)
-        #expect(comeback.before == Fixture.lunchWalk.slot)
-        // 60% of the 25-minute median, at the usual 7 PM.
-        #expect(comeback.after == Slot(start: Fixture.at(19), end: Fixture.at(19, 15), activityType: "Walking"))
-        #expect(comeback.points == 40)
-    }
-
-    @Test func noMissInsideTheGracePeriod() async throws {
-        // The walk ended at 12:30; it counts as missed from 1:00.
-        let response = try await agent.tick(Fixture.snapshot(now: Fixture.at(12, 50), plan: [Fixture.lunchWalk]))
-
         #expect(response.actions.isEmpty)
+        #expect(response.completions.isEmpty)
     }
 
-    @Test func aComebackIsBookedOnce() async throws {
-        let first = try await agent.tick(Fixture.snapshot(now: Fixture.at(13, 30), plan: [Fixture.lunchWalk]))
-        let again = try await agent.tick(
-            Fixture.snapshot(now: Fixture.at(14), plan: [Fixture.lunchWalk], actions: first.actions)
-        )
-
-        #expect(again.actions.isEmpty)
-    }
-
-    @Test func anUndoneComebackIsntBookedAgain() async throws {
-        let response = try await agent.tick(Fixture.snapshot(
-            now: Fixture.at(14), plan: [Fixture.lunchWalk], undoneActionIds: ["comeback-plan-walk"]
-        ))
-
-        #expect(response.actions.isEmpty)
-    }
-
-    @Test func aMissedComebackOnlyGetsANote() async throws {
-        let booked = try await agent.tick(Fixture.snapshot(now: Fixture.at(13, 30), plan: [Fixture.lunchWalk]))
-        let comeback = try #require(booked.actions.first)
-        let comebackItem = PlanItem(id: comeback.id, slot: try #require(comeback.after), points: 40, source: .comeback)
+    @Test func finishingAPlannedWorkoutCompletesIt() async throws {
+        let walk = Fixture.workout("demo-walk", at: Fixture.at(12), minutes: 30, source: .demo)
 
         let response = try await agent.tick(Fixture.snapshot(
-            now: Fixture.at(20), plan: [Fixture.lunchWalk, comebackItem], actions: booked.actions
-        ))
-
-        #expect(response.actions.map(\.id) == ["note-missed-comeback-plan-walk"])
-        #expect(response.actions.first?.kind == .note)
-    }
-
-    // MARK: Completions and points
-
-    @Test func finishingTheComebackEarnsDoublePoints() async throws {
-        let booked = try await agent.tick(Fixture.snapshot(now: Fixture.at(13, 30), plan: [Fixture.lunchWalk]))
-        let comeback = try #require(booked.actions.first)
-        let comebackItem = PlanItem(id: comeback.id, slot: try #require(comeback.after), points: 40, source: .comeback)
-        let walk = Fixture.workout("demo-walk", at: Fixture.at(19), minutes: 15, source: .demo)
-
-        let response = try await agent.tick(Fixture.snapshot(
-            now: Fixture.at(19, 20),
-            plan: [Fixture.lunchWalk, comebackItem],
-            workouts: Fixture.samHistory + [walk],
-            actions: booked.actions
+            now: Fixture.at(12, 40), plan: [Fixture.lunchWalk], workouts: Fixture.samHistory + [walk]
         ))
 
         #expect(response.completions == [
-            Completion(planItemId: "comeback-plan-walk", workoutId: "demo-walk", points: 40, comeback: true),
+            Completion(planItemId: Fixture.lunchWalk.id, workoutId: "demo-walk", points: Fixture.lunchWalk.points, comeback: false),
         ])
-        #expect(response.pointsTotal == 40)
         #expect(response.weekDone == 2)
     }
 
