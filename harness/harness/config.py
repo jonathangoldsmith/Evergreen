@@ -1,4 +1,4 @@
-"""Settings from the environment, or the repo-root .env (git-ignored). Values are never logged."""
+"""Settings from the environment, or harness/.env (git-ignored). Values are never logged."""
 from __future__ import annotations
 
 import os

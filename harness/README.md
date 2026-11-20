@@ -4,7 +4,7 @@ The stateless backend that recommends running shoes from the fake persona data. 
 
 ## Run
 
-Needs [uv](https://docs.astral.sh/uv/). Keys go in the repo-root `.env` (git-ignored): `SUPERLINKED_API_KEY` (or `SIE_API_KEY`), and optionally `SENSO_API_KEY` and `HARNESS_SECRET`.
+Needs [uv](https://docs.astral.sh/uv/). Keys go in `harness/.env` (git-ignored by `harness/.gitignore`): `SUPERLINKED_API_KEY` (or `SIE_API_KEY`), and optionally `SENSO_API_KEY` and `HARNESS_SECRET`.
 
 ```sh
 cd harness
