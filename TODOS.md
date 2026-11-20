@@ -15,5 +15,5 @@
 - **Why:** D2 cut it to protect calendar sync on demo day; today the moved event keeps "Walk" with no location.
 - **Pros:** The Calendar app matches the agent's move exactly.
 - **Cons:** Touches calendar diffing (9 tests).
-- **Context:** `app/TrackerPlusPlus/CalendarSync/CalendarEntry.swift`, `CalendarSync.swift`.
+- **Context:** `app/Evergreen/CalendarSync/CalendarEntry.swift`, `CalendarSync.swift`.
 - **Depends on / blocked by:** `Slot.place` landing with the shopping beat.

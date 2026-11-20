@@ -131,9 +131,9 @@ def test_audit_routes_off_without_url(monkeypatch):
 
 
 def test_connect_args_handles_special_password_characters():
-    a = store.connect_args("singlestoredb://admin:p@ss:w,rd/#1?x@svc-abc.aws.singlestore.com:3306/trackerplusplus?ssl=true")
+    a = store.connect_args("singlestoredb://admin:p@ss:w,rd/#1?x@svc-abc.aws.singlestore.com:3306/evergreen?ssl=true")
     assert a == {"host": "svc-abc.aws.singlestore.com", "port": 3306, "user": "admin", "password": "p@ss:w,rd/#1?x",
-                 "database": "trackerplusplus"}
+                 "database": "evergreen"}
     assert store.connect_args("u:p@h")["port"] == 3306
 
 
@@ -142,7 +142,7 @@ def test_connect_args_from_portal_mysql_command():
                            "--default-auth=mysql_native_password --password='a|{:_b,?c$d@e@f'")
     assert a == {"user": "admin", "host": "svc-1-dml.aws-oregon-3.svc.singlestore.com", "port": 3306,
                  "password": "a|{:_b,?c$d@e@f"}
-    assert store.connect_args("mysql -u u -h h -P 3333 --password=x trackerplusplus")["database"] == "trackerplusplus"
+    assert store.connect_args("mysql -u u -h h -P 3333 --password=x evergreen")["database"] == "evergreen"
 
 
 def test_request_path_uses_memory_only(fake_db):
