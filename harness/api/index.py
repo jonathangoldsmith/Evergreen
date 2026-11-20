@@ -43,6 +43,31 @@ def shoes_prefetch(persona: str = "jordan") -> dict:
             "fetchedAt": snap["fetchedAt"], "singlestore": store.save_candidates(snap)}
 
 
+@app.get("/audit/recent", dependencies=[Depends(require_secret)])
+def audit_recent(persona: str | None = None, limit: int = 20) -> dict:
+    """The latest recommendations from SingleStore: what the agent decided, from what, and why."""
+    if not store.enabled():
+        raise HTTPException(status_code=503, detail="audit log off (no SINGLESTORE_URL)")
+    try:
+        return {"recommendations": store.recent_recommendations(persona, limit)}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"singlestore: {type(exc).__name__}")
+
+
+@app.get("/audit/{rid}", dependencies=[Depends(require_secret)])
+def audit_get(rid: str) -> dict:
+    """One full audit record by the auditId a recommendation returned."""
+    if not store.enabled():
+        raise HTTPException(status_code=503, detail="audit log off (no SINGLESTORE_URL)")
+    try:
+        rec = store.get_recommendation(rid)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"singlestore: {type(exc).__name__}")
+    if not rec:
+        raise HTTPException(status_code=404, detail="no such recommendation")
+    return rec
+
+
 @app.post("/evidence", response_model=EvidenceResponse)
 def evidence(req: EvidenceRequest) -> EvidenceResponse:
     items, live = senso.search(req.purchaseKind, req.query)

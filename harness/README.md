@@ -11,7 +11,7 @@ cd harness
 uv sync
 PYTHONPATH=. uv run python scripts/warm.py      # loads both SIE models; also the smoke test
 PYTHONPATH=. uv run python scripts/sample.py    # Jordan's demo preset, live (add --offline for the fallback)
-uv run pytest -q                                # 11 tests; the live SIE test skips without a key
+uv run pytest -q                                # 18 tests; the live SIE test skips without a key
 PYTHONPATH=. uv run uvicorn api.index:app --reload --port 8000
 ```
 
@@ -23,6 +23,8 @@ PYTHONPATH=. uv run uvicorn api.index:app --reload --port 8000
 | `POST /warm` | Loads the two SIE models before the demo, since cold starts can take minutes |
 | `POST /evidence` | `{purchaseKind, query}` → `{evidence, live}`, the shape `EvidenceClient.swift` expects. Cached passages until Senso is wired. Open even when a secret is set, because the app sends no header. |
 | `POST /shoes/prefetch?persona=jordan` | Researches shoes on the web now (Nimble + SIE, about 30 s) and stores them in SingleStore when configured. Needs the secret. |
+| `GET /audit/recent?persona=jordan&limit=20` | The latest recommendations from SingleStore. Needs the secret; 503 when SingleStore is off. |
+| `GET /audit/{auditId}` | One full audit record. Needs the secret. |
 | `POST /shoes/recommend` | `{persona, now, shoes:{boughtOn,startMiles}, raceDate, mandate}` → `{condition, profile, purchase?, live, source}`. `purchase` uses the Swift `Purchase` shape. |
 
 ```sh
@@ -48,6 +50,24 @@ To connect the app, see [INTEGRATION.md](INTEGRATION.md).
 7. Mandate: over the `any` line's `maxAutoCents` means `awaitingApproval`. Approval, cancellation, action ids and break-in runs stay in Swift.
 
 The whole route has a 5 s budget. Measured on Jordan with web candidates: about 3.5–4 s live and about 0.3 s on the fallback.
+
+## SingleStore (audit log and candidate store)
+
+Off until `SINGLESTORE_URL` is set; the harness works the same without it.
+
+1. In the SingleStore portal, create a free starter workspace and a database (e.g. `trackerplusplus`).
+2. Workspace → **Connect** → Python (or "Your app"): build the URL as `user:password@host:3306/trackerplusplus`. The `singlestoredb://` prefix is optional.
+3. Put it in `harness/.env` as `SINGLESTORE_URL=...`.
+4. `PYTHONPATH=. uv run python scripts/singlestore_check.py jordan`. This creates the two tables, loads the web snapshot into `shoe_candidates`, writes and reads one audit record, and lists recent ones.
+5. Add it to Vercel and redeploy:
+   `uv run python -c "from harness import store; print(store.url(), end='')" | npx vercel env add SINGLESTORE_URL production`
+   `npx vercel deploy --prod --yes`. Then `/health` shows `"singlestore": true`.
+
+What gets stored:
+- `shoe_candidates`: one row per shoe from the web research (`scripts/prefetch_web.py` or `POST /shoes/prefetch` writes it). Recommendations read it first, cached for 5 minutes per instance.
+- `recommendations`: one row per pick, holding the request, wear, profile, where the candidates came from, the shortlist, every rejection and its reason, the final `Purchase` with citations, the source (`sie` or `rules`) and latency. The write waits at most 1 s, so a slow database never delays the answer. If it finishes, the response carries `auditId`.
+
+Try it for the demo: `curl -s "$URL/audit/recent?persona=jordan&limit=1" -H "X-Harness-Secret: $SECRET"`.
 
 ## Deploy (Vercel)
 
