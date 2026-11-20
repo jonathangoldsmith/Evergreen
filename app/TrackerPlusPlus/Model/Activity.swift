@@ -49,5 +49,5 @@ extension Date {
 
 extension Slot {
     /// "12:00 PM, 30 min"
-    var summary: String { "\(start.clock), \(minutes) min" }
+    var summary: String { "\(start.clock), \(minutes) min" + (place.map { ", \($0)" } ?? "") }
 }

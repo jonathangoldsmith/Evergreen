@@ -19,6 +19,9 @@ final class ActionRecord {
     var createdAt: Date
     /// Undone actions stay in the feed and are sent so the agent won't redo them.
     var undone: Bool
+    var purchaseId: String?
+    /// The JSON-encoded `Purchase`, so a new purchase field needs no new column.
+    var purchaseData: Data?
     var run: Run?
 
     init(_ action: AgentAction, sequence: Int) {
@@ -33,11 +36,14 @@ final class ActionRecord {
         points = action.points
         createdAt = action.createdAt
         undone = false
+        purchaseId = action.purchaseId
+        purchaseData = action.purchase.flatMap { try? JSONEncoder.contract.encode($0) }
     }
 
     var action: AgentAction {
         AgentAction(id: actionId, kind: AgentAction.Kind(rawValue: kind) ?? .note, title: title,
                     planItemId: planItemId, before: before, after: after, reason: reason,
-                    points: points, createdAt: createdAt)
+                    points: points, createdAt: createdAt, purchaseId: purchaseId,
+                    purchase: purchaseData.flatMap { try? JSONDecoder.contract.decode(Purchase.self, from: $0) })
     }
 }

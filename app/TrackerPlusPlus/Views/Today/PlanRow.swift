@@ -20,7 +20,7 @@ struct PlanRow: View {
                     .font(.body)
                     .foregroundStyle(Theme.text)
                     .strikethrough(isMissed, color: Theme.textMuted)
-                Text("\(item.slot.minutes) min\(item.source == .comeback ? " · 2× points" : "")")
+                Text("\(item.slot.minutes) min\(item.source == .comeback ? " · 2× points" : "")\(item.slot.place.map { " · \($0)" } ?? "")")
                     .font(.footnote)
                     .foregroundStyle(Theme.textMuted)
             }

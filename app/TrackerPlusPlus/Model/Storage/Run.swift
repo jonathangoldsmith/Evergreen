@@ -21,6 +21,11 @@ final class Run {
     /// The last good `/tick` answer exactly as it arrived, kept on screen when
     /// the agent can't be reached.
     var lastResponse: Data?
+    /// Purchases the person approved, one id per line (see seenCompletionIds).
+    var approvedPurchaseText: String = ""
+    /// The demo controls' conditions and gym visits, JSON-encoded.
+    var demoData: Data?
+    var visitsData: Data?
 
     @Relationship(deleteRule: .cascade, inverse: \ActionRecord.run)
     var actions: [ActionRecord] = []
@@ -38,6 +43,21 @@ final class Run {
     }
 
     var personaKey: PersonaKey { PersonaKey(rawValue: persona) ?? .sam }
+
+    var approvedPurchaseIds: [String] {
+        get { approvedPurchaseText.split(separator: "\n").map(String.init) }
+        set { approvedPurchaseText = newValue.joined(separator: "\n") }
+    }
+
+    var demo: DemoConditions? {
+        get { demoData.flatMap { try? JSONDecoder.contract.decode(DemoConditions.self, from: $0) } }
+        set { demoData = newValue.flatMap { try? JSONEncoder.contract.encode($0) } }
+    }
+
+    var visits: [Visit] {
+        get { visitsData.flatMap { try? JSONDecoder.contract.decode([Visit].self, from: $0) } ?? [] }
+        set { visitsData = newValue.isEmpty ? nil : try? JSONEncoder.contract.encode(newValue) }
+    }
 
     var seenCompletions: [String] {
         get { seenCompletionIds.split(separator: "\n").map(String.init) }
