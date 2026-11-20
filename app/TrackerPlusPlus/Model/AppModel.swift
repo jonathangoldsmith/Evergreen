@@ -35,6 +35,8 @@ final class AppModel {
     /// (a clock change right after a logged workout), and a slow harness reply
     /// to an older snapshot must not replace a newer one.
     @ObservationIgnored private var latestTick = 0
+    /// Waits for a burst of calendar changes to settle before ticking.
+    @ObservationIgnored private var calendarChangeTask: Task<Void, Never>?
 
     init(context: ModelContext) {
         self.context = context
@@ -53,6 +55,7 @@ final class AppModel {
             response = run.lastResponse.flatMap { try? JSONDecoder.contract.decode(TickResponse.self, from: $0) }
         }
         save()
+        calendarSync.onChange = { [weak self] in self?.calendarChanged() }
     }
 
     // MARK: Derived
@@ -154,7 +157,8 @@ final class AppModel {
             plan: plan,
             workouts: workouts,
             actions: appliedActions.filter { !isUndone($0) },
-            undoneActionIds: appliedActions.map(\.id).filter(undoneIds.contains)
+            undoneActionIds: appliedActions.map(\.id).filter(undoneIds.contains),
+            busy: calendarSync.busyTimes(from: storyDay)
         )
         do {
             let response = try await agent.tick(snapshot)
@@ -210,6 +214,18 @@ final class AppModel {
         syncCalendar()
     }
 
+    /// Something changed on the phone's calendars, maybe a meeting on a
+    /// workout (slot defense). The app's own writes land here too; a tick that
+    /// changes nothing writes nothing, so this settles.
+    private func calendarChanged() {
+        calendarChangeTask?.cancel()
+        calendarChangeTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            await tick()
+        }
+    }
+
     func completeOnboarding() {
         run.onboarded = true
         save()
@@ -221,6 +237,21 @@ final class AppModel {
         run.clockMinutes = minutes
         save()
         Task { await tick() }
+    }
+
+    /// The workout "Add a meeting" lands on: the first one after the story day,
+    /// so the demo can show defense before the miss (demo script step 3).
+    var nextDaysFirstWorkout: PlanItem? {
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: storyDay) ?? storyDay
+        return plan.first { $0.slot.start >= tomorrow && completion(for: $0) == nil }
+    }
+
+    /// Puts a 1-hour test meeting on the person's calendar starting 15 minutes
+    /// before that workout. The calendar change triggers the tick that moves it.
+    func addTestMeeting() {
+        guard let item = nextDaysFirstWorkout else { return }
+        let start = item.slot.start.addingTimeInterval(-15 * 60)
+        calendarSync.addTestMeeting(start: start, end: start.addingTimeInterval(60 * 60))
     }
 
     /// Adds a finished workout ending now, shaped like the real HealthKit import.

@@ -20,6 +20,13 @@ struct Slot: Codable, Hashable {
     var minutes: Int { Int((end.timeIntervalSince(start) / 60).rounded()) }
 }
 
+/// A time the person is busy on another calendar. Only the times leave the
+/// phone, never the event's title or attendees.
+struct Busy: Codable, Hashable {
+    var start: Date
+    var end: Date
+}
+
 /// One planned workout: from the week plan, a comeback, or a routine.
 struct PlanItem: Codable, Hashable, Identifiable {
     enum Source: String, Codable { case plan, comeback, routine }
@@ -98,6 +105,9 @@ struct TickSnapshot: Codable {
     var actions: [AgentAction]
     /// Actions the person undid; the agent must not redo them.
     var undoneActionIds: [String]
+    /// Busy times on the person's other calendars from the story day on, for
+    /// slot defense. Empty without calendar access.
+    var busy: [Busy]
 }
 
 struct TickResponse: Codable, Hashable {
