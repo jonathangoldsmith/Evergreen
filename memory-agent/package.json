@@ -1,0 +1,13 @@
+{
+  "name": "tracker-memory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A memory layer for a fitness agent: daily facts from a health snapshot and user feedback, written as plain Markdown.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
