@@ -119,8 +119,13 @@ extension ActionCopy {
         return now < cancelBy
     }
 
+    /// A gym day pass (it has a free-cancel deadline), as opposed to shoes.
+    static func isDayPass(_ purchase: Purchase) -> Bool {
+        purchase.cancelBy != nil
+    }
+
     static func whyLabel(_ purchase: Purchase) -> String {
-        boughtWithoutAsking(purchase) ? "Why" : "Why this pair"
+        isDayPass(purchase) ? "Why" : "Why this pair"
     }
 
     /// "Monday", when the chosen option arrives.
@@ -132,13 +137,16 @@ extension ActionCopy {
     /// 15 min → 6:30 PM, 15 min, Demo Gym"), else "Current pair → Pacer 9, arrives Monday".
     static func purchaseChange(_ purchase: Purchase, moved: AgentAction?) -> Text {
         if let moved, let change = beforeAfter(moved) { return change }
+        if isDayPass(purchase) {
+            return Text("\(Text("Outside").strikethrough().foregroundStyle(Theme.textMuted)) → \(Text(purchase.item).fontWeight(.semibold))")
+        }
         let after = arrivalDay(purchase).map { "\(purchase.item), arrives \($0)" } ?? purchase.item
         return Text("\(Text("Current pair").strikethrough().foregroundStyle(Theme.textMuted)) → \(Text(after).fontWeight(.semibold))")
     }
 
     /// The line under the change: what the purchase keeps possible.
     static func purchaseKeep(_ purchase: Purchase, breakInRuns: Int, now: Date) -> String? {
-        if boughtWithoutAsking(purchase), purchase.status == .bought {
+        if isDayPass(purchase), purchase.status == .bought {
             if let outcome = purchase.outcome { return outcome }
             guard let cancelBy = purchase.cancelBy else { return nil }
             return now < cancelBy ? "Cancel free until \(cancelBy.clock)." : "Free cancel ended \(cancelBy.clock)."

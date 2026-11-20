@@ -109,13 +109,15 @@ struct WhyView: View {
     private func didText(_ purchase: Purchase) -> String {
         switch purchase.status {
         case .awaitingApproval:
-            "Order it from the demo store (no charge), then add 2 break-in runs before race day."
+            ActionCopy.isDayPass(purchase)
+                ? "Buy the pass (demo, no charge) once you say yes, and move your workout there."
+                : "Order it from the demo store (no charge), then add 2 break-in runs before race day."
         case .bought:
-            ActionCopy.boughtWithoutAsking(purchase)
-                ? "Bought a \(purchase.item) (demo, no charge) under your rule and moved your workout there."
+            ActionCopy.isDayPass(purchase)
+                ? "Bought a \(purchase.item) (demo, no charge)\(ActionCopy.boughtWithoutAsking(purchase) ? " under your rule" : "") and moved your workout there."
                 : "Ordered from the demo store, no charge."
         case .cancelled:
-            ActionCopy.boughtWithoutAsking(purchase)
+            ActionCopy.isDayPass(purchase)
                 ? "Cancelled the pass and moved your workout back."
                 : "Cancelled the order."
         }
@@ -127,7 +129,7 @@ struct WhyView: View {
         switch purchase.status {
         case .awaitingApproval: return declined ? "You said not now." : "Waiting for you."
         case .bought:
-            if ActionCopy.boughtWithoutAsking(purchase) {
+            if ActionCopy.isDayPass(purchase) {
                 return ActionCopy.purchaseKeep(purchase, breakInRuns: 0, now: model.now) ?? "Bought."
             }
             return ActionCopy.arrivalDay(purchase).map { "Arrives \($0)." } ?? "Ordered."

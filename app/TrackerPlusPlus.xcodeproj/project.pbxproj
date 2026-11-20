@@ -11,6 +11,8 @@
 		B8F1030630B0ECDB0058A375 /* AmplitudeSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030530B0ECDB0058A375 /* AmplitudeSwift */; };
 		B8F1030830B0ECF60058A375 /* TrackerPlusPlus.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */; };
 		B8F1030930B0ECF60058A375 /* TrackerPlusPlus.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */; };
+		B8F1030C30B0F1490058A375 /* PersonaInquirySDK2 in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */; };
+		B8F1030E30B0F1490058A375 /* PersonaInquirySDK2Protected in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030D30B0F1490058A375 /* PersonaInquirySDK2Protected */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,7 +82,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B8F1030E30B0F1490058A375 /* PersonaInquirySDK2Protected in Frameworks */,
 				B8F1030630B0ECDB0058A375 /* AmplitudeSwift in Frameworks */,
+				B8F1030C30B0F1490058A375 /* PersonaInquirySDK2 in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -156,6 +160,8 @@
 			name = TrackerPlusPlus;
 			packageProductDependencies = (
 				B8F1030530B0ECDB0058A375 /* AmplitudeSwift */,
+				B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */,
+				B8F1030D30B0F1490058A375 /* PersonaInquirySDK2Protected */,
 			);
 			productName = TrackerPlusPlus;
 			productReference = 7A1000000000000000000001 /* TrackerPlusPlus.app */;
@@ -240,6 +246,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				B8F1030330B0EAC50058A375 /* XCRemoteSwiftPackageReference "Amplitude-Swift" */,
+				B8F1030A30B0F1490058A375 /* XCRemoteSwiftPackageReference "inquiry-ios-2" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7A1000000000000000000005 /* Products */;
@@ -566,6 +573,14 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		B8F1030A30B0F1490058A375 /* XCRemoteSwiftPackageReference "inquiry-ios-2" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/persona-id/inquiry-ios-2";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -573,6 +588,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B8F1030330B0EAC50058A375 /* XCRemoteSwiftPackageReference "Amplitude-Swift" */;
 			productName = AmplitudeSwift;
+		};
+		B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B8F1030A30B0F1490058A375 /* XCRemoteSwiftPackageReference "inquiry-ios-2" */;
+			productName = PersonaInquirySDK2;
+		};
+		B8F1030D30B0F1490058A375 /* PersonaInquirySDK2Protected */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B8F1030A30B0F1490058A375 /* XCRemoteSwiftPackageReference "inquiry-ios-2" */;
+			productName = PersonaInquirySDK2Protected;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
