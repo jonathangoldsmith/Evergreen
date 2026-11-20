@@ -1,10 +1,12 @@
-# Tracker++
+# Evergreen
 
 **A personal agent that makes sure your workout happens.**
 
 > Google and Apple coach your workout. We make sure it happens.
 
-Tracker++ is an iOS agent that protects your workout plan instead of just writing one. It notices a missed session and books a shorter comeback, moves a workout when a meeting lands on it, buys what your training needs under a spending rule you set once, and shows its reasoning for every action. Built for the [Personal Agents Hackathon](https://luma.com/personalagenthack) (San Francisco, November 2026).
+Evergreen is an iOS agent that protects your workout plan instead of just writing one. It notices a missed session and books a shorter comeback, moves a workout when a meeting lands on it, buys what your training needs under a spending rule you set once, and shows its reasoning for every action. Built for the [Personal Agents Hackathon](https://luma.com/personalagenthack) (San Francisco, November 2026).
+
+> Formerly *Tracker++*. The code, the Xcode project and the repository still use the name `TrackerPlusPlus`.
 
 ![Evergreen recommendation system](docs/figures/recommendation-system.png)
 
@@ -39,7 +41,7 @@ No real money moves: every checkout is a clearly labeled demo store. All health 
 ```
 ┌──────────────── iPhone app (SwiftUI) — the hands ────────────────┐
 │ Health + calendar snapshot · memory · demo controls              │
-│ Today card · Why screen · feed · TrackerPlusPlus calendar        │
+│ Today card · Why screen · feed · its own calendar                │
 │ notifications · Live Activity · Undo / Order it / Not now        │
 └───────────────┬───────────────────────────────▲──────────────────┘
                 │ POST /shoes/recommend         │ Purchase, AgentActions,
