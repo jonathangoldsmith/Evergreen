@@ -22,6 +22,7 @@ body = {
                 {"id": "day-pass", "text": "Day passes up to $20: book it, tell me after.", "category": "dayPass", "maxAutoCents": 2000}],
 }
 t = time.monotonic()
-r = TestClient(app).post("/shoes/recommend", json=body)
+from harness import config as _c
+r = TestClient(app).post("/shoes/recommend", json=body, headers={"X-Harness-Secret": _c.HARNESS_SECRET})
 print(r.status_code, f"{(time.monotonic() - t) * 1000:.0f} ms")
 print(json.dumps(r.json(), indent=2))

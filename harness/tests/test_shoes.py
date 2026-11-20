@@ -103,3 +103,27 @@ def test_secret_enforced_when_set(monkeypatch, no_sie):
 def test_sie_smoke_live():
     w = sie.warm(provision_timeout_s=240)
     assert "rerank_ms" in w and "chat_ms" in w, w
+
+
+@pytest.mark.web
+def test_web_snapshot_candidates_used_and_filtered(no_sie, monkeypatch):
+    from harness import store
+    monkeypatch.setattr(store, "load_candidates", lambda persona: None)
+    snap = {"candidates": [
+        {"id": "a", "name": "Brand A Cushy", "amountCents": 15000, "arrivesInDays": 3, "wideToeBox": True, "carbonPlate": None,
+         "surface": "road", "cushion": "high", "dropMm": 8, "lifeKm": 650, "blurb": "q", "quote": "Great for long runs.",
+         "url": "https://example.com/r", "sourceTitle": "Review", "sourceHost": "example.com", "web": True},
+        {"id": "b", "name": "Brand B Unknown", "amountCents": 9000, "arrivesInDays": 3, "wideToeBox": None, "carbonPlate": None,
+         "surface": "road", "cushion": "high", "dropMm": 8, "lifeKm": 650, "blurb": "q", "quote": "q", "url": "", "sourceTitle": "R",
+         "sourceHost": "x", "web": True},
+        {"id": "c", "name": "Brand C Flat", "amountCents": 4000, "arrivesInDays": 3, "wideToeBox": True, "carbonPlate": None,
+         "surface": "road", "cushion": "low", "dropMm": 0, "lifeKm": 650, "blurb": "q", "quote": "q", "url": "", "sourceTitle": "R",
+         "sourceHost": "x", "web": True}]}
+    from harness.web import research
+    monkeypatch.setattr(research, "load_snapshot", lambda persona: snap)
+    r = TestClient(app).post("/shoes/recommend", json=body()).json()
+    p = r["purchase"]
+    assert r["candidatesFrom"] == "web-snapshot" and p["item"] == "Brand A Cushy"
+    lost = {o["name"]: o.get("lostBecause") for o in p["options"]}
+    assert "confirm a wide toe box" in lost["Brand B Unknown"] and "Low cushioning" in lost["Brand C Flat"]
+    assert any(e["source"] == "Review (example.com)" for e in p["evidence"])

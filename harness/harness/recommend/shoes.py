@@ -11,7 +11,8 @@ import concurrent.futures as cf
 import time
 from datetime import datetime, timedelta
 
-from harness import data
+from harness import data, store
+from harness.web import research
 from harness.clients import sie
 from harness.evidence import senso
 from harness.models import Evidence, Mandate, Option, Purchase, Rule, ShoesRequest, ShoesResponse
@@ -20,6 +21,8 @@ from harness.recommend.condition import condition, profile
 BUDGET_S = 5.0           # whole route; the phone's RecommendClient waits 6 s
 BREAK_IN_DAYS = 3        # a new pair must arrive at least this long before race day
 RACE_WINDOW_DAYS = 14
+LONG_RUN_KM = 15         # long runs at or above this need real cushioning
+DECIDE_TOP = 4           # shortlist size the model chooses from (keeps its answer short and fast)
 MERCHANT = "Demo store, no charge"
 _pool = cf.ThreadPoolExecutor(max_workers=4)
 
@@ -30,19 +33,36 @@ def _money(cents: int) -> str:
     return f"${cents / 100:.0f}"
 
 
-def _filter(shoes: list[dict], fit: dict, day: datetime, race: datetime) -> tuple[list[dict], list[dict]]:
+def candidates(persona: str) -> tuple[list[dict], str]:
+    """Web research from SingleStore, else the deployed snapshot, else the fake catalog."""
+    rows = store.load_candidates(persona)
+    if rows:
+        return rows, "web-singlestore"
+    snap = research.load_snapshot(persona)
+    if snap:
+        return snap["candidates"], "web-snapshot"
+    return data.catalog(), "catalog"
+
+
+def _filter(shoes: list[dict], fit: dict, day: datetime, race: datetime, long_run_km: float = 0) -> tuple[list[dict], list[dict]]:
     """Hard rules stay in code. Returns (eligible, rejected with lostBecause)."""
     latest = race - timedelta(days=BREAK_IN_DAYS)
     ok, lost = [], []
     for s in shoes:
         arrives = day + timedelta(days=s["arrivesInDays"])
         s = {**s, "arrives": arrives}
-        if fit.get("wideToeBox") and not s["wideToeBox"]:
+        if fit.get("wideToeBox") and s["wideToeBox"] is None:
+            s["lostBecause"] = "Reviews don't confirm a wide toe box (your fit notes say wide)"
+        elif fit.get("wideToeBox") and not s["wideToeBox"]:
             s["lostBecause"] = "Narrow toe box (your fit notes say wide)"
         elif fit.get("carbonPlate") is False and s["carbonPlate"]:
             s["lostBecause"] = "Carbon plate (your fit notes say no plate)"
         elif fit.get("surface") and s["surface"] != fit["surface"]:
             s["lostBecause"] = f"Built for {s['surface']}; you run on {fit['surface']}"
+        elif long_run_km >= LONG_RUN_KM and s["cushion"] == "low":
+            s["lostBecause"] = f"Low cushioning for your {long_run_km} km long runs"
+        elif long_run_km >= LONG_RUN_KM and (s.get("dropMm") or 8) <= 2:
+            s["lostBecause"] = "Zero-drop: too big a change right before a race"
         elif arrives > latest:
             days = (race.date() - arrives.date()).days
             s["lostBecause"] = f"Arrives {arrives:%A}, {days} days before the race: no time to break in"
@@ -95,9 +115,10 @@ def _decide_prompt(need: str, eligible: list[dict], scores: dict[str, float]) ->
         for s in eligible)
     return (
         "You pick one replacement running shoe for a runner. Every shoe below already passed the hard rules "
-        "(fit notes, arrives in time to break in before the race). Choose the best fit for how they train; "
-        "prefer the cheaper shoe only when fit is about equal. For every other shoe give one short reason it "
-        "lost (under 12 words, factual, no second person pronoun except 'your'). whyChosen: one sentence under 25 words, speaking to the runner as 'your' (never 'the runner').\n\n"
+        "(fit notes, arrives in time to break in before the race). Choose the shoe that best fits how they train: "
+        "cushioning and durability for their weekly distance and long runs come first, a familiar daily-trainer feel "
+        "before a race second, price last (only to break a near tie). For every other shoe give one short reason it "
+        "lost (under 10 words, factual, no second person pronoun except 'your'). whyChosen: one sentence under 25 words, speaking to the runner as 'your' (never 'the runner').\n\n"
         f"Runner: {need}\n\nShoes:\n{rows}\n\nAnswer in JSON."
     )
 
@@ -131,7 +152,8 @@ def recommend(req: ShoesRequest) -> ShoesResponse:
         return ShoesResponse(condition=cond, profile=prof, purchase=None, live=False, source="fresh")
 
     fit = data.fit_notes(req.persona)
-    eligible, rejected = _filter(data.catalog(), fit, day, race)
+    pool, cand_source = candidates(req.persona)
+    eligible, rejected = _filter(pool, fit, day, race, prof.longestRunKm)
     if not eligible:
         return ShoesResponse(condition=cond, profile=prof, purchase=None, live=False, source="rules")
     need = _need(prof, cond, fit, days_to_race)
@@ -146,10 +168,13 @@ def recommend(req: ShoesRequest) -> ShoesResponse:
     try:
         scores = _pool.submit(sie.rerank, need, {s["id"]: f"{s['name']}: {s['blurb']}" for s in eligible},
                               RERANK_INSTRUCTION).result(timeout=left())
-        answer = _pool.submit(sie.chat_json, _decide_prompt(need, eligible, scores), _decide_schema([s["id"] for s in eligible]),
-                              "shoe_pick").result(timeout=left())
-        lost_map = _guard(answer, eligible)
-        chosen = next(s for s in eligible if s["id"] == answer["chosenId"])
+        ranked = sorted(eligible, key=lambda s: -scores[s["id"]])
+        top, rest = ranked[:DECIDE_TOP], ranked[DECIDE_TOP:]
+        answer = _pool.submit(sie.chat_json, _decide_prompt(need, top, scores), _decide_schema([s["id"] for s in top]),
+                              "shoe_pick", 450).result(timeout=left())
+        lost_map = _guard(answer, top)
+        lost_map.update({s["id"]: f"Ranked below the top {DECIDE_TOP} for your mileage and long runs" for s in rest})
+        chosen = next(s for s in top if s["id"] == answer["chosenId"])
         why, source = answer["whyChosen"].strip(), "sie"
     except Exception:
         chosen, lost_map = _fallback_pick(eligible, prof)
@@ -158,13 +183,15 @@ def recommend(req: ShoesRequest) -> ShoesResponse:
         evidence, ev_live = ev_future.result(timeout=left())
     except Exception:
         evidence, ev_live = [Evidence(**p) for p in data.passages("shoes")], False
+    if chosen.get("web"):
+        evidence = evidence + [Evidence(source=f"{chosen['sourceTitle']} ({chosen['sourceHost']})", passage=chosen["quote"])]
     listing = next((e for e in evidence if e.source == f"{chosen['name']} listing"), None)
-    evidence = evidence + ([] if listing else [Evidence(source=f"{chosen['name']} listing",
+    evidence = evidence + ([] if listing or chosen.get("web") else [Evidence(source=f"{chosen['name']} listing",
                                     passage=f"{chosen['blurb']} {_money(chosen['amountCents'])}. Arrives {chosen['arrives']:%a %b %d}. Free returns for 30 days.")])
 
     rule = next((m for m in req.mandate if m.category == "any"), None) or Mandate(
         id="ask-first", text="Ask me before buying anything.", category="any", maxAutoCents=0)
-    others = [s for s in eligible if s is not chosen]
+    others = sorted((s for s in eligible if s is not chosen), key=lambda s: s["id"] not in lost_map or "Ranked below" in lost_map[s["id"]])
     options = [Option(name=chosen["name"], amountCents=chosen["amountCents"], arrives=chosen["arrives"])]
     options += [Option(name=s["name"], amountCents=s["amountCents"], arrives=s["arrives"], lostBecause=lost_map[s["id"]]) for s in others]
     options += [Option(name=s["name"], amountCents=s["amountCents"], arrives=s["arrives"], lostBecause=s["lostBecause"]) for s in rejected]
@@ -179,4 +206,11 @@ def recommend(req: ShoesRequest) -> ShoesResponse:
         rule=Rule(id=rule.id, text=rule.text), noticed=noticed,
         evidence=evidence, evidenceLive=ev_live, options=options,
     )
-    return ShoesResponse(condition=cond, profile=prof, purchase=purchase, live=source == "sie", source=source)
+    audit_id = store.log_recommendation(req.persona, source, chosen["name"], int((time.monotonic() - t0) * 1000), {
+        "request": req.model_dump(mode="json"), "condition": cond.model_dump(), "profile": prof.model_dump(),
+        "candidatesFrom": cand_source, "shortlist": [s["id"] for s in eligible],
+        "rejected": {s["id"]: s["lostBecause"] for s in rejected}, "purchase": purchase.model_dump(mode="json"),
+        "sources": [{"name": c["name"], "url": c.get("url")} for c in [chosen] if c.get("url")],
+    })
+    return ShoesResponse(condition=cond, profile=prof, purchase=purchase, live=source == "sie", source=source,
+                         candidatesFrom=cand_source, auditId=audit_id)

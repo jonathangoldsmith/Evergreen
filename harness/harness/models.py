@@ -98,3 +98,5 @@ class ShoesResponse(BaseModel):
     purchase: Optional[Purchase]
     live: bool          # true = SIE ranked and decided; false = deterministic fallback
     source: str         # "sie" | "rules" | "fresh"
+    candidatesFrom: Optional[str] = None   # "web-singlestore" | "web-snapshot" | "catalog"
+    auditId: Optional[str] = None          # SingleStore recommendations row, when logging is on

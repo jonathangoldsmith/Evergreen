@@ -5,7 +5,7 @@ import hmac
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 
-from harness import config
+from harness import config, store
 from harness.clients import sie
 from harness.evidence import senso
 from harness.models import EvidenceRequest, EvidenceResponse, ShoesRequest, ShoesResponse
@@ -23,12 +23,24 @@ def require_secret(x_harness_secret: str = Header(default="")) -> None:
 @app.get("/health")
 def health() -> dict:
     return {"ok": True, "sie": bool(config.SIE_API_KEY), "senso": bool(config.SENSO_API_KEY),
+            "nimble": bool(__import__("os").environ.get("NIMBLE_API_KEY")), "singlestore": store.enabled(),
             "secret": bool(config.HARNESS_SECRET), "version": app.version}
 
 
 @app.post("/warm", dependencies=[Depends(require_secret)])
 def warm() -> dict:
     return sie.warm(provision_timeout_s=240)
+
+
+@app.post("/shoes/prefetch", dependencies=[Depends(require_secret)])
+def shoes_prefetch(persona: str = "jordan") -> dict:
+    """Research shoes on the web now (Nimble + SIE, ~30 s) and store them in SingleStore.
+    Vercel can't write files, so without SINGLESTORE_URL this only reports what it found;
+    the deployed snapshot (scripts/prefetch_web.py, committed) stays the source."""
+    from harness.web import research
+    snap = research.research(persona)
+    return {"persona": persona, "pages": len(snap["pages"]), "candidates": len(snap["candidates"]),
+            "fetchedAt": snap["fetchedAt"], "singlestore": store.save_candidates(snap)}
 
 
 @app.post("/evidence", response_model=EvidenceResponse)

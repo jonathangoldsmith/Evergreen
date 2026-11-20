@@ -22,6 +22,7 @@ PYTHONPATH=. uv run uvicorn api.index:app --reload --port 8000
 | `GET /health` | Which keys are configured (never their values) |
 | `POST /warm` | Loads the two SIE models before the demo, since cold starts can take minutes |
 | `POST /evidence` | `{purchaseKind, query}` → `{evidence, live}`, the shape `EvidenceClient.swift` expects. Cached passages until Senso is wired. Open even when a secret is set, because the app sends no header. |
+| `POST /shoes/prefetch?persona=jordan` | Researches shoes on the web now (Nimble + SIE, about 30 s) and stores them in SingleStore when configured. Needs the secret. |
 | `POST /shoes/recommend` | `{persona, now, shoes:{boughtOn,startMiles}, raceDate, mandate}` → `{condition, profile, purchase?, live, source}`. `purchase` uses the Swift `Purchase` shape. |
 
 ```sh
@@ -33,14 +34,20 @@ curl -s localhost:8000/shoes/recommend -H 'content-type: application/json' -d '{
 
 ## How it decides
 
+**Where the shoes come from:** web research, not a fixed list. `scripts/prefetch_web.py jordan` searches expert review sites with **Nimble** (2 queries, about 12 pages), and **SIE Qwen3.8** extracts each recommended model (price, toe box, plate, cushion, drop, a quote and the URL). The result is saved to `harness/data/web_candidates/jordan.json`, committed and deployed. At request time the harness reads SingleStore if `SINGLESTORE_URL` is set, else that snapshot, else the fake catalog. `candidatesFrom` in the response says which. Delivery is simulated (Demo store, ships in 3 days), because reviews carry no arrival dates.
+
+To connect the app, see [INTEGRATION.md](INTEGRATION.md).
+
+
 1. Load the persona's workouts, shifted so the history ends the day before `now` (as the app does).
 2. Compute wear from the real `distanceKm` of runs since `boughtOn`, plus `startMiles`: ≥85% of a 650 km life means replace. No purchase if the pair is fresh or the race is more than 14 days away.
-3. Hard filters in code: fit notes (toe box, no carbon plate, surface) and arrival at least 3 days before the race.
-4. **Superlinked SIE:** `Qwen/Qwen3-Reranker-4B` scores the shortlist against the runner's profile. `Qwen/Qwen3.8-27B-FP8` picks one and writes why each other shoe lost, constrained to a JSON schema.
+3. Hard filters in code: fit notes (toe box must be confirmed wide, no carbon plate, surface), real cushioning and no zero-drop for long runs of 15 km or more, and arrival at least 3 days before the race.
+4. **Superlinked SIE:** `Qwen/Qwen3-Reranker-4B` scores the shortlist against the runner's profile, and the top 4 go to `Qwen/Qwen3.8-27B-FP8`, which picks one and writes why each other shoe lost, constrained to a JSON schema.
 5. Guardrails: the pick must be on the shortlist, and every other shoe needs a short reason. Otherwise, or on any SIE error or timeout, a deterministic pick: high cushion for long runs ≥15 km, then cheapest. `source` says which path answered.
-6. Mandate: over the `any` line's `maxAutoCents` means `awaitingApproval`. Approval, cancellation, action ids and break-in runs stay in Swift.
+6. Audit: with `SINGLESTORE_URL` set, every recommendation (inputs, shortlist, rejections, pick, citations, timing) is written to a `recommendations` table, and the response carries its `auditId`.
+7. Mandate: over the `any` line's `maxAutoCents` means `awaitingApproval`. Approval, cancellation, action ids and break-in runs stay in Swift.
 
-The whole route has a 5 s budget. Measured on Jordan: about 2.7–3.5 s live and about 0.3 s on the fallback.
+The whole route has a 5 s budget. Measured on Jordan with web candidates: about 3.5–4 s live and about 0.3 s on the fallback.
 
 ## Deploy (Vercel)
 
