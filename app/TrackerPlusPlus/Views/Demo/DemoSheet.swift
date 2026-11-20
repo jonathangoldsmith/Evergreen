@@ -61,6 +61,15 @@ struct DemoSheet: View {
                     Text("Adds a finished workout ending now, the way the Health import will.")
                 }
 
+                Section {
+                    Button("Add a meeting on the next workout") { model.addTestMeeting() }
+                        .disabled(model.calendarAccess != .on || model.nextDaysFirstWorkout == nil)
+                } footer: {
+                    if let item = model.nextDaysFirstWorkout {
+                        Text("Puts a 1-hour \"Team sync\" on your calendar 15 minutes before the \(item.slot.start.formatted(.dateTime.weekday(.wide).hour().minute())) \(Activity.noun(item.slot.activityType)). Needs calendar access. Reset demo removes it.")
+                    }
+                }
+
                 Section("Agent") {
                     LabeledContent("Answering /tick", value: model.agentName)
                     Button("Tick now") { Task { await model.tick() } }
@@ -69,7 +78,7 @@ struct DemoSheet: View {
                 Section {
                     Button("Reset demo", role: .destructive) { confirmReset = true }
                 } footer: {
-                    Text("Clears the agent's actions, logged workouts, points, the clock and the TrackerPlusPlus calendar.")
+                    Text("Clears the agent's actions, logged workouts, points, the clock, the TrackerPlusPlus calendar and the test meeting.")
                 }
             }
             .navigationTitle("Demo")

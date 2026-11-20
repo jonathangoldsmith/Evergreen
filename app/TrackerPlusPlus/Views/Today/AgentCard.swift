@@ -28,7 +28,7 @@ struct AgentCard: View {
             }
             .foregroundStyle(Theme.accent)
 
-            if let lead = ActionCopy.lead(action) {
+            if let lead = ActionCopy.lead(action, now: model.now) {
                 Text(lead).font(.body).foregroundStyle(Theme.text)
             }
             if let change = ActionCopy.beforeAfter(action) {

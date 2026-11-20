@@ -23,10 +23,19 @@ enum ActionCopy {
         }
     }
 
-    /// "Your 12:00 PM walk didn't happen. No problem."
-    static func lead(_ action: AgentAction) -> String? {
-        guard action.kind == .bookComeback, let before = action.before else { return nil }
-        return "Your \(before.start.clock) \(Activity.noun(before.activityType)) didn't happen. No problem."
+    /// "Your 12:00 PM walk didn't happen. No problem." for a comeback, and
+    /// "Something landed on tomorrow's 7:30 AM elliptical session." when the
+    /// agent defends a slot (the person's own moves need no lead).
+    static func lead(_ action: AgentAction, now: Date) -> String? {
+        guard let before = action.before else { return nil }
+        switch action.kind {
+        case .bookComeback:
+            return "Your \(before.start.clock) \(Activity.noun(before.activityType)) didn't happen. No problem."
+        case .move where action.id.hasPrefix("defend-"), .shrink where action.id.hasPrefix("defend-"):
+            return "Something landed on \(when(before.start, now: now))'s \(before.start.clock) \(Activity.noun(before.activityType))."
+        default:
+            return nil
+        }
     }
 
     /// "12:00 PM, 30 min → 6:30 PM, 15 min", old value struck through.

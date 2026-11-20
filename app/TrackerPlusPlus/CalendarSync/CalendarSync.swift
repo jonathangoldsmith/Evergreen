@@ -23,6 +23,17 @@ final class CalendarSync {
     /// made in Settings restarts the app, so it never needs this.
     private var grantedThisLaunch = false
 
+    /// Called when anything on the phone's calendars changes, such as a meeting
+    /// landing on a workout, so the agent can look again.
+    var onChange: (@MainActor () -> Void)?
+
+    init() {
+        // CalendarSync lives as long as the app, so the observer is never removed.
+        NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.onChange?() }
+        }
+    }
+
     var access: CalendarAccess {
         if grantedThisLaunch { return .on }
         return switch EKEventStore.authorizationStatus(for: .event) {
@@ -81,18 +92,66 @@ final class CalendarSync {
     }
 
     /// Reset demo (eng review D13): removes every event the app made in the
-    /// month around the story day, so a rehearsal starts from a clean calendar.
+    /// month around the story day, and any test meeting, so a rehearsal starts
+    /// from a clean calendar.
     func removeAllEvents(around storyDay: Date) {
-        guard prepareStore(), let calendar = existingTrackerCalendar() else { return }
+        guard prepareStore() else { return }
         let start = Calendar.current.date(byAdding: .day, value: -30, to: storyDay) ?? storyDay
+        let end = Calendar.current.date(byAdding: .day, value: 60, to: start) ?? start
+        let testMeetings = store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: nil))
+            .filter { $0.url?.scheme == Self.testMeetingScheme }
+        let planEvents = existingTrackerCalendar().map { appEvents(in: $0, from: start, days: 60) } ?? []
         do {
-            for event in appEvents(in: calendar, from: start, days: 60) {
+            for event in planEvents + testMeetings {
                 try store.remove(event, span: .thisEvent, commit: false)
             }
             try store.commit()
         } catch {
             store.reset()
             Self.log.error("Couldn't clear the calendar: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: Slot defense
+
+    /// The person's busy times on their other calendars for the synced window,
+    /// for slot defense: timed events not marked free. Only start and end leave
+    /// this function; titles stay on the phone.
+    func busyTimes(from storyDay: Date) -> [Busy] {
+        guard prepareStore() else { return [] }
+        let others = store.calendars(for: .event).filter { $0.title != Self.calendarTitle }
+        guard !others.isEmpty else { return [] }
+        let end = Calendar.current.date(byAdding: .day, value: Self.window, to: storyDay) ?? storyDay
+        return store.events(matching: store.predicateForEvents(withStart: storyDay, end: end, calendars: others))
+            .filter { !$0.isAllDay && $0.availability != .free && $0.url?.scheme != CalendarEntry.scheme }
+            .map { Busy(start: $0.startDate, end: $0.endDate) }
+            .sorted { $0.start < $1.start }
+    }
+
+    static let testMeetingScheme = "trackerplusplus-demo"
+
+    /// Demo control (demo script step 3): puts a "Team sync" on the person's own
+    /// calendar, the way a real meeting would land on a workout. Reset demo
+    /// removes it. Returns whether it was saved.
+    @discardableResult
+    func addTestMeeting(start: Date, end: Date) -> Bool {
+        guard prepareStore() else { return false }
+        let calendar = [store.defaultCalendarForNewEvents].compactMap(\.self)
+            .first { $0.title != Self.calendarTitle && $0.allowsContentModifications }
+            ?? store.calendars(for: .event).first { $0.title != Self.calendarTitle && $0.allowsContentModifications }
+        guard let calendar else { return false }
+        let meeting = EKEvent(eventStore: store)
+        meeting.calendar = calendar
+        meeting.title = "Team sync"
+        meeting.startDate = start
+        meeting.endDate = end
+        meeting.url = URL(string: "\(Self.testMeetingScheme)://test-meeting")
+        do {
+            try store.save(meeting, span: .thisEvent, commit: true)
+            return true
+        } catch {
+            Self.log.error("Couldn't add the test meeting: \(error.localizedDescription)")
+            return false
         }
     }
 

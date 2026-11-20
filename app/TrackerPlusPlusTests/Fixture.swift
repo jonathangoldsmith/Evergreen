@@ -42,13 +42,26 @@ enum Fixture {
         source: .plan
     )
 
+    /// Sam's Friday 7:30 AM elliptical, the workout a meeting lands on in the demo.
+    static let fridayElliptical = PlanItem(
+        id: "plan-elliptical",
+        slot: Slot(start: at(7, 30, dayOffset: 1), end: at(7, 55, dayOffset: 1), activityType: "Elliptical"),
+        points: StandInAgent.basePoints,
+        source: .plan
+    )
+
+    static func busy(_ start: Date, _ end: Date) -> Busy {
+        Busy(start: start, end: end)
+    }
+
     static func snapshot(
         now: Date,
         historyDays: Int = 30,
         plan: [PlanItem] = [],
         workouts: [Workout] = samHistory,
         actions: [AgentAction] = [],
-        undoneActionIds: [String] = []
+        undoneActionIds: [String] = [],
+        busy: [Busy] = []
     ) -> TickSnapshot {
         TickSnapshot(
             now: now,
@@ -59,7 +72,8 @@ enum Fixture {
             plan: plan,
             workouts: workouts,
             actions: actions,
-            undoneActionIds: undoneActionIds
+            undoneActionIds: undoneActionIds,
+            busy: busy
         )
     }
 }

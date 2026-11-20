@@ -14,7 +14,7 @@ Layout: `App/` (entry point and root view), `Agent/` (who answers `/tick`), `Con
 
 ## Tests
 
-`TrackerPlusPlusTests/StandInAgentTests.swift` covers the stand-in's rules: goal rounding, the very-active cap, thin history, the grace period, comeback length and time, no repeat or undone bookings, a missed comeback, completion points and duplicate merging. `CalendarSyncTests.swift` covers how plan items become calendar events and what a sync creates, moves and deletes. Run them with ⌘U in Xcode, or:
+`TrackerPlusPlusTests/StandInAgentTests.swift` covers the stand-in's rules: goal rounding, the very-active cap, thin history, the grace period, comeback length and time, no repeat or undone bookings, a missed comeback, completion points and duplicate merging. `CalendarSyncTests.swift` covers how plan items become calendar events and what a sync creates, moves and deletes. `SlotDefenseTests.swift` covers moves, shrinks and when the agent leaves a workout alone. Run them with ⌘U in Xcode, or:
 
 ```
 xcodebuild test -project app/TrackerPlusPlus.xcodeproj -scheme TrackerPlusPlus -destination 'platform=iOS Simulator,name=iPhone 17'
@@ -70,11 +70,20 @@ With full calendar access, the app keeps the plan on its own TrackerPlusPlus cal
 - Reset demo removes the app's events in the month around the story day, then puts the fresh plan back.
 - Without full access the plan stays in the app, and Today shows "Turn on Calendar" (the system prompt the first time, Settings after a denial).
 
+## Slot defense
+
+When something lands on an upcoming workout, the agent moves it before it can be missed (plan item 8, task T10, demo script step 3).
+
+- With calendar access, every tick sends `busy`: the start and end of the person's timed events on their other calendars for the next 3 weeks. Titles never leave the phone, and all-day events, events marked free and the app's own events are left out.
+- The app ticks about a second after any calendar change, so a meeting accepted elsewhere is defended while the app is open, and again when it comes back to the foreground.
+- The stand-in's rule (`Agent/StandInAgent+SlotDefense.swift`): move to right after the conflict, else right before, staying within 1 hour earlier to 1½ hours later than planned. If neither fits at full length, shrink into the biggest free gap of at least 15 minutes, else leave it. One action per workout and conflict, so Undo sticks. Comebacks also avoid busy times. The harness owns the real rule.
+- Demo controls → **Add a meeting on the next workout** puts a 1-hour "Team sync" on the person's own calendar 15 minutes before tomorrow's first workout. Reset demo removes it.
+
 To check sync without the Calendar app, the log is under subsystem `com.trackerplusplus.app`, category `calendar`.
 
 ## Not built yet
 
-- Slot defense and routines (P1, tasks T10 and T11): moving a workout when a meeting lands on it needs the harness to read the person's other calendars.
+- Routines and the load guardrail (P1 and P2, task T11).
 - Real HealthKit reads and workout import (P2). Health permission is already requested in onboarding.
 - General Sans: drop `GeneralSans-Semibold.otf` into `TrackerPlusPlus/Resources/Fonts/`. It registers at launch; until then the agent's voice falls back to SF Pro Semibold.
 - The contract test that decodes the harness's golden fixtures (task T3). It goes in `TrackerPlusPlusTests/` once `contract/fixtures/` exists.

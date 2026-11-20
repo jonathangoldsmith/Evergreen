@@ -4,10 +4,11 @@ import Foundation
 /// phone before the harness is deployed (P0a, eng review D14) and with no network
 /// (one candidate answer to the open R2 question).
 ///
-/// It implements only the P0 rules from the plan: normal and goal with the
+/// It implements the P0 rules from the plan: normal and goal with the
 /// very-active cap, thin-history defaults (D8), duplicate merging (D9), misses,
-/// comebacks at 2× points, and points from completions. Slot defense, routines and
-/// the load guardrail stay with the harness. When the two disagree, the harness wins.
+/// comebacks at 2× points and points from completions, plus slot defense (P1
+/// item 8, in StandInAgent+SlotDefense.swift). Routines and the load guardrail
+/// stay with the harness. When the two disagree, the harness wins.
 struct StandInAgent: Agent {
     var name: String { "Offline stand-in" }
 
@@ -97,7 +98,7 @@ struct StandInAgent: Agent {
             }
             let id = "comeback-\(item.id)"
             guard !known.contains(id),
-                  let slot = comebackSlot(for: item, history: history, booked: booked, now: s.now, cal: cal)
+                  let slot = comebackSlot(for: item, history: history, booked: booked, busy: s.busy, now: s.now, cal: cal)
             else { continue }
             let points = item.points * 2
             booked.append(PlanItem(id: id, slot: slot, points: points, source: .comeback))
@@ -106,6 +107,35 @@ struct StandInAgent: Agent {
                 before: item.slot, after: slot,
                 reason: "Shorter sessions are easier to finish after a miss, and you usually work out around \(slot.start.formatted(date: .omitted, time: .shortened)).",
                 points: points, createdAt: s.now
+            ))
+        }
+
+        // Slot defense: an upcoming workout a busy time landed on moves before
+        // it can be missed. One action per workout and conflict, so an undone
+        // move isn't made again.
+        for item in booked.sorted(by: { $0.slot.start < $1.slot.start })
+        where !done.contains(item.id) && item.slot.start > s.now {
+            guard let conflict = s.busy.first(where: { $0.start < item.slot.end && $0.end > item.slot.start }) else {
+                continue
+            }
+            let id = "defend-\(item.id)-\(Int(conflict.start.timeIntervalSince1970))"
+            guard !known.contains(id),
+                  let slot = Self.defendedSlot(
+                      for: item, conflict: conflict, busy: s.busy,
+                      others: booked.filter { $0.id != item.id }, now: s.now, cal: cal
+                  ),
+                  let index = booked.firstIndex(where: { $0.id == item.id })
+            else { continue }
+            booked[index].slot = slot
+            let shrunk = slot.minutes < item.slot.minutes
+            let at = conflict.start.formatted(date: .omitted, time: .shortened)
+            actions.append(AgentAction(
+                id: id, kind: shrunk ? .shrink : .move, planItemId: item.id,
+                before: item.slot, after: slot,
+                reason: shrunk
+                    ? "Your calendar is busy around \(at), so I made it \(slot.minutes) minutes to fit."
+                    : "That's the nearest free time, so it stays close to when you planned it.",
+                createdAt: s.now
             ))
         }
 
@@ -122,7 +152,7 @@ struct StandInAgent: Agent {
     /// usual evening slot if it's still free today, otherwise the next free half
     /// hour before 9 PM, otherwise tomorrow at the usual time.
     private func comebackSlot(
-        for item: PlanItem, history: [Workout], booked: [PlanItem], now: Date, cal: Calendar
+        for item: PlanItem, history: [Workout], booked: [PlanItem], busy: [Busy], now: Date, cal: Calendar
     ) -> Slot? {
         let lengths = history.map(\.minutes).sorted()
         let median = lengths.isEmpty ? 25 : lengths[lengths.count / 2]
@@ -143,9 +173,9 @@ struct StandInAgent: Agent {
                         activityType: item.slot.activityType)
         }
         func free(_ candidate: Slot) -> Bool {
-            candidate.start >= earliest && !booked.contains {
-                $0.slot.start < candidate.end && $0.slot.end > candidate.start
-            }
+            candidate.start >= earliest
+                && !booked.contains { $0.slot.start < candidate.end && $0.slot.end > candidate.start }
+                && !busy.contains { $0.start < candidate.end && $0.end > candidate.start }
         }
 
         let preferredToday = slot(on: today, at: preferred)
