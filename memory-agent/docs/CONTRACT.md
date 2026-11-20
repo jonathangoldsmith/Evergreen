@@ -11,6 +11,7 @@ The snapshot goes in, facts come out. `validateSnapshot` and `validateFacts` (`s
 | `dailySummaries[]` | `date` YYYY-MM-DD; optional `restingHeartRate` 0-250, `steps`, `sleepMinutes.totalAsleep` 0-1440 (at most 6 decimals) |
 | `workouts[]` | `activityType`, `start`, `end`, `durationMin` >= 0; optional `effort` 1-10 (2 decimals); other fields are never read or output |
 | `target.workoutsPerWeek` | optional; > 0, at most 2 decimals |
+| `calendar.events[]` | optional; `title` non-empty, `start` and `end` as above, `end` after `start`. Validated only: no fact reads it, so a title never reaches memory or output. The persona fixtures carry mock events written by `scripts/mock-calendar.mjs` |
 
 ## Facts
 

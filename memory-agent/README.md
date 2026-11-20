@@ -12,6 +12,7 @@ node scripts/trial.mjs         # four-week trial, dry run: docs/TRIAL.md
 npm install                    # once: the phone bundle tests need esbuild
 npm test
 node scripts/build-phone.mjs   # writes dist/phone.js
+node scripts/mock-calendar.mjs # rewrites the mock calendar in fixtures/personas/
 ```
 
 The phone host contract is in `docs/PHONE.md`.

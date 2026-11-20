@@ -103,6 +103,23 @@ export function validateSnapshot(snapshot) {
     });
   }
 
+  // Calendar events: mock input for now. Validated here, never read by the facts engine, so a title can't reach memory or output.
+  if (snapshot.calendar !== undefined) {
+    if (!isObj(snapshot.calendar) || !Array.isArray(snapshot.calendar.events)) bad('calendar', 'must be an object with an events array');
+    else {
+      snapshot.calendar.events.forEach((e, i) => {
+        const p = `calendar.events[${i}]`;
+        if (!isObj(e)) return bad(p, 'must be an object');
+        if (typeof e.title !== 'string' || !e.title.trim()) bad(`${p}.title`, 'must be a non-empty string');
+        const okStart = validTimestamp(e.start);
+        const okEnd = validTimestamp(e.end);
+        if (!okStart) bad(`${p}.start`, 'must be an ISO 8601 timestamp with an offset and at most 3 fractional second digits');
+        if (!okEnd) bad(`${p}.end`, 'must be an ISO 8601 timestamp with an offset and at most 3 fractional second digits');
+        if (okStart && okEnd && parseTimestamp(e.end).ms <= parseTimestamp(e.start).ms) bad(`${p}.end`, 'must be after start');
+      });
+    }
+  }
+
   if (snapshot.target !== undefined) {
     const t = isObj(snapshot.target) ? snapshot.target.workoutsPerWeek : undefined;
     if (!(isNum(t) && t > 0 && Math.abs(t * 100 - Math.round(t * 100)) < 1e-9)) {

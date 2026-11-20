@@ -35,6 +35,21 @@ test('persona facts are valid for each of the last 28 days', () => {
   }
 });
 
+test('calendar events never change the facts, and no title reaches them', () => {
+  for (const [name, snap] of personas) {
+    assert.ok(snap.calendar.events.length > 0, name);
+    const { calendar, ...without } = snap;
+    const titles = [...new Set(calendar.events.map((e) => e.title))];
+    for (const s of snap.dailySummaries.slice(-28)) {
+      const now = `${s.date}T23:00:00-08:00`;
+      const facts = completedFacts({ ...snap, exportDate: now }, now);
+      assert.deepEqual(facts, completedFacts({ ...without, exportDate: now }, now), `${name} ${s.date}`);
+      const text = JSON.stringify(facts);
+      for (const title of titles) assert.ok(!text.includes(title), `${name} ${s.date}: ${title}`);
+    }
+  }
+});
+
 test('the snapshot validator rejects broken input', () => {
   const good = structuredClone(personas[0][1]);
   const cases = {
@@ -48,6 +63,10 @@ test('the snapshot validator rejects broken input', () => {
     'effort out of range': { ...good, workouts: [{ ...good.workouts[0], effort: 11 }] },
     'bad target': { ...good, target: { workoutsPerWeek: 0 } },
     'sleep out of range': { ...good, dailySummaries: [{ date: '2026-11-01', sleepMinutes: { totalAsleep: 5000 } }] },
+    'calendar without events': { ...good, calendar: {} },
+    'calendar event without title': { ...good, calendar: { events: [{ ...good.calendar.events[0], title: ' ' }] } },
+    'calendar event without offset': { ...good, calendar: { events: [{ ...good.calendar.events[0], start: '2026-11-18T09:00:00' }] } },
+    'calendar event ends at start': { ...good, calendar: { events: [{ ...good.calendar.events[0], end: good.calendar.events[0].start }] } },
   };
   for (const [name, bad] of Object.entries(cases)) {
     assert.equal(validateSnapshot(bad).ok, false, name);
