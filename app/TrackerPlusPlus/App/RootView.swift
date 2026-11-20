@@ -1,0 +1,40 @@
+import SwiftUI
+
+/// Onboarding until it's done, then Today, with the Done sheet and the demo
+/// controls on top.
+struct RootView: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
+    /// The toggle on the app's page in iOS Settings (Settings.bundle).
+    @AppStorage("demo_controls") private var demoEnabled = false
+    @State private var showDemo = false
+
+    var body: some View {
+        @Bindable var model = model
+        Group {
+            if model.onboarded {
+                TodayView()
+            } else {
+                OnboardingView()
+            }
+        }
+        .sheet(item: $model.celebration, content: DoneSheet.init)
+        .overlay(alignment: .bottomTrailing) {
+            if demoEnabled && model.onboarded {
+                DemoButton(action: openDemo)
+                    .padding(Theme.md)
+            }
+        }
+        .sheet(isPresented: $showDemo) { DemoSheet() }
+        .tint(Theme.text)
+        .task { await model.keepTicking() }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await model.tick() }
+        }
+    }
+
+    private func openDemo() {
+        showDemo = true
+    }
+}

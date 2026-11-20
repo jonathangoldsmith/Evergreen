@@ -1,0 +1,39 @@
+import Foundation
+import SwiftData
+
+// The phone's memory. The harness stores nothing between calls (eng review D3),
+// so everything it needs to see again lives here. The contract structs stay the
+// wire format; these models map to and from them.
+
+/// The one demo run on this phone: who it's about and today's story. A new day
+/// clears the run but keeps the person and onboarding (eng review D6).
+@Model
+final class Run {
+    var persona: String
+    var onboarded: Bool
+    var storyDay: Date
+    /// Demo clock as minutes after midnight on the story day; nil means real time.
+    var clockMinutes: Int?
+    /// Plan items whose Done sheet has already shown.
+    var seenCompletions: [String]
+    /// The last good `/tick` answer exactly as it arrived, kept on screen when
+    /// the agent can't be reached.
+    var lastResponse: Data?
+
+    @Relationship(deleteRule: .cascade, inverse: \ActionRecord.run)
+    var actions: [ActionRecord] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \LoggedWorkout.run)
+    var workouts: [LoggedWorkout] = []
+
+    init(persona: PersonaKey, storyDay: Date) {
+        self.persona = persona.rawValue
+        self.onboarded = false
+        self.storyDay = storyDay
+        self.clockMinutes = nil
+        self.seenCompletions = []
+        self.lastResponse = nil
+    }
+
+    var personaKey: PersonaKey { PersonaKey(rawValue: persona) ?? .sam }
+}
