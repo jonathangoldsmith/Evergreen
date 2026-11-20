@@ -4,5 +4,7 @@
 <dict>
 	<key>AMPLITUDE_API_KEY</key>
 	<string>$(AMPLITUDE_API_KEY)</string>
+	<key>HARNESS_SECRET</key>
+	<string>$(HARNESS_SECRET)</string>
 </dict>
 </plist>

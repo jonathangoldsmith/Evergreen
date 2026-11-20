@@ -12,7 +12,6 @@
 		B8F1030830B0ECF60058A375 /* TrackerPlusPlus.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */; };
 		B8F1030930B0ECF60058A375 /* TrackerPlusPlus.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = B8F1030730B0ECF60058A375 /* TrackerPlusPlus.xcconfig */; };
 		B8F1030C30B0F1490058A375 /* PersonaInquirySDK2 in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */; };
-		B8F1030E30B0F1490058A375 /* PersonaInquirySDK2Protected in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030D30B0F1490058A375 /* PersonaInquirySDK2Protected */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,7 +81,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B8F1030E30B0F1490058A375 /* PersonaInquirySDK2Protected in Frameworks */,
 				B8F1030630B0ECDB0058A375 /* AmplitudeSwift in Frameworks */,
 				B8F1030C30B0F1490058A375 /* PersonaInquirySDK2 in Frameworks */,
 			);
@@ -161,7 +159,6 @@
 			packageProductDependencies = (
 				B8F1030530B0ECDB0058A375 /* AmplitudeSwift */,
 				B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */,
-				B8F1030D30B0F1490058A375 /* PersonaInquirySDK2Protected */,
 			);
 			productName = TrackerPlusPlus;
 			productReference = 7A1000000000000000000001 /* TrackerPlusPlus.app */;
@@ -593,11 +590,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B8F1030A30B0F1490058A375 /* XCRemoteSwiftPackageReference "inquiry-ios-2" */;
 			productName = PersonaInquirySDK2;
-		};
-		B8F1030D30B0F1490058A375 /* PersonaInquirySDK2Protected */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B8F1030A30B0F1490058A375 /* XCRemoteSwiftPackageReference "inquiry-ios-2" */;
-			productName = PersonaInquirySDK2Protected;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

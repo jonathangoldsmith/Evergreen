@@ -5,50 +5,78 @@
 	<key>PreferenceSpecifiers</key>
 	<array>
 		<dict>
-			<key>Type</key>
-			<string>PSGroupSpecifier</string>
+			<key>FooterText</key>
+			<string>Shows a floating button for the demo clock, logging a workout, switching people and resetting. Leave the harness URL empty to use the offline stand-in agent. With a harness secret (here or in app/Secrets.xcconfig), Jordan’s shoes come from the harness; the shoes URL defaults to the deployed one.</string>
 			<key>Title</key>
 			<string>Demo</string>
-			<key>FooterText</key>
-			<string>Shows a floating button for the demo clock, logging a workout, switching people and resetting. Leave the harness URL empty to use the offline stand-in agent.</string>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
 		</dict>
 		<dict>
-			<key>Type</key>
-			<string>PSToggleSwitchSpecifier</string>
-			<key>Title</key>
-			<string>Demo controls</string>
-			<key>Key</key>
-			<string>demo_controls</string>
 			<key>DefaultValue</key>
 			<false/>
+			<key>Key</key>
+			<string>demo_controls</string>
+			<key>Title</key>
+			<string>Demo controls</string>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
 		</dict>
 		<dict>
-			<key>Type</key>
-			<string>PSTextFieldSpecifier</string>
-			<key>Title</key>
-			<string>Harness URL</string>
+			<key>AutocapitalizationType</key>
+			<string>None</string>
+			<key>AutocorrectionType</key>
+			<string>No</string>
 			<key>Key</key>
 			<string>harness_url</string>
 			<key>KeyboardType</key>
 			<string>URL</string>
+			<key>Title</key>
+			<string>Harness URL</string>
+			<key>Type</key>
+			<string>PSTextFieldSpecifier</string>
+		</dict>
+		<dict>
 			<key>AutocapitalizationType</key>
 			<string>None</string>
 			<key>AutocorrectionType</key>
 			<string>No</string>
-		</dict>
-		<dict>
-			<key>Type</key>
-			<string>PSTextFieldSpecifier</string>
-			<key>Title</key>
-			<string>Evidence URL</string>
 			<key>Key</key>
 			<string>evidence_url</string>
 			<key>KeyboardType</key>
 			<string>URL</string>
+			<key>Title</key>
+			<string>Evidence URL</string>
+			<key>Type</key>
+			<string>PSTextFieldSpecifier</string>
+		</dict>
+		<dict>
 			<key>AutocapitalizationType</key>
 			<string>None</string>
 			<key>AutocorrectionType</key>
 			<string>No</string>
+			<key>Key</key>
+			<string>recommend_url</string>
+			<key>KeyboardType</key>
+			<string>URL</string>
+			<key>Title</key>
+			<string>Shoes URL</string>
+			<key>Type</key>
+			<string>PSTextFieldSpecifier</string>
+		</dict>
+		<dict>
+			<key>AutocapitalizationType</key>
+			<string>None</string>
+			<key>AutocorrectionType</key>
+			<string>No</string>
+			<key>IsSecure</key>
+			<true/>
+			<key>Key</key>
+			<string>harness_secret</string>
+			<key>Title</key>
+			<string>Harness secret</string>
+			<key>Type</key>
+			<string>PSTextFieldSpecifier</string>
 		</dict>
 	</array>
 	<key>StringsTable</key>
