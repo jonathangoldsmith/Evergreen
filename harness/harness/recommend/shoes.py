@@ -136,8 +136,11 @@ def recommend(req: ShoesRequest) -> ShoesResponse:
         return ShoesResponse(condition=cond, profile=prof, purchase=None, live=False, source="rules")
     need = _need(prof, cond, fit, days_to_race)
 
-    # Evidence runs alongside the models.
-    ev_future = _pool.submit(senso.search, "shoes", f"replace running shoes mileage; {fit.get('text')}; arrives by {race:%b %d}")
+    # Guide and fit-note evidence runs alongside the models; the chosen listing is added after.
+    ev_future = _pool.submit(senso.search_many, "shoes", [
+        ("How many miles before replacing running shoes, and how to break in a new pair before a race", 2),
+        (f"{req.persona.capitalize()}'s fit notes: toe box, carbon plate, surface", 1),
+    ])
 
     source, why, lost_map = "rules", None, None
     try:
@@ -155,8 +158,9 @@ def recommend(req: ShoesRequest) -> ShoesResponse:
         evidence, ev_live = ev_future.result(timeout=left())
     except Exception:
         evidence, ev_live = [Evidence(**p) for p in data.passages("shoes")], False
-    evidence = evidence + [Evidence(source=f"{chosen['name']} listing",
-                                    passage=f"{chosen['blurb']} {_money(chosen['amountCents'])}. Arrives {chosen['arrives']:%a %b %d}. Free returns for 30 days.")]
+    listing = next((e for e in evidence if e.source == f"{chosen['name']} listing"), None)
+    evidence = evidence + ([] if listing else [Evidence(source=f"{chosen['name']} listing",
+                                    passage=f"{chosen['blurb']} {_money(chosen['amountCents'])}. Arrives {chosen['arrives']:%a %b %d}. Free returns for 30 days.")])
 
     rule = next((m for m in req.mandate if m.category == "any"), None) or Mandate(
         id="ask-first", text="Ask me before buying anything.", category="any", maxAutoCents=0)
