@@ -22,7 +22,7 @@ xcodebuild test -project app/TrackerPlusPlus.xcodeproj -scheme TrackerPlusPlus -
 
 ## Demo controls
 
-Off by default (design D13). Turn them on in iOS Settings → Tracker++ → Demo controls, or in the simulator:
+On by default in Debug builds, which is what Xcode installs on the simulator or a phone; off in Release (design D13). Turn them on or off in iOS Settings → Tracker++ → Demo controls, or in the simulator:
 
 ```
 xcrun simctl spawn booted defaults write com.trackerplusplus.app demo_controls -bool YES
