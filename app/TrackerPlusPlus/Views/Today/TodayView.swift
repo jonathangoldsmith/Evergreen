@@ -15,7 +15,9 @@ struct TodayView: View {
                             .font(.footnote)
                             .foregroundStyle(Theme.warning)
                     }
-                    if let action = model.latestAction {
+                    if let action = model.latestAction, let purchaseId = action.purchaseId {
+                        PurchaseCard(purchaseId: purchaseId)
+                    } else if let action = model.latestAction {
                         AgentCard(action: action)
                     } else {
                         QuietState()

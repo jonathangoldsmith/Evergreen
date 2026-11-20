@@ -11,6 +11,8 @@ import Foundation
 /// stay with the harness. When the two disagree, the harness wins.
 struct StandInAgent: Agent {
     var name: String { "Offline stand-in" }
+    /// Where live Senso evidence comes from; nil uses the bundled passages.
+    var evidence: EvidenceClient? = EvidenceClient.configured()
 
     static let basePoints = 20
     /// A window counts as missed 30 minutes after it ends, and a workout up to 30
@@ -138,6 +140,8 @@ struct StandInAgent: Agent {
                 createdAt: s.now
             ))
         }
+
+        actions += await purchaseActions(s, known: known, done: done, cal: cal)
 
         return TickResponse(
             actions: actions,

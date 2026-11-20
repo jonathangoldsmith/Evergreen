@@ -101,9 +101,14 @@ final class AppModel {
                     id: id, slot: after, points: action.points ?? StandInAgent.basePoints,
                     source: action.kind == .bookComeback ? .comeback : .routine
                 ))
-            case .move, .shrink:
+            case .move, .shrink, .purchase, .cancelPurchase:
+                // A day pass moves the workout to the gym; its cancel moves it back.
                 if let index = items.firstIndex(where: { $0.id == id }) { items[index].slot = after }
-            case .note:
+            case .addWorkout:
+                // Break-in runs leave the plan when their order is cancelled.
+                if let purchaseId = action.purchaseId, purchaseState(purchaseId)?.status == .cancelled { continue }
+                items.append(PlanItem(id: id, slot: after, points: action.points ?? StandInAgent.basePoints, source: .plan))
+            case .note, .purchaseOutcome:
                 break
             }
         }
@@ -123,6 +128,23 @@ final class AppModel {
 
     /// The one card on Today: the latest action that's still in effect.
     var latestAction: AgentAction? { feed.first { !isUndone($0) } }
+
+    /// A purchase as of its newest action still in effect. Each state change is
+    /// its own action (the phone ignores known ids), so the trail folds here.
+    func purchaseState(_ purchaseId: String) -> Purchase? {
+        appliedActions.last { $0.purchaseId == purchaseId && $0.purchase != nil && !isUndone($0) }?.purchase
+    }
+
+    /// Every action in one purchase's trail, oldest first.
+    func purchaseTrail(_ purchaseId: String) -> [AgentAction] {
+        appliedActions.filter { $0.purchaseId == purchaseId }
+    }
+
+    /// The person's standing spending rule (premise 2), set once in onboarding.
+    nonisolated static let mandate = [
+        Mandate(id: "ask-first", text: "Ask me before buying anything else.", category: .any, maxAutoCents: 0),
+        Mandate(id: "day-pass", text: "Day passes up to $20: book it, tell me after.", category: .dayPass, maxAutoCents: 2000),
+    ]
 
     func isUndone(_ action: AgentAction) -> Bool { undoneIds.contains(action.id) }
 
@@ -165,7 +187,11 @@ final class AppModel {
             workouts: workouts,
             actions: appliedActions.filter { !isUndone($0) },
             undoneActionIds: appliedActions.map(\.id).filter(undoneIds.contains),
-            busy: calendarSync.busyTimes(from: storyDay)
+            busy: calendarSync.busyTimes(from: storyDay),
+            mandate: Self.mandate,
+            approvedPurchaseIds: run.approvedPurchaseIds,
+            demo: run.demo,
+            visits: run.visits
         )
         do {
             let response = try await agent.tick(snapshot)
@@ -198,6 +224,14 @@ final class AppModel {
     func undo(_ action: AgentAction) {
         guard let record = run.actions.first(where: { $0.actionId == action.id }), !record.undone else { return }
         record.undone = true
+        save()
+        Task { await tick() }
+    }
+
+    /// "Order it" on a purchase that's waiting for the person.
+    func approvePurchase(_ purchaseId: String) {
+        guard !run.approvedPurchaseIds.contains(purchaseId) else { return }
+        run.approvedPurchaseIds.append(purchaseId)
         save()
         Task { await tick() }
     }
@@ -371,12 +405,66 @@ final class AppModel {
         Task { await tick() }
     }
 
-    func switchPerson(to key: PersonaKey) {
+    func switchPerson(to key: PersonaKey, clock: Int? = nil, demo: ((Persona) -> DemoConditions)? = nil) {
         run.persona = key.rawValue
         clearRun(storyDay: storyDay)
         persona = Persona.load(key, storyDay: storyDay)
+        run.clockMinutes = clock
+        run.demo = demo?(persona)
         save()
         Task { await tick() }
+    }
+
+    /// Demo preset: Sam at 1:30 PM, so the missed lunch walk already has its
+    /// 6:30 PM comeback for the rain beat.
+    func showRainDemo() {
+        switchPerson(to: .sam, clock: 13 * 60 + 30)
+    }
+
+    /// The 6:30 PM rain the day-pass rule reacts to.
+    var rainTime: Date { calendar.date(bySettingHour: 18, minute: 30, second: 0, of: storyDay) ?? storyDay }
+
+    /// Demo control: rain at 6:30 PM; the agent may buy a day pass.
+    func forecastRain() {
+        var demo = run.demo ?? DemoConditions()
+        demo.rainAt = rainTime
+        demo.forecastClear = false
+        run.demo = demo
+        save()
+        Task { await tick() }
+    }
+
+    /// Demo control: the forecast clears; the agent may cancel its own pass.
+    func clearForecast() {
+        var demo = run.demo ?? DemoConditions()
+        demo.forecastClear = true
+        run.demo = demo
+        save()
+        Task { await tick() }
+    }
+
+    var rainForecast: Bool { run.demo?.rainAt != nil && run.demo?.forecastClear == false }
+
+    /// Demo control: arrive at the gym now. Records the visit the day-pass
+    /// outcome reads, and sends the arrival notification when allowed. The
+    /// real geofence only notifies; it runs no app code.
+    func arriveAtGym() {
+        run.visits.append(Visit(place: StandInAgent.gym, at: now))
+        save()
+        if notificationAccess == .on { sendGymNotification(arriving: true) }
+        Task { await tick() }
+    }
+
+    /// Demo preset: Jordan's shoes near 400 miles with a race in 9 days. His
+    /// 30-day history adds about 125 miles to the 267 already on the pair.
+    func showShoesDemo() {
+        switchPerson(to: .jordan) { [calendar, storyDay] person in
+            DemoConditions(
+                shoesBoughtOn: person.historyStart,
+                shoesStartMiles: 267,
+                raceDate: calendar.date(byAdding: .day, value: 9, to: storyDay)
+            )
+        }
     }
 
     /// Clears the run: actions, logged workouts, points and the clock. Calendar
@@ -408,6 +496,9 @@ final class AppModel {
         run.clockMinutes = nil
         run.seenCompletions = []
         run.lastResponse = nil
+        run.approvedPurchaseIds = []
+        run.demo = nil
+        run.visits = []
         response = nil
     }
 

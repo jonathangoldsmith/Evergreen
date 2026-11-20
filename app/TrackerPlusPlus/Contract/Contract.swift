@@ -16,6 +16,9 @@ struct Slot: Codable, Hashable {
     var start: Date
     var end: Date
     var activityType: String
+    /// Where it happens when the agent changed it ("Demo Gym"); nil means the
+    /// plan's usual place. Shown in the app only; the calendar keeps its title.
+    var place: String? = nil
 
     var minutes: Int { Int((end.timeIntervalSince(start) / 60).rounded()) }
 }
@@ -59,7 +62,12 @@ struct Workout: Codable, Hashable, Identifiable {
 /// Every action carries the five parts of design D9: verb, before → after,
 /// reason, timestamp, and (in the UI) Undo.
 struct AgentAction: Codable, Hashable, Identifiable {
-    enum Kind: String, Codable { case bookComeback, move, shrink, addRoutine, note }
+    enum Kind: String, Codable {
+        case bookComeback, move, shrink, addRoutine, note
+        /// A purchase or one of its later states, a one-off workout it added
+        /// (break-in runs), and what happened after (the shopping beat).
+        case purchase, cancelPurchase, purchaseOutcome, addWorkout
+    }
 
     var id: String
     var kind: Kind
@@ -72,6 +80,77 @@ struct AgentAction: Codable, Hashable, Identifiable {
     var reason: String
     var points: Int?
     var createdAt: Date
+    /// Every action in one purchase's trail shares this, so the UI folds them.
+    var purchaseId: String? = nil
+    /// The purchase as of this action: each state change is a new action with a
+    /// new id, because the phone ignores ids it already has.
+    var purchase: Purchase? = nil
+}
+
+/// Something the agent bought or asked to buy, with the trail behind it. No
+/// real money moves: every merchant is a demo merchant.
+struct Purchase: Codable, Hashable {
+    enum Status: String, Codable { case awaitingApproval, bought, cancelled }
+
+    /// The mandate line that allowed or held the purchase.
+    struct Rule: Codable, Hashable {
+        var id: String
+        var text: String
+    }
+
+    /// A cited passage the agent used (Senso, live or cached).
+    struct Evidence: Codable, Hashable {
+        var source: String
+        var passage: String
+    }
+
+    /// An option the agent weighed; the chosen one comes first.
+    struct Option: Codable, Hashable {
+        var name: String
+        var amountCents: Int
+        var arrives: Date?
+        var lostBecause: String?
+    }
+
+    var id: String
+    var item: String
+    var merchant: String
+    var amountCents: Int
+    var status: Status
+    var rule: Rule
+    var noticed: String
+    var evidence: [Evidence]
+    var evidenceLive: Bool
+    var options: [Option]
+    /// The free-cancel deadline for purchases made without asking.
+    var cancelBy: Date?
+    var outcome: String?
+}
+
+/// One line of the person's standing spending rule.
+struct Mandate: Codable, Hashable {
+    enum Category: String, Codable { case dayPass, any }
+
+    var id: String
+    var text: String
+    var category: Category
+    /// At or under this, in this category, the agent buys without asking.
+    var maxAutoCents: Int
+}
+
+/// Conditions the demo controls set instead of live weather or mileage.
+struct DemoConditions: Codable, Hashable {
+    var rainAt: Date?
+    var forecastClear = false
+    var shoesBoughtOn: Date?
+    var shoesStartMiles: Int?
+    var raceDate: Date?
+}
+
+/// Arriving somewhere, recorded by the "Arrive at the gym" demo control.
+struct Visit: Codable, Hashable {
+    var place: String
+    var at: Date
 }
 
 /// A plan item finished by a workout.
@@ -108,6 +187,11 @@ struct TickSnapshot: Codable {
     /// Busy times on the person's other calendars from the story day on, for
     /// slot defense. Empty without calendar access.
     var busy: [Busy]
+    var mandate: [Mandate] = []
+    /// Purchases the person tapped "Order it" on.
+    var approvedPurchaseIds: [String] = []
+    var demo: DemoConditions? = nil
+    var visits: [Visit] = []
 }
 
 struct TickResponse: Codable, Hashable {

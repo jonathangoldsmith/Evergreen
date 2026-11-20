@@ -62,6 +62,21 @@ struct DemoSheet: View {
                 }
 
                 Section {
+                    Button("Jordan: shoes near 400 mi") { model.showShoesDemo() }
+                    Button("Sam: back to 1:30 PM") {
+                        minutes = 13 * 60 + 30
+                        model.showRainDemo()
+                    }
+                    Button("Rain at 6:30 PM") { model.forecastRain() }
+                    Button("Forecast clears") { model.clearForecast() }
+                        .disabled(!model.rainForecast)
+                } header: {
+                    Text("Shopping")
+                } footer: {
+                    Text("Jordan has 392 miles on his shoes and a race in 9 days; the agent picks a pair and asks first. Sam's comeback is at 6:30 PM; rain makes the agent buy a $15 day pass under the $20 rule, and a clear forecast makes it cancel its own pass. Demo merchants, no charge.")
+                }
+
+                Section {
                     Button("Add a meeting on the next workout") { model.addTestMeeting() }
                         .disabled(model.calendarAccess != .on || model.nextDaysFirstWorkout == nil)
                 } footer: {
@@ -82,12 +97,13 @@ struct DemoSheet: View {
                         set: { on in Task { await model.setGymAlerts(on) } }
                     ))
                     HStack {
-                        Button("Arrive at the gym") { model.sendGymNotification(arriving: true) }
+                        // Always on: it also records the visit the day pass's outcome reads.
+                        Button("Arrive at the gym") { model.arriveAtGym() }
                         Spacer()
                         Button("Leave the gym") { model.sendGymNotification(arriving: false) }
+                            .disabled(model.notificationAccess != .on)
                     }
                     .buttonStyle(.borderless)
-                    .disabled(model.notificationAccess != .on)
                     Button("Show Live Activity for the next workout") { model.startLiveActivity() }
                         .disabled(!model.liveActivityAvailable || model.nextWorkout == nil)
                 } header: {
