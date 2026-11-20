@@ -22,7 +22,7 @@ def _get(*names: str) -> str:
 SIE_API_KEY = _get("SIE_API_KEY", "SUPERLINKED_API_KEY")
 SIE_BASE_URL = _get("SIE_BASE_URL") or "https://api.superlinked.com"
 SENSO_API_KEY = _get("SENSO_API_KEY")
-SENSO_BASE_URL = _get("SENSO_BASE_URL") or "https://sdk.senso.ai/api/v1"
+SENSO_BASE_URL = _get("SENSO_BASE_URL")  # set from Senso's docs once we have access
 HARNESS_SECRET = _get("HARNESS_SECRET")
 
 RERANK_MODEL = "Qwen/Qwen3-Reranker-4B"
