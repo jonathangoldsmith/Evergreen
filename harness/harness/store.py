@@ -28,7 +28,7 @@ DDL = [
         PRIMARY KEY (id), SORT KEY (created_at))""",
 ]
 CANDIDATE_TTL_S = 300
-LOG_WAIT_S = 1.0          # how long a request waits for its audit write before answering anyway
+LOG_WAIT_S = 0.4          # how long a request waits for its audit write before answering anyway
 
 _lock = threading.Lock()
 _conn_obj = None
@@ -132,6 +132,27 @@ def save_candidates(snap: dict) -> str:
         return f"saved {len(snap['candidates'])} candidates"
     except Exception as exc:
         return f"failed: {type(exc).__name__}: {str(exc)[:120]}"
+
+
+def cached_candidates(persona: str) -> list[dict] | None:
+    """Candidates already in this instance's memory, or None. Never touches the network."""
+    hit = _cache.get(persona)
+    return hit[1] if hit and time.monotonic() - hit[0] < CANDIDATE_TTL_S else None
+
+
+def refresh_candidates_async(persona: str) -> None:
+    """Fill the cache in the background so the next request can use SingleStore's candidates."""
+    if enabled():
+        threading.Thread(target=load_candidates, args=(persona,), daemon=True).start()
+
+
+def warm(persona: str = "jordan") -> dict:
+    """Open the connection and load candidates now (called by /warm before the demo)."""
+    if not enabled():
+        return {"singlestore": "off"}
+    t = time.monotonic()
+    rows = load_candidates(persona)
+    return {"singlestore_ms": int((time.monotonic() - t) * 1000), "singlestore_candidates": len(rows or [])}
 
 
 def load_candidates(persona: str) -> list[dict] | None:

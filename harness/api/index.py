@@ -29,7 +29,7 @@ def health() -> dict:
 
 @app.post("/warm", dependencies=[Depends(require_secret)])
 def warm() -> dict:
-    return sie.warm(provision_timeout_s=240)
+    return {**sie.warm(provision_timeout_s=240), **store.warm()}
 
 
 @app.post("/shoes/prefetch", dependencies=[Depends(require_secret)])

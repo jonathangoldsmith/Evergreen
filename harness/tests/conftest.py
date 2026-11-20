@@ -20,6 +20,7 @@ def _catalog_only(monkeypatch, request):
     from harness.web import research
     monkeypatch.setattr(research, "load_snapshot", lambda persona: None)
     monkeypatch.setattr(store, "load_candidates", lambda persona: None)
+    monkeypatch.setattr(store, "cached_candidates", lambda persona: None)
 
 
 @pytest.fixture(autouse=True)

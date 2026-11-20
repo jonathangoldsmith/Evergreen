@@ -143,3 +143,14 @@ def test_connect_args_from_portal_mysql_command():
     assert a == {"user": "admin", "host": "svc-1-dml.aws-oregon-3.svc.singlestore.com", "port": 3306,
                  "password": "a|{:_b,?c$d@e@f"}
     assert store.connect_args("mysql -u u -h h -P 3333 --password=x trackerplusplus")["database"] == "trackerplusplus"
+
+
+def test_request_path_uses_memory_only(fake_db):
+    from harness.recommend import shoes
+    store.save_candidates(SNAP)
+    store._cache.clear()
+    assert store.cached_candidates("jordan") is None
+    pool, src = shoes.candidates("jordan")          # cold: snapshot/catalog, refresh kicked off in background
+    assert src in ("web-snapshot", "catalog")
+    store.load_candidates("jordan")                  # what the background refresh does
+    assert shoes.candidates("jordan")[1] == "web-singlestore"

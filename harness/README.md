@@ -64,8 +64,8 @@ Off until `SINGLESTORE_URL` is set; the harness works the same without it.
    `npx vercel deploy --prod --yes`. Then `/health` shows `"singlestore": true`.
 
 What gets stored:
-- `shoe_candidates`: one row per shoe from the web research (`scripts/prefetch_web.py` or `POST /shoes/prefetch` writes it). Recommendations read it first, cached for 5 minutes per instance.
-- `recommendations`: one row per pick, holding the request, wear, profile, where the candidates came from, the shortlist, every rejection and its reason, the final `Purchase` with citations, the source (`sie` or `rules`) and latency. The write waits at most 1 s, so a slow database never delays the answer. If it finishes, the response carries `auditId`.
+- `shoe_candidates`: one row per shoe from the web research (`scripts/prefetch_web.py` or `POST /shoes/prefetch` writes it). Recommendations use it from memory only (loaded by `/warm` or in the background after the first request, cached 5 minutes), so the database is never on the request path; until then they use the snapshot.
+- `recommendations`: one row per pick, holding the request, wear, profile, where the candidates came from, the shortlist, every rejection and its reason, the final `Purchase` with citations, the source (`sie` or `rules`) and latency. The write waits at most 0.4 s, so a slow database never delays the answer. If it finishes, the response carries `auditId`.
 
 Try it for the demo: `curl -s "$URL/audit/recent?persona=jordan&limit=1" -H "X-Harness-Secret: $SECRET"`.
 

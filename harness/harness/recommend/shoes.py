@@ -35,9 +35,10 @@ def _money(cents: int) -> str:
 
 def candidates(persona: str) -> tuple[list[dict], str]:
     """Web research from SingleStore, else the deployed snapshot, else the fake catalog."""
-    rows = store.load_candidates(persona)
+    rows = store.cached_candidates(persona)          # memory only: the database is never on the request path
     if rows:
         return rows, "web-singlestore"
+    store.refresh_candidates_async(persona)
     snap = research.load_snapshot(persona)
     if snap:
         return snap["candidates"], "web-snapshot"

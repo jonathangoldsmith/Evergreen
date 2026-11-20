@@ -109,6 +109,7 @@ def test_sie_smoke_live():
 def test_web_snapshot_candidates_used_and_filtered(no_sie, monkeypatch):
     from harness import store
     monkeypatch.setattr(store, "load_candidates", lambda persona: None)
+    monkeypatch.setattr(store, "cached_candidates", lambda persona: None)
     snap = {"candidates": [
         {"id": "a", "name": "Brand A Cushy", "amountCents": 15000, "arrivesInDays": 3, "wideToeBox": True, "carbonPlate": None,
          "surface": "road", "cushion": "high", "dropMm": 8, "lifeKm": 650, "blurb": "q", "quote": "Great for long runs.",
