@@ -17,9 +17,15 @@ final class CalendarSync {
     /// A store made before access was granted doesn't see any calendars, so
     /// it's replaced the first time a sync runs with access.
     private var storeHasAccess = EKEventStore.authorizationStatus(for: .event) == .fullAccess
+    /// Set when the prompt grants access. `authorizationStatus` keeps reporting
+    /// "not determined" for the rest of the launch after a grant (seen on the
+    /// iOS 27 simulator), so the request's own answer is trusted too. A change
+    /// made in Settings restarts the app, so it never needs this.
+    private var grantedThisLaunch = false
 
     var access: CalendarAccess {
-        switch EKEventStore.authorizationStatus(for: .event) {
+        if grantedThisLaunch { return .on }
+        return switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess: .on
         case .notDetermined: .notAsked
         default: .off
@@ -31,7 +37,12 @@ final class CalendarSync {
     /// workout. Returns whether access is on afterwards.
     @discardableResult
     func requestAccess() async -> Bool {
-        _ = try? await EKEventStore().requestFullAccessToEvents()
+        do {
+            grantedThisLaunch = try await EKEventStore().requestFullAccessToEvents()
+        } catch {
+            Self.log.error("Access request failed: \(error.localizedDescription)")
+        }
+        Self.log.info("Calendar access request granted: \(self.grantedThisLaunch)")
         return access == .on
     }
 
