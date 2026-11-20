@@ -44,3 +44,8 @@ def shoes_recommend(req: ShoesRequest) -> ShoesResponse:
         return shoes.recommend(req)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"unknown persona {req.persona}")
+
+
+@app.api_route("/{rest:path}", methods=["GET", "POST"], include_in_schema=False)
+def not_found(rest: str):
+    raise HTTPException(status_code=404, detail=f"no route /{rest}")

@@ -44,4 +44,10 @@ The whole route has a 5 s budget. Measured on Jordan: about 2.7–3.5 s live and
 
 ## Deploy (Vercel)
 
-`vercel.json` routes everything to `api/index.py`, and `requirements.txt` holds the dependencies. Set the same environment variables in the Vercel project, deploy from `harness/`, then `curl <url>/health` and `POST <url>/warm`.
+Live at **https://trackerplusplus-harness.vercel.app** (personal Vercel project `trackerplusplus-harness`, production, so no preview protection).
+
+- Entry point: `main.py` exposes the FastAPI `app` (Vercel's zero-config FastAPI support); `vercel.json` stays empty. A rewrite to `api/index.py` dropped the request path.
+- Dependencies come from `requirements.txt`. `.vercelignore` keeps `.env`, tests and scripts out of the upload.
+- Environment variables (production): `SUPERLINKED_API_KEY`, `SENSO_API_KEY`, `NIMBLE_API_KEY`, `HARNESS_SECRET`.
+- `HARNESS_SECRET` is on: `/shoes/recommend` and `/warm` need `X-Harness-Secret: <value from harness/.env>`; `/health` and `/evidence` stay open.
+- Redeploy: `cd harness && npx vercel deploy --prod --yes`. Before the demo: `POST /warm` with the header.
