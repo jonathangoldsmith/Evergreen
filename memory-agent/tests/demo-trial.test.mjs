@@ -9,12 +9,21 @@ import { makeTmp } from './helpers/tmp.mjs';
 const env = { ...process.env, AMPLITUDE_API_KEY: '', AMPLITUDE_SECRET_KEY: '' };
 const run = (script, ...args) => spawnSync(process.execPath, [new URL(`../scripts/${script}`, import.meta.url).pathname, ...args], { encoding: 'utf8', env });
 
-test('demo.mjs exits 0 and prints the five sections in under 120 lines', () => {
+test('demo.mjs exits 0 and prints all seven sections in under 120 lines', () => {
   const r = run('demo.mjs');
   assert.equal(r.status, 0, r.stderr);
-  for (const s of ['(a) Snapshot in', '(b) rollDay', '(c) Taps', '(c) Forget', '(d) Planner text', '(e) Amplitude events']) assert.ok(r.stdout.includes(s), s);
+  for (const s of ['(a) Snapshot in', '(b) rollDay', '(c) Taps', '(c) Forget', '(d) Planner text', '(e) Amplitude events', '(f) Memory Agent calendar demo', '(g) Amplitude events from this calendar replay']) assert.ok(r.stdout.includes(s), s);
   assert.ok(r.stdout.split('\n').length < 120);
   assert.equal(run('demo.mjs').stdout, r.stdout, 'same output twice');
+});
+
+test('calendar output is rebuilt from memory and the existing mock calendar', () => {
+  const { stdout } = run('demo.mjs', 'sedentary');
+  assert.match(stdout, /Standing timing signals: 0 before, 1 after feedback, 0 after forget/);
+  assert.match(stdout, /Lunch walk: 12:00 PM -> 12:45 PM to 1:15 PM \(calendar conflict\)/);
+  assert.match(stdout, /Elliptical: 7:30 AM -> 8:00 AM to 8:25 AM \(remembered timing feedback\)/);
+  assert.match(stdout, /After forget: Lunch walk 12:45 PM; Elliptical 7:30 AM/);
+  assert.ok(!stdout.includes('Client call'));
 });
 
 test('demo.mjs prints no raw heart-rate numbers from the fixture', () => {
