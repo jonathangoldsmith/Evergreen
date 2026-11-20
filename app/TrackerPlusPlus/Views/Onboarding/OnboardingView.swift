@@ -41,7 +41,7 @@ struct OnboardingView: View {
             await Permissions.requestHealth()
             step = 1
         case 1:
-            await Permissions.requestCalendar()
+            await model.requestCalendarAccess()
             await model.tick()
             step = 2
         default:

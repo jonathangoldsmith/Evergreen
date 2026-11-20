@@ -1,10 +1,8 @@
-import EventKit
 import HealthKit
 
-/// Permission prompts for onboarding. Each is shown after a one-sentence
+/// The Health permission prompt for onboarding, shown after a one-sentence
 /// explainer that matches its usage string (design D16). A denial never blocks
-/// the app: the demo runs on mock data, and the plan stays in the app without
-/// calendar access (design D5).
+/// the app: the demo runs on mock data. Calendar access lives in CalendarSync.
 enum Permissions {
     static let healthStore = HKHealthStore()
 
@@ -14,11 +12,5 @@ enum Permissions {
         types.insert(HKQuantityType(.workoutEffortScore))
         types.insert(HKQuantityType(.estimatedWorkoutEffortScore))
         try? await healthStore.requestAuthorization(toShare: [], read: types)
-    }
-
-    /// Full access, because slot defense has to read other calendars (eng review
-    /// Section 1); write-only access can't see the meeting that lands on a workout.
-    static func requestCalendar() async {
-        _ = try? await EKEventStore().requestFullAccessToEvents()
     }
 }
