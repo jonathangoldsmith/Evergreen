@@ -118,6 +118,19 @@ struct DemoSheet: View {
                 }
 
                 Section {
+                    LabeledContent("Sent since launch", value: model.amplitudeOn ? "\(model.amplitudeSent)" : "Off")
+                    LabeledContent("Waiting to send", value: "\(model.memoryReport?.pending ?? 0)")
+                    if let problem = model.memoryReport?.problem {
+                        LabeledContent("Last problem", value: problem)
+                    }
+                    Button("Sync memory now") { Task { await model.syncMemory() } }
+                } header: {
+                    Text("Amplitude")
+                } footer: {
+                    Text("Each tick rolls the person's memory and sends workout and memory events. Turn it on with an API key in iOS Settings → Tracker++. Ids are opaque; no names or health readings leave the phone.")
+                }
+
+                Section {
                     Button("Reset demo", role: .destructive) { confirmReset = true }
                 } footer: {
                     Text("Clears the agent's actions, logged workouts, points, the clock, the TrackerPlusPlus calendar and the test meeting.")

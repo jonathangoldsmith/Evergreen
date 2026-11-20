@@ -23,6 +23,14 @@ final class AppModel {
     @ObservationIgnored private let calendarSync = CalendarSync()
     @ObservationIgnored private let notifier = Notifier()
     @ObservationIgnored private let liveActivity = LiveActivityController()
+    /// Tony's memory bundle in JavaScriptCore; nil if it doesn't load.
+    @ObservationIgnored private let memory = MemoryEngine.standard()
+    /// The last memory sync, for the demo controls.
+    private(set) var memoryReport: MemoryEngine.Report?
+    /// Events Amplitude accepted since launch.
+    private(set) var amplitudeSent = 0
+    /// Whether an Amplitude key is set in iOS Settings.
+    private(set) var amplitudeOn = false
     /// Whether notifications are allowed, for onboarding and the demo controls.
     private(set) var notificationAccess: NotificationAccess = .notAsked
     private(set) var gymAlertsOn = false
@@ -203,6 +211,22 @@ final class AppModel {
             // Keep the last good screen up with a quiet label (design D5).
             offline = true
         }
+        await syncMemory()
+    }
+
+    /// Rolls the person's memory and sends its staged events to Amplitude when
+    /// a key is set (memory-agent/docs/AMPLITUDE.md). Never blocks the agent.
+    func syncMemory() async {
+        guard let memory else { return }
+        let sink = AmplitudeSink.configured()
+        amplitudeOn = sink != nil
+        let input = MemoryInput(
+            personaKey: persona.key.rawValue, historyStart: persona.historyStart,
+            now: now, workouts: workouts, calendar: calendar
+        )
+        let report = await memory.sync(input, sink: sink)
+        amplitudeSent += report.sent
+        memoryReport = report
     }
 
     private func apply(_ response: TickResponse) {

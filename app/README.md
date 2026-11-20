@@ -94,6 +94,16 @@ No push backend yet, so everything is local (plan item 16 and the Lock Screen):
 
 Banners show even with the app open. Tapping one opens Today and ticks.
 
+## Memory and Amplitude
+
+`Memory/MemoryEngine.swift` runs the memory agent's phone bundle (`memory-agent/`, see its `docs/PHONE.md`) in JavaScriptCore. After every tick it rolls the person's memory into Application Support/Memory and, when an Amplitude API key is set in iOS Settings → Tracker++, posts the staged events (workouts and `memory_rolled`) to Amplitude's HTTP API, then acknowledges them so each is sent once. Ids are HMACs under a per-install secret kept in the Keychain; events carry no names or health readings. The demo controls show how many were sent and how many are waiting.
+
+The bundle is a built copy: after changing `memory-agent/src`, refresh it with
+
+```
+cd memory-agent && npm install && node scripts/build-phone.mjs ../app/TrackerPlusPlus/Resources/Memory/memory-phone.js
+```
+
 ## Not built yet
 
 - Routines and the load guardrail (P1 and P2, task T11).
