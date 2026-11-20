@@ -1,0 +1,12 @@
+// Base configuration of the Evergreen app target (Debug and Release).
+// AMPLITUDE_API_KEY comes from the git-ignored Secrets.xcconfig next to this file:
+//
+//   AMPLITUDE_API_KEY = <your project API key>
+//   HARNESS_SECRET = <the harness's shared secret, from Surya>
+//
+// Without that file both are empty: the app sends no Amplitude events and
+// Jordan's shoes are the stand-in's own pick.
+#include? "Secrets.xcconfig"
+
+// Merged with the generated Info.plist; carries both values into the app.
+INFOPLIST_FILE = Evergreen-Info.plist

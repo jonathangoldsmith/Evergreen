@@ -1,6 +1,6 @@
 # Evergreen harness
 
-The stateless backend that recommends running shoes from the fake persona data. The app stays the agent's hands: it applies what comes back and writes the calendar. Design: [docs/designs/trackerplusplus-recommendation-harness.md](../docs/designs/trackerplusplus-recommendation-harness.md).
+The stateless backend that recommends running shoes from the fake persona data. The app stays the agent's hands: it applies what comes back and writes the calendar. Design: [docs/designs/evergreen-recommendation-harness.md](../docs/designs/evergreen-recommendation-harness.md).
 
 ## Run
 
@@ -55,8 +55,8 @@ The whole route has a 5 s budget. Measured on Jordan with web candidates: about 
 
 Off until `SINGLESTORE_URL` is set; the harness works the same without it.
 
-1. In the SingleStore portal, create a free starter workspace and a database (e.g. `trackerplusplus`).
-2. Workspace → **Connect** → Python (or "Your app"): build the URL as `user:password@host:3306/trackerplusplus`. The `singlestoredb://` prefix is optional.
+1. In the SingleStore portal, create a free starter workspace and a database (e.g. `evergreen`).
+2. Workspace → **Connect** → Python (or "Your app"): build the URL as `user:password@host:3306/evergreen`. The `singlestoredb://` prefix is optional.
 3. Put it in `harness/.env` as `SINGLESTORE_URL=...`.
 4. `PYTHONPATH=. uv run python scripts/singlestore_check.py jordan`. This creates the two tables, loads the web snapshot into `shoe_candidates`, writes and reads one audit record, and lists recent ones.
 5. Add it to Vercel and redeploy:

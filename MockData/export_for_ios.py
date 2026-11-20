@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT.parent / "app" / "TrackerPlusPlus" / "Resources" / "Personas"
+OUT = ROOT.parent / "app" / "Evergreen" / "Resources" / "Personas"
 PERSONAS = {"sedentary": "sam", "moderate": "alex", "half_marathon": "jordan"}
 
 
