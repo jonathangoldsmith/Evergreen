@@ -37,7 +37,55 @@ _cache: dict[str, tuple[float, list[dict]]] = {}
 
 
 def url() -> str:
-    return os.environ.get("SINGLESTORE_URL", "").strip()
+    """SINGLESTORE_URL or SINGLESTORE_DB_URL; a singlestoredb:// or mysql:// prefix is fine."""
+    return (os.environ.get("SINGLESTORE_URL") or os.environ.get("SINGLESTORE_DB_URL") or "").strip()
+
+
+def connect_args(raw: str) -> dict:
+    """Accepts either the portal's mysql command line (mysql -u USER -h HOST -P PORT --password='...' [-D DB | DB])
+    or user:password@host:port/database. Parsed by hand: passwords often contain @ : , / # that break URLs."""
+    raw = raw.strip()
+    if raw.startswith("mysql ") or raw.startswith("-"):
+        return _cli_args(raw)
+    for prefix in ("singlestoredb://", "mysql://", "singlestore://"):
+        if raw.startswith(prefix):
+            raw = raw[len(prefix):]
+    creds, _, rest = raw.rpartition("@")
+    rest = rest.split("?", 1)[0]          # options only after the host; passwords may contain '?'
+    user, _, password = creds.partition(":")
+    hostport, _, database = rest.partition("/")
+    host, _, port = hostport.rpartition(":") if ":" in hostport else (hostport, "", "")
+    args = {"host": host, "port": int(port) if port else 3306, "user": user, "password": password}
+    if database:
+        args["database"] = database
+    return args
+
+
+def _cli_args(raw: str) -> dict:
+    import shlex
+    tokens = shlex.split(raw)
+    if tokens and tokens[0] == "mysql":
+        tokens = tokens[1:]
+    args: dict = {"port": 3306}
+    flags = {"-u": "user", "--user": "user", "-h": "host", "--host": "host", "-P": "port", "--port": "port",
+             "-p": "password", "--password": "password", "-D": "database", "--database": "database"}
+    i = 0
+    while i < len(tokens):
+        t = tokens[i]
+        if "=" in t and t.startswith("--"):
+            name, value = t.split("=", 1)
+            if name in flags:
+                args[flags[name]] = value
+        elif t in flags and i + 1 < len(tokens):
+            args[flags[t]] = tokens[i + 1]
+            i += 1
+        elif t.startswith("-p") and len(t) > 2:
+            args["password"] = t[2:]
+        elif not t.startswith("-"):
+            args["database"] = t
+        i += 1
+    args["port"] = int(args["port"])
+    return args
 
 
 def enabled() -> bool:
@@ -56,7 +104,7 @@ def _conn():
                 return _conn_obj
             except Exception:
                 _conn_obj = None
-        _conn_obj = s2.connect(url(), autocommit=True)
+        _conn_obj = s2.connect(**connect_args(url()), autocommit=True)
         if not _ready:
             with _conn_obj.cursor() as cur:
                 for stmt in DDL:

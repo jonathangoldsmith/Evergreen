@@ -72,6 +72,7 @@ SNAP = {"persona": "jordan", "fetchedAt": "2026-11-20T18:00:00+00:00",
 
 def test_off_without_url(monkeypatch):
     monkeypatch.delenv("SINGLESTORE_URL", raising=False)
+    monkeypatch.delenv("SINGLESTORE_DB_URL", raising=False)
     assert not store.enabled()
     assert store.load_candidates("jordan") is None and store.log_recommendation("jordan", "sie", "x", 1, {}) is None
     assert store.save_candidates(SNAP).startswith("off")
@@ -125,4 +126,20 @@ def test_recommend_logs_and_returns_audit_id(fake_db, monkeypatch):
 def test_audit_routes_off_without_url(monkeypatch):
     from api.index import app
     monkeypatch.delenv("SINGLESTORE_URL", raising=False)
+    monkeypatch.delenv("SINGLESTORE_DB_URL", raising=False)
     assert TestClient(app).get("/audit/recent").status_code == 503
+
+
+def test_connect_args_handles_special_password_characters():
+    a = store.connect_args("singlestoredb://admin:p@ss:w,rd/#1?x@svc-abc.aws.singlestore.com:3306/trackerplusplus?ssl=true")
+    assert a == {"host": "svc-abc.aws.singlestore.com", "port": 3306, "user": "admin", "password": "p@ss:w,rd/#1?x",
+                 "database": "trackerplusplus"}
+    assert store.connect_args("u:p@h")["port"] == 3306
+
+
+def test_connect_args_from_portal_mysql_command():
+    a = store.connect_args("mysql -u admin -h svc-1-dml.aws-oregon-3.svc.singlestore.com -P 3306 "
+                           "--default-auth=mysql_native_password --password='a|{:_b,?c$d@e@f'")
+    assert a == {"user": "admin", "host": "svc-1-dml.aws-oregon-3.svc.singlestore.com", "port": 3306,
+                 "password": "a|{:_b,?c$d@e@f"}
+    assert store.connect_args("mysql -u u -h h -P 3333 --password=x trackerplusplus")["database"] == "trackerplusplus"

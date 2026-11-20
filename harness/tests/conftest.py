@@ -27,3 +27,4 @@ def _no_real_singlestore(monkeypatch, request):
     """Never touch a real database in tests (test_store.py sets a fake one)."""
     if request.node.fspath.basename != "test_store.py":
         monkeypatch.delenv("SINGLESTORE_URL", raising=False)
+        monkeypatch.delenv("SINGLESTORE_DB_URL", raising=False)
