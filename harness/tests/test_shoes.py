@@ -25,6 +25,8 @@ def body(**over):
 
 @pytest.fixture
 def no_sie(monkeypatch):
+    from harness import config
+    monkeypatch.setattr(config, "SENSO_API_KEY", "")
     def boom(*a, **k):
         raise sie.SIEUnavailable("offline")
     monkeypatch.setattr(sie, "rerank", boom)
@@ -81,7 +83,9 @@ def test_bad_model_answer_falls_back(monkeypatch):
     assert r["source"] == "rules" and r["purchase"]["item"] == "Pacer 9"
 
 
-def test_evidence_route_cached_without_senso():
+def test_evidence_route_cached_without_senso(monkeypatch):
+    from harness import config
+    monkeypatch.setattr(config, "SENSO_API_KEY", "")
     r = TestClient(app).post("/evidence", json={"purchaseKind": "shoes", "query": "x"}).json()
     assert r["live"] is False and len(r["evidence"]) >= 3
 
