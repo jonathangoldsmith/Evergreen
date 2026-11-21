@@ -21,6 +21,10 @@ struct TodayPlanSection: View {
                 PlanRow(item: item)
                 Rectangle().fill(Theme.rule).frame(height: 1)
             }
+            if model.plannerAvailable {
+                PlannerLink()
+                Rectangle().fill(Theme.rule).frame(height: 1)
+            }
         }
     }
 }

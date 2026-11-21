@@ -94,10 +94,3 @@ struct PlanRow: View {
         }
     }
 }
-
-/// A row that dims while pressed, with no other chrome.
-private struct RowPressStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label.opacity(configuration.isPressed ? 0.6 : 1)
-    }
-}
