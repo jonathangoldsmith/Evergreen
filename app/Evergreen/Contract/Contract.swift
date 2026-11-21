@@ -53,6 +53,9 @@ struct Workout: Codable, Hashable, Identifiable {
     var effort: Double?
     var avgHeartRate: Int?
     var source: Source
+    /// From Apple Health: kilometers covered (runs, walks, rides) and whether it was indoors.
+    var distanceKm: Double? = nil
+    var indoor: Bool? = nil
 
     var minutes: Double { end.timeIntervalSince(start) / 60 }
 }

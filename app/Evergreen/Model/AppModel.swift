@@ -11,6 +11,9 @@ final class AppModel {
     /// views that read through this class update when the run changes.
     private let run: Run
     private(set) var persona: Persona
+    /// What Evergreen last read from Apple Health, for the person's own week (`.me`).
+    private(set) var health = HealthHistory.cached()
+    @ObservationIgnored private let healthReader = HealthReader()
     /// The last good answer, decoded once from `run.lastResponse`.
     private(set) var response: TickResponse?
     private(set) var offline = false
@@ -75,6 +78,7 @@ final class AppModel {
         calendarSync.onChange = { [weak self] in self?.calendarChanged() }
         notifier.onOpen = { [weak self] in Task { await self?.tick() } }
         Task { await refreshNotifications() }
+        if persona.key.isReal { Task { await refreshHealth() } }
     }
 
     // MARK: Derived
@@ -91,7 +95,18 @@ final class AppModel {
 
     var normal: Normal? { response?.normal }
 
-    var basePlan: [PlanItem] { PinnedPlan.items(for: persona.key, storyDay: storyDay) }
+    /// Jordan's pinned demo week, or a real person's week from their own history.
+    var basePlan: [PlanItem] {
+        persona.key.isReal
+            ? HistoryPlan.items(health.workouts, storyDay: storyDay, calendar: calendar, madeAt: run.planMadeAt)
+            : PinnedPlan.items(for: persona.key, storyDay: storyDay)
+    }
+
+    /// Where the person's history begins: Apple Health's first workout, or Jordan's mock history.
+    var historyStart: Date {
+        guard persona.key.isReal else { return persona.historyStart }
+        return health.historyStart.map { calendar.startOfDay(for: $0) } ?? storyDay
+    }
 
     /// The pinned plan with every applied, not-undone action on top. Undoing an
     /// action just drops it from this replay.
@@ -122,7 +137,7 @@ final class AppModel {
     var todayPlan: [PlanItem] { plan.filter { calendar.isDate($0.slot.start, inSameDayAs: storyDay) } }
 
     var workouts: [Workout] {
-        persona.workouts + loggedWorkouts
+        (persona.key.isReal ? health.workouts : persona.workouts) + loggedWorkouts
     }
 
     /// Every applied action, oldest first, undone ones included.
@@ -153,10 +168,15 @@ final class AppModel {
     /// wear and race from the demo, the new pair's arrival once one is ordered,
     /// and the busy times on their other calendars.
     func plannerRequest() -> PlannerClient.Request {
-        PlannerClient.request(
+        var request = PlannerClient.request(
             persona: persona.key.rawValue, now: now, demo: run.demo, newPairArrives: newShoesArrive,
             busy: calendarSync.busyTimes(from: storyDay), cal: calendar
         )
+        if persona.key.isReal {
+            request.user = DeviceIdentity.userId
+            request.history = HistoryPayload(health, cal: calendar)
+        }
+        return request
     }
 
     /// When the ordered pair arrives; nil before Order it or after Cancel order.
@@ -200,7 +220,7 @@ final class AppModel {
             now: now,
             timeZone: calendar.timeZone.identifier,
             persona: persona.key.rawValue,
-            historyStart: persona.historyStart,
+            historyStart: historyStart,
             planCreatedAt: PinnedPlan.createdAt(storyDay: storyDay),
             plan: plan,
             workouts: workouts,
@@ -232,7 +252,7 @@ final class AppModel {
         guard let memory else { return }
         let sink = amplitude.map(AmplitudeSink.init)
         let input = MemoryInput(
-            personaKey: persona.key.rawValue, historyStart: persona.historyStart,
+            personaKey: persona.key.rawValue, historyStart: historyStart,
             now: now, workouts: workouts, calendar: calendar
         )
         let report = await memory.sync(input, sink: sink)
@@ -346,6 +366,31 @@ final class AppModel {
         calendarSync.removeAllEvents(around: storyDay)
         run.onboarded = true
         save()
+        // With workouts in Apple Health, the week is the person's own; without, Jordan's demo week.
+        Task {
+            await refreshHealth()
+            if !health.workouts.isEmpty, !persona.key.isReal { switchPerson(to: .me) }
+        }
+    }
+
+    // MARK: Apple Health
+
+    /// Reads Apple Health again (on launch and when the app comes forward, for
+    /// the person's own week) and re-plans when anything changed.
+    func refreshHealth() async {
+        guard healthReader.isAvailable else { return }
+        let read = await healthReader.read(now: Date(), calendar: calendar)
+        let changed = read.workouts != health.workouts || read.days != health.days
+        health = read
+        read.saveToCache()
+        if changed, persona.key.isReal { await tick() }
+    }
+
+    /// Asks for Apple Health (if it hasn't been) and switches to the person's own week.
+    func useAppleHealth() async {
+        await Permissions.requestHealth()
+        await refreshHealth()
+        switchPerson(to: .me)
     }
 
     // MARK: Demo controls
@@ -479,6 +524,7 @@ final class AppModel {
         run.approvedPurchaseIds = []
         run.demo = nil
         run.visits = []
+        run.planMadeAt = Date()
         response = nil
     }
 

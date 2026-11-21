@@ -107,6 +107,16 @@ Surya's harness (`harness/`, live at `https://trackerplusplus-harness.vercel.app
 
 `harness_url` is different: it swaps the whole agent. Leave it empty.
 
+## You, from Apple Health
+
+Besides Jordan's demo week, the app plans for a real person (`PersonaKey.me`):
+
+- **Reading Health:** `Health/HealthReader.swift` reads 60 days of workouts (type, times, average heart rate, distance, indoors) and 28 days of sleep and resting heart rate. It's cached in Application Support and read again on launch and whenever the app comes forward.
+- **The week:** `Model/HistoryPlan.swift` turns each weekday the person trained on at least twice in the last 4 weeks into a workout at their usual time, kind and length. The longest usual run becomes the long run. With no pattern yet, it plans two short starter walks. Today's usual workouts that had already started when the plan was made are left out.
+- **When it's used:** after onboarding, when Apple Health has workouts (otherwise Jordan's demo week stays), or from Demo → **You, from Apple Health**. The other demo beats switch back to Jordan.
+- **The planner:** "Next 7 days" sends the history and this install's anonymous id (`Agent/DeviceIdentity.swift`, an HMAC under the Keychain secret) to the harness, which keeps the latest copy per id. **Your data** on Today shows what's kept and deletes it.
+- **Simulator:** Debug builds have Demo → **Add a month of sample data to Apple Health**, which writes Jordan's mock month into Health as real samples.
+
 ## Memory and Amplitude
 
 Amplitude runs through the Amplitude-Swift SDK (Swift Package Manager, app target only), made once in `EvergreenApp.init()` for the US region. Its key is the project API key, built in from the git-ignored `app/Secrets.xcconfig`:

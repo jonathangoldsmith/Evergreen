@@ -5,6 +5,7 @@ import SwiftUI
 struct DemoSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @State private var sampleStatus: String?
 
     var body: some View {
         NavigationStack {
@@ -21,6 +22,26 @@ struct DemoSheet: View {
                         model.showRainDemo()
                     }
                     .disabled(model.rainTime == nil)
+                    beat("You, from Apple Health", detail: "Your own week, planned from your workouts, sleep and resting heart rate in Apple Health.") {
+                        Task { await model.useAppleHealth() }
+                    }
+                    #if DEBUG
+                    Button("Add a month of sample data to Apple Health") {
+                        Task {
+                            sampleStatus = "Adding…"
+                            do {
+                                let added = try await HealthSampleData.fill(storyDay: model.storyDay)
+                                sampleStatus = "Added \(added) workouts and 28 nights."
+                                await model.refreshHealth()
+                            } catch {
+                                sampleStatus = "Couldn't write to Apple Health."
+                            }
+                        }
+                    }
+                    if let sampleStatus {
+                        Text(sampleStatus).font(.footnote).foregroundStyle(Theme.textMuted)
+                    }
+                    #endif
                     beat("Shoes near 400 miles", detail: "392 miles on the pair, race in 9 days; the agent asks before buying.") {
                         model.showShoesDemo()
                     }

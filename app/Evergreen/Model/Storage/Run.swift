@@ -26,6 +26,10 @@ final class Run {
     /// The demo controls' conditions and gym visits, JSON-encoded.
     var demoData: Data?
     var visitsData: Data?
+    /// When this run's plan was made. A real person's week leaves out today's
+    /// usual workouts that had already started by then, so a plan made mid-day
+    /// doesn't open with a miss.
+    var planMadeAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \ActionRecord.run)
     var actions: [ActionRecord] = []
