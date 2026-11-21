@@ -11,7 +11,7 @@ cd harness
 uv sync
 PYTHONPATH=. uv run python scripts/warm.py      # loads both SIE models; also the smoke test
 PYTHONPATH=. uv run python scripts/sample.py    # Jordan's demo preset, live (add --offline for the fallback)
-uv run pytest -q                                # 18 tests; the live SIE test skips without a key
+uv run pytest -q                                # 33 tests; the live SIE test skips without a key
 PYTHONPATH=. uv run uvicorn api.index:app --reload --port 8000
 ```
 
@@ -22,6 +22,7 @@ PYTHONPATH=. uv run uvicorn api.index:app --reload --port 8000
 | `GET /health` | Which keys are configured (never their values) |
 | `POST /warm` | Loads the two SIE models before the demo, since cold starts can take minutes |
 | `POST /evidence` | `{purchaseKind, query}` → `{evidence, live}`, the shape `EvidenceClient.swift` expects. Cached passages until Senso is wired. Open even when a secret is set, because the app sends no header. |
+| `POST /workouts/recommend` | The next 7 days from health data, shoe condition and memory: `{persona, now, shoes?, newPairArrives?, raceDate?, busy[]}` → `{summary, signals, actions[], memoryUsed, source, auditId}`. Needs the secret. |
 | `POST /shoes/prefetch?persona=jordan` | Researches shoes on the web now (Nimble + SIE, about 30 s) and stores them in SingleStore when configured. Needs the secret. |
 | `GET /audit/recent?persona=jordan&limit=20` | The latest recommendations from SingleStore. Needs the secret; 503 when SingleStore is off. |
 | `GET /audit/{auditId}` | One full audit record. Needs the secret. |
@@ -36,7 +37,7 @@ curl -s localhost:8000/shoes/recommend -H 'content-type: application/json' -d '{
 
 ## How it decides
 
-**Where the shoes come from:** web research, not a fixed list. `scripts/prefetch_web.py jordan` searches expert review sites with **Nimble** (2 queries, about 12 pages), and **SIE Qwen3.8** extracts each recommended model (price, toe box, plate, cushion, drop, a quote and the URL). The result is saved to `harness/data/web_candidates/jordan.json`, committed and deployed. At request time the harness reads SingleStore if `SINGLESTORE_URL` is set, else that snapshot, else the fake catalog. `candidatesFrom` in the response says which. Delivery is simulated (Demo store, ships in 3 days), because reviews carry no arrival dates.
+**Where the shoes come from:** web research, not a fixed list. `scripts/prefetch_web.py jordan` searches expert review sites with **Nimble** (2 queries, about 12 pages), and **SIE Qwen3.8** extracts each recommended model (price, toe box, plate, cushion, drop, a quote and the URL). The result is saved to `harness/data/web_candidates/jordan.json`, committed and deployed. At request time the harness reads SingleStore if `SINGLESTORE_URL` is set, else that snapshot, else the fake catalog. `candidatesFrom` in the response says which. Delivery is simulated (Demo store, ships in 3 days), because reviews carry no arrival dates. `scripts/add_images.py jordan` then finds a product photo per shoe (Nimble finds pages about it; the page's `og:image` is used if it names the model or comes from a product page, isn't a generic banner, and actually serves an image). The response carries `imageUrl` on the purchase and on every option.
 
 To connect the app, see [INTEGRATION.md](INTEGRATION.md).
 
@@ -50,6 +51,21 @@ To connect the app, see [INTEGRATION.md](INTEGRATION.md).
 7. Mandate: over the `any` line's `maxAutoCents` means `awaitingApproval`. Approval, cancellation, action ids and break-in runs stay in Swift.
 
 The whole route has a 5 s budget. Measured on Jordan with web candidates: about 3.5–4 s live and about 0.3 s on the fallback.
+
+## Workout recommendations
+
+`POST /workouts/recommend` plans the next 7 days. Code decides the sessions; the model only explains them.
+
+- **Usual week:** per weekday, the activity, minutes and start hour Jordan actually did in the last 4 weeks. **Memory** supplies the fixed slots: the phone's memory when the request carries `memory` (`memorySource: "phone"`), else the bundled copy built by Tony's memory agent (`"bundled"`). It (e.g. "running on Tue between 18:00 and 19:00") and they set the start time. The history is shifted by whole weeks here so weekdays match the memory.
+- **Health data:** training load (effort × minutes; effort estimated from average heart rate when missing) for the last 7 days vs. the 4-week weekly average. The week must stay ≤ min(110% of the larger of the two, 1.3 × the average). Sleep down 30+ min/night or resting HR up 3+ bpm → the first hard session becomes easy.
+- **Shoes:** worn out (≥85%) and no new pair yet → runs longer than 45 min move to the bike or elliptical. After `newPairArrives`, the first two runs are 30-minute break-in runs.
+- **Race:** taper in the last 10 days (long run 60%, other runs 80%), rest the day before, and race day as a note.
+- **Calendar:** sessions overlapping `busy` move to right after the event.
+- **Web suggestions (optional):** `scripts/prefetch_ideas.py` has Nimble search expert guidance (taper, race-week drills, cross-training on worn shoes, breaking in new shoes) and Qwen extracts small session ideas with their source into `harness/data/workout_ideas/running.json`. The recommender offers at most 2 as `suggestions` (never booked): only low-risk kinds (strides, shakeout, mobility, drills, walk), matching the week's phase, within the load headroom, no extra running on worn shoes before the new pair, and running add-ons attached to a planned run (`attachTo`).
+- **Citations:** each session's `evidence` cites a web source behind its rule (taper, worn shoes, break-in) when one was found.
+- **Reasons:** SIE Qwen3.8 writes one sentence per session, all calls in parallel (about 1.5 s). A template is the fallback. Every plan is logged to SingleStore.
+
+Actions use the app's `AgentAction` shape (`addWorkout` with an `after` slot; ids are stable as `wk-<date>-<activity>`), so the app can put them on the calendar. Memory facts are rebuilt with `node harness/scripts/build_memory.mjs` (from the repo root).
 
 ## Age check (Persona Relay)
 

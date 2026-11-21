@@ -26,18 +26,61 @@ def passages(kind: str) -> list[dict]:
     return _load("passages.json").get(kind, [])
 
 
-def workouts(persona: str, now: datetime) -> list[dict]:
+def _shift(d: dict, now: datetime, keep_weekdays: bool) -> timedelta:
+    days = (now.date() - datetime.fromisoformat(d["exportDate"]).date()).days
+    return timedelta(days=(days // 7) * 7 if keep_weekdays else days)
+
+
+def workouts(persona: str, now: datetime, keep_weekdays: bool = False) -> list[dict]:
     """The persona's workouts, re-anchored like the app does: the history ends the day before `now`.
     Each workout gets parsed `start`/`end` datetimes in now's offset; workouts after `now` are dropped."""
     path = DIR / "personas" / f"{persona}.json"
     if not path.exists():
         raise KeyError(persona)
     d = _load(f"personas/{persona}.json")
-    shift = now.date() - datetime.fromisoformat(d["exportDate"]).date()
+    shift = _shift(d, now, keep_weekdays)
     out = []
     for w in d["workouts"]:
-        start = datetime.fromisoformat(w["start"]) + timedelta(days=shift.days)
-        end = datetime.fromisoformat(w["end"]) + timedelta(days=shift.days)
+        start = datetime.fromisoformat(w["start"]) + shift
+        end = datetime.fromisoformat(w["end"]) + shift
         if end <= now:
             out.append({**w, "start": start, "end": end})
     return out
+
+
+def daily(persona: str, now: datetime, keep_weekdays: bool = False) -> list[dict]:
+    """Daily summaries (sleep minutes, resting HR), re-anchored like workouts; days before now only."""
+    d = _load(f"personas/{persona}.json")
+    shift = _shift(d, now, keep_weekdays)
+    out = []
+    for s in d.get("dailySummaries", []):
+        day = datetime.fromisoformat(s["date"]).date() + shift
+        if day < now.date():
+            out.append({**s, "date": day})
+    return out
+
+
+def memory(persona: str) -> dict | None:
+    """Facts and planner text from Tony's memory agent (scripts/build_memory.mjs)."""
+    try:
+        return _load(f"memory/{persona}.json")
+    except FileNotFoundError:
+        return None
+
+
+MEMORY_KINDS = ("regularity", "load", "body")
+_KIND_HINTS = {"regularity": ("Fixed slot", "Days since", "Longest stretch"), "load": ("load",),
+               "body": ("sleep", "resting heart rate")}
+
+
+def resolve_memory(phone, persona: str) -> tuple[dict | None, str | None]:
+    """The phone's memory when the request carries it, else the bundled copy. Facts without a kind
+    get one from their wording so slot parsing and filtering work the same for both."""
+    if phone and (phone.facts or phone.plannerText):
+        facts = []
+        for f in phone.facts:
+            kind = f.kind or next((k for k, hints in _KIND_HINTS.items() if any(h.lower() in f.text.lower() for h in hints)), None)
+            facts.append({"text": f.text, "kind": kind})
+        return {"facts": facts, "plannerText": phone.plannerText or "", "asOf": None}, "phone"
+    mem = memory(persona)
+    return (mem, "bundled") if mem else (None, None)
