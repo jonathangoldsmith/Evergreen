@@ -103,6 +103,8 @@ Surya's harness (`harness/`, live at `https://trackerplusplus-harness.vercel.app
 - **Before the demo:** `curl -X POST https://trackerplusplus-harness.vercel.app/warm -H "X-Harness-Secret: $SECRET"` so the first pick doesn't wait for a cold model.
 - Why this pair shows the first 5 options and a "Show N more" button for the rest.
 
+**Next 7 days from the planner:** with the same secret, a row under Today's plan opens the harness's `POST /workouts/recommend` (`Agent/PlannerClient.swift`, `Views/Today/WeekPlanView.swift`). It sends the demo clock, the shoe wear and race from the shoe beat, the new pair's arrival once one is ordered, and the busy times, and shows the 7 days with each reason and source, plus optional suggestions marked "not booked". It's a read-only preview: nothing is added to the plan or the calendar. The harness plans from the memory agent's bundled copy, since the app doesn't send its own memory yet.
+
 `harness_url` is different: it swaps the whole agent. Leave it empty.
 
 ## Memory and Amplitude

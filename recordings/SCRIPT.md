@@ -87,4 +87,4 @@ Presentation is the whole three minutes.
 - **Warm the harness** a few minutes before any live demo:
   `curl -X POST https://trackerplusplus-harness.vercel.app/warm -H "X-Harness-Secret: $SECRET"`
 
-Files: `evergreen-demo-3min.mp4` (1920×1080, 30 fps, 3:00, voice track, burned-in captions plus a soft caption track) and `evergreen-demo-3min.srt`.
+Files: `evergreen-demo-3min.mp4` (1920×1080, 30 fps, 3:00, 6.9 MB, voice track, burned-in captions plus a soft caption track; small enough for GitHub's 10 MB README video limit) and `evergreen-demo-3min.srt`.

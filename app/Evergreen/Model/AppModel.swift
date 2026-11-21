@@ -144,6 +144,27 @@ final class AppModel {
         appliedActions.filter { $0.purchaseId == purchaseId }
     }
 
+    // MARK: Harness planner (read-only)
+
+    /// Whether the harness planner is set up (it shares the shoe pick's secret).
+    var plannerAvailable: Bool { PlannerClient.configured() != nil }
+
+    /// What the planner needs about this person now: the demo clock, the shoe
+    /// wear and race from the demo, the new pair's arrival once one is ordered,
+    /// and the busy times on their other calendars.
+    func plannerRequest() -> PlannerClient.Request {
+        PlannerClient.request(
+            persona: persona.key.rawValue, now: now, demo: run.demo, newPairArrives: newShoesArrive,
+            busy: calendarSync.busyTimes(from: storyDay), cal: calendar
+        )
+    }
+
+    /// When the ordered pair arrives; nil before Order it or after Cancel order.
+    private var newShoesArrive: Date? {
+        let shoes = Set(appliedActions.compactMap(\.purchaseId).filter { $0.hasPrefix("shoes-") })
+        return shoes.compactMap(purchaseState).first { $0.status == .bought }?.options.first?.arrives
+    }
+
     /// The person's standing spending rule (premise 2), set once in onboarding.
     nonisolated static let mandate = [
         Mandate(id: "ask-first", text: "Always check with me before buying anything.", category: .any, maxAutoCents: 0),
