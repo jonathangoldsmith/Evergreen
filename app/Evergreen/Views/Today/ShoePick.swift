@@ -7,11 +7,10 @@ struct ShoePick: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.md) {
             HStack(spacing: Theme.md) {
-                Image(systemName: "shoe.fill")
-                    .font(.system(size: 34))
-                    .foregroundStyle(Theme.accent)
+                photo
                     .frame(width: 72, height: 72)
-                    .background(Theme.surface, in: .rect(cornerRadius: Theme.radiusButton, style: .continuous))
+                    .background(Theme.surface)
+                    .clipShape(.rect(cornerRadius: Theme.radiusButton, style: .continuous))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("My pick")
@@ -36,6 +35,29 @@ struct ShoePick: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+
+    /// The harness's product photo when it sent one; the shoe symbol while it
+    /// loads, if it fails, or for the stand-in's own pick (which has none).
+    @ViewBuilder
+    private var photo: some View {
+        if let url = purchase.photoURL {
+            AsyncImage(url: url) { phase in
+                if let image = phase.image {
+                    image.resizable().scaledToFit()
+                } else {
+                    placeholder
+                }
+            }
+        } else {
+            placeholder
+        }
+    }
+
+    private var placeholder: some View {
+        Image(systemName: "shoe.fill")
+            .font(.system(size: 34))
+            .foregroundStyle(Theme.accent)
     }
 
     /// "$138 · arrives Monday"

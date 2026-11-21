@@ -110,6 +110,8 @@ struct Purchase: Codable, Hashable {
         var amountCents: Int
         var arrives: Date?
         var lostBecause: String?
+        /// A product photo from the harness (often WebP); nil for the stand-in's own picks.
+        var imageUrl: String? = nil
     }
 
     var id: String
@@ -127,6 +129,13 @@ struct Purchase: Codable, Hashable {
     var outcome: String?
     /// Miles on the pair being replaced, for a shoes purchase.
     var miles: Int?
+    /// The chosen item's product photo from the harness; nil when it has none.
+    var imageUrl: String? = nil
+
+    /// The photo to show: the purchase's own, else the chosen option's.
+    var photoURL: URL? {
+        (imageUrl ?? options.first?.imageUrl).flatMap(URL.init(string:))
+    }
 }
 
 /// One line of the person's standing spending rule.

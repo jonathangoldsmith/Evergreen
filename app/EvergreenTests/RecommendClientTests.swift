@@ -66,5 +66,30 @@ struct RecommendClientTests {
         #expect(purchase.options.count == 2)
         #expect(purchase.options[0].arrives == ISO8601DateFormatter().date(from: "2026-11-23T08:00:00Z"))
         #expect(purchase.options[1].lostBecause == "Less cushion for long runs")
+        #expect(purchase.photoURL == nil)
+    }
+
+    /// The harness sends a product photo on the purchase and on each option; the pick shows it.
+    @Test func theHarnessPhotoComesThrough() throws {
+        let json = """
+        {"id": "shoes-2026-10-22", "item": "ASICS Gel-Cumulus 27", "merchant": "Demo store, no charge",
+         "amountCents": 14000, "status": "awaitingApproval",
+         "rule": {"id": "ask-first", "text": "Ask me before buying anything else."},
+         "noticed": "Your shoes hit 390 miles.", "evidence": [], "evidenceLive": false,
+         "imageUrl": "https://example.com/cumulus.jpeg",
+         "options": [{"name": "ASICS Gel-Cumulus 27", "amountCents": 14000, "imageUrl": "https://example.com/cumulus.jpeg"},
+                     {"name": "Altra Paradigm 8", "amountCents": 10300, "imageUrl": "https://example.com/paradigm.jpg"}]}
+        """
+        var purchase = try JSONDecoder.contract.decode(Purchase.self, from: Data(json.utf8))
+        #expect(purchase.photoURL?.absoluteString == "https://example.com/cumulus.jpeg")
+        #expect(purchase.options[1].imageUrl == "https://example.com/paradigm.jpg")
+
+        // Only the option has one: still shown.
+        purchase.imageUrl = nil
+        #expect(purchase.photoURL?.absoluteString == "https://example.com/cumulus.jpeg")
+
+        // It survives the app's own storage round trip.
+        let again = try JSONDecoder.contract.decode(Purchase.self, from: JSONEncoder.contract.encode(purchase))
+        #expect(again.options[0].imageUrl == "https://example.com/cumulus.jpeg")
     }
 }
