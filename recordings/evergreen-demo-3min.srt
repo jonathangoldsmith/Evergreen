@@ -1,168 +1,164 @@
 1
-00:00:00,000 --> 00:00:03,500
-Hi, I'm Anna. I designed Evergreen and our little pine buddy.
+00:00:00,333 --> 00:00:02,848
+Hi, I'm Anna. I designed Evergreen.
 
 2
-00:00:03,500 --> 00:00:08,000
-Most of us want to work out a bit more than our normal.
+00:00:02,898 --> 00:00:05,793
+I want to improve my fitness in a sustainable manner,
 
 3
-00:00:08,000 --> 00:00:12,500
-But a plan breaks the moment it meets a real calendar.
+00:00:05,843 --> 00:00:10,449
+but my ideal workout plan goes out the window the moment it meets the real world.
 
 4
-00:00:12,500 --> 00:00:17,000
-A meeting runs late, it rains, your shoes wear out, and the week slips.
+00:00:10,499 --> 00:00:13,489
+A meeting runs late, it rains, your shoes wear out,
 
 5
-00:00:17,000 --> 00:00:21,500
-Evergreen is a personal training agent that works inside your real life.
+00:00:13,539 --> 00:00:17,290
+you overtrain and tear your meniscus three times (that's a true story),
 
 6
-00:00:21,500 --> 00:00:26,500
-It reads Apple Health: 21 runs in 30 days, an average heart rate of 132,
+00:00:17,340 --> 00:00:21,280
+and before you know it, you're on the couch watching TV instead of working out.
 
 7
-00:00:26,500 --> 00:00:30,500
-and a training load that's up 19% on your usual week.
+00:00:21,330 --> 00:00:25,081
+Evergreen is a personal training agent that works with your real life.
 
 8
-00:00:30,500 --> 00:00:35,000
-Then it reads your calendar and finds the time you actually have.
+00:00:25,131 --> 00:00:28,188
+It takes in all your data from Apple Health.
 
 9
-00:00:35,000 --> 00:00:39,500
-This week: Friday evening, and Saturday and Sunday mornings.
+00:00:28,238 --> 00:00:31,133
+Then it reads your calendar and finds the time you actually have.
 
 10
-00:00:39,500 --> 00:00:43,000
-Three workouts, each with a reason you can see.
+00:00:31,183 --> 00:00:34,933
+This week, we have workouts planned Friday, Saturday and Sunday.
 
 11
-00:00:43,000 --> 00:00:45,000
-Jonathan, show them what it does.
+00:00:34,983 --> 00:00:37,499
+Evergreen built these out so I don't overtrain.
 
 12
-00:00:45,000 --> 00:00:48,500
-Thanks, Anna. I'm Jonathan, and I built the iOS app.
+00:00:37,549 --> 00:00:39,687
+Jonathan, show them what it does.
 
 13
-00:00:48,500 --> 00:00:52,500
-Evergreen doesn't just plan. It acts for you, end to end.
+00:00:40,357 --> 00:00:43,253
+Thanks, Anna. I'm Jonathan, and I built the iOS app.
 
 14
-00:00:52,500 --> 00:00:57,000
-At 4 PM, a team sync lands right on top of tonight's 6 PM run.
+00:00:43,303 --> 00:00:46,768
+Evergreen doesn't just plan sustainable workouts based on your training load.
 
 15
-00:00:57,000 --> 00:01:01,500
-Nobody taps anything. The agent sees the conflict and moves the run to 6:45,
+00:00:46,818 --> 00:00:50,094
+It acts for you, end to end, to keep you on track.
 
 16
-00:01:01,500 --> 00:01:06,000
-the next open slot, so the week still has all three workouts.
+00:00:50,144 --> 00:00:54,274
+At 4 PM, a team sync lands right on top of tonight's 6 PM run.
 
 17
-00:01:06,000 --> 00:01:10,500
-It tells you why, and Undo is one tap away.
+00:00:54,324 --> 00:00:58,740
+Nobody taps anything. The agent sees the conflict and moves the run to 6:45,
 
 18
-00:01:10,500 --> 00:01:15,000
-Now rain is forecast for Saturday's 8:30 AM long run.
+00:00:58,790 --> 00:01:02,065
+your next open slot, so the week still has all three workouts.
 
 19
-00:01:15,000 --> 00:01:19,500
-It finds a $15 day pass at 24 Hour Fitness, 0.4 miles from home.
+00:01:02,115 --> 00:01:05,723
+It tells you why it rescheduled, and lets you reschedule if necessary.
 
 20
-00:01:19,500 --> 00:01:23,500
-Spending is where it always asks first. Nothing is bought without your OK.
+00:01:05,773 --> 00:01:09,429
+Oh no! Rain is forecast for Saturday's 8:30 AM long run.
 
 21
-00:01:23,500 --> 00:01:27,500
-One tap, and it books the pass and moves the run onto a treadmill.
+00:01:09,479 --> 00:01:13,989
+Evergreen finds a $15 day pass at 24 Hour Fitness, close to home.
 
 22
-00:01:27,500 --> 00:01:30,000
-Surya, show them how it shops.
+00:01:14,039 --> 00:01:17,362
+One tap, and it books the pass and moves the run onto a treadmill.
 
 23
-00:01:30,000 --> 00:01:33,500
-Thanks, Jonathan. I'm Surya. I built the recommendation harness.
+00:01:17,412 --> 00:01:19,503
+Surya, show them how it shops.
 
 24
-00:01:33,500 --> 00:01:38,000
-Jordan's shoes are at 392 miles, and his race is in nine days.
+00:01:20,173 --> 00:01:25,444
+Thanks, Jonathan. I'm Surya. I built the recommendation harness behind this app.
 
 25
-00:01:38,000 --> 00:01:42,500
-Our harness on Vercel uses Nimble to research real shoes on expert review sites.
+00:01:25,494 --> 00:01:31,335
+Let's say Jordan's shoes are at 390 miles, 97% worn, and his race is in about nine days.
 
 26
-00:01:42,500 --> 00:01:47,000
-Hard rules run in code: wide toe box, no carbon plate, arrives in time to break in.
+00:01:31,385 --> 00:01:35,221
+The harness picks from real shoes found on expert review sites.
 
 27
-00:01:47,000 --> 00:01:51,500
-Then Superlinked's SIE ranks the shortlist with a Qwen reranker,
+00:01:35,271 --> 00:01:43,639
+Before any AI is involved, hard rules filter out shoes that don't fit, lack cushioning, or arrive too late.
 
 28
-00:01:51,500 --> 00:01:56,000
-and a Qwen model picks one and writes why every other shoe lost.
+00:01:43,689 --> 00:01:46,964
+Then we have Superlinked's SIE, which ranks the shortlist,
 
 29
-00:01:56,000 --> 00:02:00,500
-Senso supplies cited passages, live, so every claim has a source.
+00:01:47,014 --> 00:01:51,724
+and a small open model picks one and explains why every other shoe lost.
 
 30
-00:02:00,500 --> 00:02:05,000
-Every recommendation is written to a SingleStore audit log.
+00:01:51,774 --> 00:01:57,995
+We use Senso, which supplies live, cited sources, so every claim on the screen has a source.
 
 31
-00:02:05,000 --> 00:02:09,500
-If anything fails, guardrails fall back to a safe, deterministic pick.
+00:01:58,045 --> 00:02:05,216
+It's $170, over his $20 rule, so it asks first, and every decision is logged to SingleStore.
 
 32
-00:02:09,500 --> 00:02:13,000
-Jordan says yes once, and two break-in runs land on his calendar.
+00:02:05,266 --> 00:02:08,788
+Persona here verifies your age for 18+ purchases.
 
 33
-00:02:13,000 --> 00:02:15,000
-Tony, take us home.
+00:02:08,838 --> 00:02:13,853
+Jordan says yes once, and two break-in runs land on his calendar.
 
 34
-00:02:15,000 --> 00:02:18,500
-Thanks, Surya. I'm Tony. I built the data and the memory agent.
+00:02:13,903 --> 00:02:15,490
+Tony, take us home.
 
 35
-00:02:18,500 --> 00:02:23,000
-Evergreen remembers you, on your phone. The memory agent runs in JavaScriptCore.
+00:02:16,160 --> 00:02:22,286
+Thanks, Surya. I'm Tony. I built Evergreen's memory agent and its Amplitude tracking.
 
 36
-00:02:23,000 --> 00:02:27,500
-Every tick, it rolls your history into a memory of how you actually train.
+00:02:22,336 --> 00:02:28,272
+Amplitude tells us which workout suggestions people accept, which they complete,
 
 37
-00:02:27,500 --> 00:02:32,000
-Workouts, memory updates and approved purchases go to Amplitude,
+00:02:28,322 --> 00:02:34,913
+and when feedback becomes a saved preference, without sending names or raw health readings.
 
 38
-00:02:32,000 --> 00:02:36,500
-with opaque, hashed ids. No names or health readings leave the phone.
+00:02:34,963 --> 00:02:40,519
+On the phone, the agent turns workout history into a personal baseline.
 
 39
-00:02:36,500 --> 00:02:41,000
-So we see what the agent does and what people say yes to, not who they are.
+00:02:40,569 --> 00:02:45,583
+I used Superlinked to interpret sample feedback like “too early,”
 
 40
-00:02:41,000 --> 00:02:45,500
-Evergreen plans around your real life, acts on its own, and asks before it spends.
+00:02:45,633 --> 00:02:54,001
+and built a calendar preview that uses those preferences to suggest workout times that fit.
 
 41
-00:02:45,500 --> 00:02:50,000
-Training that grows with you.
-
-42
-00:02:50,000 --> 00:02:55,000
-We're Anna, Jonathan, Surya and Tony. Thank you!
+00:02:54,051 --> 00:02:59,164
+We are Anna, Jonathan, Surya and Tony. Thank you!
 
