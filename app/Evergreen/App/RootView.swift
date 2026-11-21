@@ -28,7 +28,10 @@ struct RootView: View {
         .task { await model.keepTicking() }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            Task { await model.tick() }
+            Task {
+                if model.persona.key.isReal { await model.refreshHealth() }
+                await model.tick()
+            }
         }
     }
 

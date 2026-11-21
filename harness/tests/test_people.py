@@ -1,0 +1,104 @@
+"""A real person's Apple Health history: used over the persona files, kept per anonymous user, erasable."""
+from datetime import datetime, timedelta
+
+import pytest
+from fastapi.testclient import TestClient
+
+from api.index import app
+from harness import config, store
+from harness.clients import sie
+from harness.recommend import workouts as W
+
+NOW = datetime.fromisoformat("2026-11-20T09:00:00-08:00")
+USER = "usr_0123456789abcdef"
+client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _clean(monkeypatch):
+    store._histories.clear()
+    monkeypatch.setattr(sie, "chat_json", lambda *a, **k: (_ for _ in ()).throw(sie.SIEUnavailable("off")))
+    monkeypatch.setattr(sie, "rerank", lambda *a, **k: (_ for _ in ()).throw(sie.SIEUnavailable("off")))
+    yield
+    store._histories.clear()
+
+
+def history(weeks: int = 4, km: float = 8.0) -> dict:
+    """Tuesday and Thursday 7 PM runs and a Saturday 9 AM long run, for `weeks` weeks before NOW."""
+    out = []
+    for back in range(1, weeks * 7 + 1):
+        day = NOW - timedelta(days=back)
+        wd = day.weekday()
+        if wd in (1, 3, 5):
+            hour, minutes = (9, 75) if wd == 5 else (19, 40)
+            start = day.replace(hour=hour, minute=0)
+            out.append({"activityType": "Running", "start": start.isoformat(),
+                        "end": (start + timedelta(minutes=minutes)).isoformat(),
+                        "avgHeartRate": 150, "distanceKm": km * (1.8 if wd == 5 else 1)})
+    daily = [{"date": (NOW - timedelta(days=d)).date().isoformat(), "sleepMin": 450, "restingHeartRate": 55}
+             for d in range(1, 29)]
+    return {"workouts": out, "daily": daily}
+
+
+def body(**over):
+    b = {"persona": "me", "now": NOW.isoformat(), "user": USER, "history": history()}
+    b.update(over)
+    return b
+
+
+def test_the_week_follows_the_persons_own_history():
+    plan = W.build(W.WorkoutsRequest(**body()))
+    assert plan["historySource"] == "phone"
+    days = {s["date"].weekday(): s for s in plan["sessions"]}
+    assert days[1]["activityType"] == "Running" and days[1]["hour"] == 19
+    assert days[5]["activityType"] == "Running" and days[5]["hour"] == 9
+    assert plan["signals"]["sleep7Min"] == 450 and plan["signals"]["rhr7"] == 55
+
+
+def test_history_is_kept_for_the_user_and_reused():
+    W.build(W.WorkoutsRequest(**body()))
+    later = W.build(W.WorkoutsRequest(**body(history=None)))
+    assert later["historySource"] == "stored"
+    assert {s["date"].weekday() for s in later["sessions"]} >= {1, 3, 5}
+
+
+def test_demo_personas_still_read_their_files():
+    plan = W.build(W.WorkoutsRequest(persona="jordan", now=NOW.isoformat()))
+    assert plan["historySource"] == "persona"
+
+
+def test_an_unknown_person_without_history_is_a_404():
+    r = client.post("/workouts/recommend", json={"persona": "me", "now": NOW.isoformat(), "user": USER})
+    assert r.status_code == 404
+
+
+def test_shoe_wear_comes_from_the_phones_distances():
+    # 12 weeks of runs at 8 km (14.4 km on Saturdays) on a pair bought 12 weeks ago with 150 mi already on it.
+    b = body(history=history(weeks=12), shoes={"boughtOn": (NOW - timedelta(days=84)).date().isoformat(), "startMiles": 150},
+             raceDate=(NOW + timedelta(days=9)).date().isoformat(), mandate=[])
+    r = client.post("/shoes/recommend", json=b)
+    assert r.status_code == 200, r.text
+    out = r.json()
+    assert out["historySource"] == "phone"
+    assert out["condition"]["runsCounted"] == 36 and out["condition"]["status"] == "replace"
+    assert out["purchase"]["status"] == "awaitingApproval"
+
+
+def test_a_bad_user_id_is_refused():
+    r = client.post("/workouts/recommend", json=body(user="jonathan@example.com"))
+    assert r.status_code == 422
+    assert client.get("/users/not-an-id").status_code == 422
+
+
+def test_users_route_shows_and_erases_what_is_kept(monkeypatch):
+    monkeypatch.setattr(config, "HARNESS_SECRET", "s")
+    client.post("/workouts/recommend", json=body(), headers={"X-Harness-Secret": "s"})
+    assert client.get(f"/users/{USER}").status_code == 401
+
+    kept = client.get(f"/users/{USER}", headers={"X-Harness-Secret": "s"}).json()
+    assert kept["historyStored"] and kept["workouts"] == 12 and kept["days"] == 28
+
+    gone = client.delete(f"/users/{USER}", headers={"X-Harness-Secret": "s"})
+    assert gone.status_code == 200 and gone.json()["deleted"]["history"] == 1
+    assert client.get(f"/users/{USER}", headers={"X-Harness-Secret": "s"}).json()["historyStored"] is False
+    assert client.post("/workouts/recommend", json=body(history=None), headers={"X-Harness-Secret": "s"}).status_code == 404

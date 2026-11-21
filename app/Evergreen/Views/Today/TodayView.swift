@@ -4,6 +4,7 @@ import SwiftUI
 /// workouts, and how many are done.
 struct TodayView: View {
     @Environment(AppModel.self) private var model
+    @State private var showYourData = false
 
     var body: some View {
         ScrollView {
@@ -45,6 +46,13 @@ struct TodayView: View {
                 .frame(minHeight: 44)
                 .padding(.top, Theme.sm)
                 .accessibilityElement(children: .combine)
+                if model.persona.key.isReal {
+                    Button("Your data") { showYourData = true }
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textMuted)
+                        .frame(minHeight: 44)
+                        .accessibilityHint("What Evergreen read from Apple Health and what its planner keeps")
+                }
             }
             .padding(.horizontal, Theme.md)
             .padding(.top, Theme.lg)
@@ -52,6 +60,7 @@ struct TodayView: View {
             .padding(.bottom, 88)
         }
         .background(Theme.surface)
+        .sheet(isPresented: $showYourData) { YourDataView() }
     }
 
     /// "Friday, Nov 20", plus the time when the demo clock is set ("· 4:00 PM"),

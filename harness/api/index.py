@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hmac
+import re
 
 from pydantic import BaseModel
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -9,7 +10,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from harness import config, store
 from harness.clients import sie
 from harness.evidence import senso
-from harness.models import EvidenceRequest, EvidenceResponse, ShoesRequest, ShoesResponse
+from harness.models import USER_ID, EvidenceRequest, EvidenceResponse, ShoesRequest, ShoesResponse
 from harness.recommend import shoes, workouts
 
 app = FastAPI(title="Evergreen harness", version="0.1.0")
@@ -32,6 +33,27 @@ def health() -> dict:
 @app.post("/warm", dependencies=[Depends(require_secret)])
 def warm() -> dict:
     return {**sie.warm(provision_timeout_s=240), **store.warm()}
+
+
+def _user(user: str) -> str:
+    if not re.fullmatch(USER_ID, user):
+        raise HTTPException(status_code=422, detail="not an anonymous user id")
+    return user
+
+
+@app.get("/users/{user}", dependencies=[Depends(require_secret)])
+def user_get(user: str) -> dict:
+    """What the harness keeps for this anonymous id: history size and age, recommendation count, age check."""
+    return store.user_summary(_user(user))
+
+
+@app.delete("/users/{user}", dependencies=[Depends(require_secret)])
+def user_delete(user: str) -> dict:
+    """Erases everything kept for this id: Apple Health history, recommendation records, age check."""
+    try:
+        return {"deleted": store.delete_user(_user(user))}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"singlestore: {type(exc).__name__}")
 
 
 @app.post("/workouts/recommend", dependencies=[Depends(require_secret)])

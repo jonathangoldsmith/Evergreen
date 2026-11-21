@@ -42,6 +42,10 @@ extension AppModel {
     /// Why Evergreen picked this workout, from the health data and the calendar:
     /// "Easy pace. Your training load is up 18% on your usual week, so tonight stays light."
     func reason(for item: PlanItem) -> String? {
+        if persona.key.isReal {
+            return HistoryPlan.reason(for: item, workouts: health.workouts, storyDay: storyDay, calendar: .current,
+                                      insights: insights)
+        }
         guard let focus = PinnedPlan.focus(for: item.id, key: persona.key) else { return nil }
         let data = insights
         switch focus {

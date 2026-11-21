@@ -33,6 +33,9 @@ struct PlannerClient: Sendable {
         var newPairArrives: String?
         var raceDate: String?
         var busy: [Busy]
+        /// For a real person: this install's anonymous id and their Apple Health history.
+        var user: String? = nil
+        var history: HistoryPayload? = nil
     }
 
     enum Failure: Error, Equatable {

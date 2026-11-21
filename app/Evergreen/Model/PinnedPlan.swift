@@ -24,6 +24,8 @@ enum PinnedPlan {
                 Entry(focus: .long, dayOffset: 1, hour: 8, minute: 30, minutes: 90, activityType: "Running"),
                 Entry(focus: .strength, dayOffset: 2, hour: 7, minute: 0, minutes: 40, activityType: "FunctionalStrengthTraining"),
             ]
+        case .me:
+            [] // A real person's week comes from their history (HistoryPlan).
         }
     }
 
