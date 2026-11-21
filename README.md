@@ -6,7 +6,13 @@
 
 Evergreen is an iOS agent that protects your workout plan instead of just writing one. It picks workouts for your body and the time you actually have, moves a workout when a meeting lands on it, finds what your training needs (a rainy-day gym pass, new running shoes) and buys it only after you say yes, and shows its reasoning for every action. Built for the [Personal Agents Hackathon](https://luma.com/personalagenthack) (San Francisco, November 2026).
 
-> Formerly *Tracker++*.
+## Demo
+
+
+
+https://github.com/user-attachments/assets/9d3cc401-fd6f-40d0-a5ab-5fae2b718493
+
+
 
 ![Evergreen recommendation system](docs/figures/recommendation-system.png)
 
