@@ -18,9 +18,9 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from harness import data, store
+from harness import data, people, store
 from harness.clients import sie
-from harness.models import PhoneMemory, ShoeState
+from harness.models import USER_ID, History, PhoneMemory, ShoeState
 from harness.recommend.condition import condition
 from harness.web import workout_ideas
 
@@ -53,6 +53,8 @@ class WorkoutsRequest(BaseModel):
     raceDate: Optional[date] = None
     busy: list[Busy] = Field(default_factory=list)
     memory: Optional[PhoneMemory] = None          # the phone's memory; falls back to the bundled copy
+    user: Optional[str] = Field(default=None, pattern=USER_ID)   # a real person's anonymous device id
+    history: Optional[History] = None             # their Apple Health history; kept for `user` (people.resolve)
 
 
 def effort(w: dict) -> float:
@@ -119,8 +121,8 @@ def usual_week(ws: list[dict], now: datetime) -> dict[int, dict]:
 def build(req: WorkoutsRequest) -> dict:
     now = req.now
     # Whole-week shift so weekdays match the history (and Tony's memory slots, computed on the same data).
-    ws = data.workouts(req.persona, now, keep_weekdays=True)
-    sig = signals(ws, data.daily(req.persona, now, keep_weekdays=True), now)
+    ws, days, hist_source = people.resolve(req.persona, req.user, req.history, now, keep_weekdays=True)
+    sig = signals(ws, days, now)
     mem, mem_source = data.resolve_memory(req.memory, req.persona)
     slots = memory_slots(mem)
     week = usual_week(ws, now)
@@ -195,7 +197,8 @@ def build(req: WorkoutsRequest) -> dict:
         if end.hour >= 21 and not s.get("race"):
             s["tags"].append("no free slot that day")
         s["start"], s["end"] = start, end
-    return {"sessions": sessions, "signals": sig, "condition": cond, "memory": mem, "memorySource": mem_source}
+    return {"sessions": sessions, "signals": sig, "condition": cond, "memory": mem, "memorySource": mem_source,
+            "historySource": hist_source}
 
 
 def _template(s: dict) -> str:
@@ -354,9 +357,9 @@ def recommend(req: WorkoutsRequest) -> dict:
     mem = plan["memory"] or {}
     used = [f["text"] for f in mem.get("facts", []) if f.get("kind") in ("regularity", "load", "body")]
     result = {"summary": summary, "signals": sig, "actions": actions, "suggestions": suggestions(req, plan, ids),
-              "memoryUsed": used, "memorySource": plan["memorySource"],
+              "memoryUsed": used, "memorySource": plan["memorySource"], "historySource": plan["historySource"],
               "memoryAsOf": mem.get("asOf"), "live": source == "sie", "source": source,
               "condition": plan["condition"].model_dump() if plan["condition"] else None}
-    result["auditId"] = store.log_recommendation(req.persona, source, "week plan", int((time.monotonic() - t0) * 1000),
-                                                 {"kind": "workouts", "request": req.model_dump(mode="json"), **result})
+    result["auditId"] = store.log_recommendation(req.user or req.persona, source, "week plan", int((time.monotonic() - t0) * 1000),
+                                                 {"kind": "workouts", "request": req.model_dump(mode="json", exclude={"history"}), **result})
     return result

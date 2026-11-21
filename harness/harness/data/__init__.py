@@ -22,6 +22,10 @@ def fit_notes(persona: str) -> dict:
     return _load("fit_notes.json").get(persona, {"wideToeBox": False, "carbonPlate": None, "surface": "road", "text": "No fit notes."})
 
 
+def has_fit_notes(persona: str) -> bool:
+    return persona in _load("fit_notes.json")
+
+
 def passages(kind: str) -> list[dict]:
     return _load("passages.json").get(kind, [])
 

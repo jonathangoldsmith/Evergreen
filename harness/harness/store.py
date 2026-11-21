@@ -6,6 +6,9 @@ Connect → Python screen). Everything is best-effort: a failure never blocks or
 Tables (created on first use):
   shoe_candidates(persona, id, fetched_at, doc JSON)          web research, one row per shoe
   recommendations(id, created_at, persona, source, item, latency_ms, doc JSON)   one row per pick
+  user_history(user_id, updated_at, doc JSON)                  a real person's Apple Health history, latest copy
+For a real person, `persona` in recommendations and verifications holds their anonymous `usr_` id.
+Without SINGLESTORE_URL, user history and verifications live in memory (lost on a cold start).
 """
 from __future__ import annotations
 
@@ -30,6 +33,9 @@ DDL = [
         id VARCHAR(36) NOT NULL, created_at DATETIME(6) NOT NULL, persona VARCHAR(32) NOT NULL,
         source VARCHAR(16) NOT NULL, item VARCHAR(256), latency_ms INT, doc JSON NOT NULL,
         PRIMARY KEY (id), SORT KEY (created_at))""",
+    """CREATE TABLE IF NOT EXISTS user_history (
+        user_id VARCHAR(80) NOT NULL, updated_at DATETIME(6) NOT NULL, doc JSON NOT NULL,
+        PRIMARY KEY (user_id))""",
 ]
 CANDIDATE_TTL_S = 300
 LOG_WAIT_S = 0.4          # how long a request waits for its audit write before answering anyway
@@ -265,3 +271,67 @@ def get_verification(persona: str) -> dict | None:
         except Exception:
             pass
     return _verifications.get(persona)
+
+
+# --- a real person's history (Apple Health, sent by the phone); memory fallback when SingleStore is off ---
+
+_histories: dict[str, dict] = {}
+
+
+def save_history(user: str, doc: dict) -> None:
+    """Keeps the latest history for an anonymous user id. Best-effort: a failed write never blocks a pick."""
+    _histories[user] = {**doc, "updatedAt": datetime.now(timezone.utc).isoformat()}
+    if not enabled():
+        return
+    try:
+        with _conn().cursor() as cur:
+            cur.execute("REPLACE INTO user_history (user_id, updated_at, doc) VALUES (%s, %s, %s)",
+                        (user, datetime.now(timezone.utc).replace(tzinfo=None), json.dumps(doc, default=str)))
+    except Exception:
+        pass
+
+
+def get_history(user: str) -> dict | None:
+    """The latest stored history for a user, with `updatedAt`; None if there is none."""
+    if enabled():
+        try:
+            with _conn().cursor() as cur:
+                cur.execute("SELECT doc, updated_at FROM user_history WHERE user_id = %s", (user,))
+                r = cur.fetchone()
+            if r:
+                doc = {**_json(r[0]), "updatedAt": r[1].isoformat() + "Z" if hasattr(r[1], "isoformat") else str(r[1])}
+                _histories[user] = doc
+                return doc
+        except Exception:
+            pass
+    return _histories.get(user)
+
+
+def user_summary(user: str) -> dict:
+    """What the harness holds for a user, for the app's privacy screen."""
+    h = get_history(user)
+    recs = 0
+    if enabled():
+        try:
+            with _conn().cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM recommendations WHERE persona = %s", (user,))
+                recs = int(cur.fetchone()[0])
+        except Exception:
+            pass
+    return {"user": user, "historyStored": h is not None, "updatedAt": (h or {}).get("updatedAt"),
+            "workouts": len((h or {}).get("workouts", [])), "days": len((h or {}).get("daily", [])),
+            "recommendations": recs, "ageCheck": get_verification(user) is not None}
+
+
+def delete_user(user: str) -> dict:
+    """Erases everything kept for a user: history, recommendation records and the age check."""
+    removed = {"history": int(_histories.pop(user, None) is not None), "recommendations": 0,
+               "verifications": int(_verifications.pop(user, None) is not None)}
+    if enabled():
+        with _conn().cursor() as cur:
+            for table, column, key in (("user_history", "user_id", "history"),
+                                       ("recommendations", "persona", "recommendations"),
+                                       ("verifications", "persona", "verifications")):
+                cur.execute(f"DELETE FROM {table} WHERE {column} = %s", (user,))
+                removed[key] = max(removed[key], cur.rowcount or 0)
+    return removed

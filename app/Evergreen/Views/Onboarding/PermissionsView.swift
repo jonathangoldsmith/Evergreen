@@ -19,7 +19,7 @@ struct PermissionsView: View {
                         .foregroundStyle(Theme.text)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.horizontal, Theme.sm)
-                    Text("I tailor your training with the apps you already use. Your data stays on your phone.")
+                    Text("I tailor your training with the apps you already use. To plan, I send your workouts and sleep to Evergreen's planner under an anonymous ID; you can delete them any time.")
                         .font(.footnote)
                         .foregroundStyle(Theme.textMuted)
                         .padding(.horizontal, Theme.sm)
@@ -30,7 +30,7 @@ struct PermissionsView: View {
                                   state: state(model.calendarAccess == .on, asked: model.calendarAccess != .notAsked),
                                   action: allowCalendar)
                     PermissionRow(symbol: "heart", title: "Apple Health",
-                                  detail: "I read your runs, heart rate and effort to pick the right workout and pace.",
+                                  detail: "I read your workouts, heart rate, sleep and resting heart rate to plan your week.",
                                   state: healthAsked ? .asked : .ask,
                                   action: allowHealth)
                     PermissionRow(symbol: "bell", title: "Notifications",

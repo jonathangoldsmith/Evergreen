@@ -66,6 +66,37 @@ class ShoeState(BaseModel):
     startMiles: float = 0
 
 
+# --- a real person's history, sent by the phone (Apple Health) ---
+
+USER_ID = r"^usr_[0-9a-f]{8,64}$"   # the phone's anonymous device id (HMAC under a per-install secret)
+
+
+class HistoryWorkout(BaseModel):
+    """One Apple Health workout. Times carry the phone's UTC offset."""
+    id: Optional[str] = None
+    activityType: str
+    start: datetime
+    end: datetime
+    avgHeartRate: Optional[float] = None
+    effort: Optional[float] = None
+    distanceKm: Optional[float] = None
+    indoor: Optional[bool] = None
+
+
+class DailySummary(BaseModel):
+    """One night/day from Apple Health: minutes asleep and resting heart rate."""
+    date: date
+    sleepMin: Optional[float] = None
+    restingHeartRate: Optional[float] = None
+
+
+class History(BaseModel):
+    """What the phone read from Apple Health. With a `user`, the harness keeps the latest copy
+    (store.save_history) so later requests can plan without resending it; DELETE /users/{user} erases it."""
+    workouts: list[HistoryWorkout] = Field(default_factory=list)
+    daily: list[DailySummary] = Field(default_factory=list)
+
+
 # --- /evidence (matches EvidenceClient.swift) ---
 
 class EvidenceRequest(BaseModel):
@@ -87,6 +118,8 @@ class ShoesRequest(BaseModel):
     raceDate: date
     mandate: list[Mandate] = Field(default_factory=list)
     memory: Optional[PhoneMemory] = None
+    user: Optional[str] = Field(default=None, pattern=USER_ID)
+    history: Optional[History] = None
 
 
 class Condition(BaseModel):
@@ -117,3 +150,4 @@ class ShoesResponse(BaseModel):
     memorySource: Optional[str] = None     # "phone" | "bundled" | None   # "web-singlestore" | "web-snapshot" | "catalog"
     auditId: Optional[str] = None          # SingleStore recommendations row, when logging is on
     identity: Optional[dict] = None        # Persona age check: {required, verified, claimType, method?}
+    historySource: Optional[str] = None    # "phone" (sent now) | "stored" (kept for this user) | "persona" (demo files)

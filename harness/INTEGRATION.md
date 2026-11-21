@@ -172,3 +172,22 @@ When the harness has a Persona key, `/shoes/recommend` returns `identity: {requi
 4. Tick again: purchases now follow the mandate. Show "Verified 18+ by Persona" on the Why screen (`identity.verified`, `identity.method`).
 
 `GET /verify/status?persona=jordan` reads the state at any time. Only the yes/no claim is stored.
+
+
+## 9. A real person's own week (Apple Health)
+
+For the person's own week (`persona: "me"`), the app sends two more fields with `/workouts/recommend` (and `/shoes/recommend` when it has their shoes):
+
+```json
+"user": "usr_0123456789abcdef",
+"history": {
+  "workouts": [{"activityType": "Running", "start": "2026-11-17T19:00:00-08:00", "end": "2026-11-17T19:40:00-08:00",
+                "avgHeartRate": 150, "distanceKm": 6.67, "indoor": false}],
+  "daily": [{"date": "2026-11-19", "sleepMin": 452, "restingHeartRate": 51.5}]
+}
+```
+
+- `user` is `DeviceIdentity.userId`; `history` is `HistoryPayload` built from `HealthReader`'s last read (60 days of workouts, 28 days of sleep and resting heart rate).
+- The harness keeps the latest history for `user`; later calls without `history` plan from that (`historySource: "stored"`).
+- "Your data" on Today reads `GET /users/{user}` and erases with `DELETE /users/{user}`.
+

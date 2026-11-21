@@ -67,6 +67,19 @@ The whole route has a 5 s budget. Measured on Jordan with web candidates: about 
 
 Actions use the app's `AgentAction` shape (`addWorkout` with an `after` slot; ids are stable as `wk-<date>-<activity>`), so the app can put them on the calendar. Memory facts are rebuilt with `node harness/scripts/build_memory.mjs` (from the repo root).
 
+## Real people (Apple Health history, per device)
+
+Both recommenders also plan for a real person, not just the demo personas. The phone sends `user` (its anonymous device id, `usr_` + 16 hex, an HMAC under a per-install secret: no name, email or account) and `history` (its Apple Health workouts with type, times, average heart rate, distance and indoors, plus per day minutes asleep and resting heart rate). `persona` is `"me"`.
+
+- **Which history** (`harness/people.py`): the history sent with the request, else the one last kept for that `user`, else the persona's files. The response's `historySource` says which: `phone`, `stored` or `persona`. A person with no history at all gets a 404.
+- **Kept per user:** with a `user`, the latest history is stored in SingleStore (`user_history`; memory when SingleStore is off), so later calls can plan without resending it. Recommendations and the age check are keyed by `user` too. Audit records leave the history out.
+- **Shoes for a real person:** wear comes from their own run distances; candidates fall back to the default pool of reviewed road shoes (`DEFAULT_RESEARCH`), and there are no fit notes until they give some.
+
+| Route | Secret | What it does |
+|---|---|---|
+| `GET /users/{user}` | ✓ | What's kept for the id: whether a history is stored, when, how many workouts and days, recommendation count, age check |
+| `DELETE /users/{user}` | ✓ | Erases the history, recommendation records and age check for the id. The app's "Your data" screen calls it. |
+
 ## Age check (Persona Relay)
 
 Purchases unlock once the person passes a Persona age check (18+). Only a yes/no claim comes back: no name, birthdate or ID. On when `PERSONA_API_KEY` is set (a key with `privacy_pass.write` is enough, no inquiry template).
