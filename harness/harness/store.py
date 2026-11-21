@@ -19,6 +19,10 @@ from datetime import datetime, timezone
 from harness import config  # noqa: F401  (loads harness/.env)
 
 DDL = [
+    """CREATE TABLE IF NOT EXISTS verifications (
+        persona VARCHAR(32) NOT NULL, relay_token VARCHAR(256) NOT NULL, relay_secret VARCHAR(256) NOT NULL,
+        status VARCHAR(16) NOT NULL, claim_type VARCHAR(64), doc JSON, updated_at DATETIME(6) NOT NULL,
+        PRIMARY KEY (persona))""",
     """CREATE TABLE IF NOT EXISTS shoe_candidates (
         persona VARCHAR(32) NOT NULL, id VARCHAR(128) NOT NULL, fetched_at DATETIME NOT NULL,
         doc JSON NOT NULL, PRIMARY KEY (persona, id))""",
@@ -225,3 +229,39 @@ def recent_recommendations(persona: str | None = None, limit: int = 20) -> list[
 def _row(r) -> dict:
     return {"id": r[0], "createdAt": r[1].isoformat() + "Z" if hasattr(r[1], "isoformat") else str(r[1]),
             "persona": r[2], "source": r[3], "item": r[4], "latencyMs": r[5], "record": _json(r[6])}
+
+
+# --- identity verification (Persona Relay); memory fallback when SingleStore is off ---
+
+_verifications: dict[str, dict] = {}
+
+
+def save_verification(persona: str, rec: dict) -> None:
+    """rec: relay_token, relay_secret, status (started|passed|failed), claim_type, doc."""
+    _verifications[persona] = rec
+    if not enabled():
+        return
+    try:
+        with _conn().cursor() as cur:
+            cur.execute("REPLACE INTO verifications (persona, relay_token, relay_secret, status, claim_type, doc, updated_at) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        (persona, rec["relay_token"], rec["relay_secret"], rec["status"], rec.get("claim_type"),
+                         json.dumps(rec.get("doc") or {}), datetime.now(timezone.utc).replace(tzinfo=None)))
+    except Exception:
+        pass
+
+
+def get_verification(persona: str) -> dict | None:
+    if enabled():
+        try:
+            with _conn().cursor() as cur:
+                cur.execute("SELECT relay_token, relay_secret, status, claim_type, doc, updated_at FROM verifications WHERE persona = %s", (persona,))
+                r = cur.fetchone()
+            if r:
+                rec = {"relay_token": r[0], "relay_secret": r[1], "status": r[2], "claim_type": r[3], "doc": _json(r[4]),
+                       "updatedAt": r[5].isoformat() + "Z" if hasattr(r[5], "isoformat") else str(r[5])}
+                _verifications[persona] = rec
+                return rec
+        except Exception:
+            pass
+    return _verifications.get(persona)

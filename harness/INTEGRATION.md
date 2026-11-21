@@ -122,3 +122,15 @@ curl -s -X POST https://trackerplusplus-harness.vercel.app/warm -H "X-Harness-Se
 In the Simulator: Demo → "Jordan: shoes near 400 mi". The card should show the harness's shoe, and Why this pair should show live citations including a review site. Turn Wi-Fi off and repeat: Swift's own Pacer 9 should appear, so the fallback works.
 
 **Before going on stage:** `POST /warm` with the secret, so the first request doesn't wait for a cold model.
+
+
+## Age check before purchases (Persona)
+
+When the harness has a Persona key, `/shoes/recommend` returns `identity: {required: true, verified: false, ...}` and keeps the purchase `awaitingApproval`. To unlock:
+
+1. `POST /verify/start {"persona": "jordan"}` (with the secret header) → `{sessionToken, claimType, sandbox}`.
+2. Open Persona's Relay flow with `sessionToken`: Persona's iOS SDK, or their hosted Relay page in an `SFSafariViewController`. In sandbox you can skip this step for the demo; the claim still passes.
+3. When it closes, `POST /verify/check {"persona": "jordan"}` → `{verified: true, method: "document_selfie", ...}`.
+4. Tick again: purchases now follow the mandate. Show "Verified 18+ by Persona" on the Why screen (`identity.verified`, `identity.method`).
+
+`GET /verify/status?persona=jordan` reads the state at any time. Only the yes/no claim is stored.

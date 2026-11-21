@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hmac
 
+from pydantic import BaseModel
 from fastapi import Depends, FastAPI, Header, HTTPException
 
 from harness import config, store
@@ -24,7 +25,8 @@ def require_secret(x_harness_secret: str = Header(default="")) -> None:
 def health() -> dict:
     return {"ok": True, "sie": bool(config.SIE_API_KEY), "senso": bool(config.SENSO_API_KEY),
             "nimble": bool(__import__("os").environ.get("NIMBLE_API_KEY")), "singlestore": store.enabled(),
-            "secret": bool(config.HARNESS_SECRET), "version": app.version}
+            "secret": bool(config.HARNESS_SECRET),
+            "persona": bool(__import__("os").environ.get("PERSONA_API_KEY")), "version": app.version}
 
 
 @app.post("/warm", dependencies=[Depends(require_secret)])
@@ -66,6 +68,38 @@ def audit_get(rid: str) -> dict:
     if not rec:
         raise HTTPException(status_code=404, detail="no such recommendation")
     return rec
+
+
+class VerifyRequest(BaseModel):
+    persona: str
+
+
+@app.post("/verify/start", dependencies=[Depends(require_secret)])
+def verify_start(req: VerifyRequest) -> dict:
+    """Start a Persona age check (18+). Returns the session token the app opens Persona's flow with."""
+    from harness.identity import gate, persona
+    if not persona.enabled():
+        raise HTTPException(status_code=503, detail="age check off (no PERSONA_API_KEY)")
+    try:
+        return gate.start(req.persona)
+    except persona.PersonaError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)[:200])
+
+
+@app.post("/verify/check", dependencies=[Depends(require_secret)])
+def verify_check(req: VerifyRequest) -> dict:
+    """After the person finishes Persona's flow: redeem a Privacy Pass on the relay and record the yes/no claim."""
+    from harness.identity import gate, persona
+    try:
+        return gate.check(req.persona)
+    except persona.PersonaError as exc:
+        raise HTTPException(status_code=409 if "no verification" in str(exc) else 502, detail=str(exc)[:200])
+
+
+@app.get("/verify/status", dependencies=[Depends(require_secret)])
+def verify_status(persona: str) -> dict:
+    from harness.identity import gate
+    return gate.status(persona)
 
 
 @app.post("/evidence", response_model=EvidenceResponse)

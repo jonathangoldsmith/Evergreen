@@ -12,6 +12,7 @@ import time
 from datetime import datetime, timedelta
 
 from harness import data, store
+from harness.identity import gate
 from harness.web import research
 from harness.clients import sie
 from harness.evidence import senso
@@ -200,18 +201,21 @@ def recommend(req: ShoesRequest) -> ShoesResponse:
     noticed = f"Your shoes hit {cond.miles} miles ({cond.percentLife}% of their life). Race day is in {days_to_race} days."
     if why:
         noticed += f" {why}"
+    identity = gate.status(req.persona)
+    if identity["required"] and not identity["verified"]:
+        noticed += " Verify you're over 18 with Persona to unlock purchases."
     purchase = Purchase(
         id=f"shoes-{req.shoes.boughtOn.isoformat()}", item=chosen["name"], merchant=MERCHANT,
         amountCents=chosen["amountCents"],
-        status="bought" if chosen["amountCents"] <= rule.maxAutoCents else "awaitingApproval",
+        status="bought" if chosen["amountCents"] <= rule.maxAutoCents and (identity["verified"] or not identity["required"]) else "awaitingApproval",
         rule=Rule(id=rule.id, text=rule.text), noticed=noticed,
         evidence=evidence, evidenceLive=ev_live, options=options,
     )
     audit_id = store.log_recommendation(req.persona, source, chosen["name"], int((time.monotonic() - t0) * 1000), {
         "request": req.model_dump(mode="json"), "condition": cond.model_dump(), "profile": prof.model_dump(),
-        "candidatesFrom": cand_source, "shortlist": [s["id"] for s in eligible],
+        "candidatesFrom": cand_source, "identity": identity, "shortlist": [s["id"] for s in eligible],
         "rejected": {s["id"]: s["lostBecause"] for s in rejected}, "purchase": purchase.model_dump(mode="json"),
         "sources": [{"name": c["name"], "url": c.get("url")} for c in [chosen] if c.get("url")],
     })
     return ShoesResponse(condition=cond, profile=prof, purchase=purchase, live=source == "sie", source=source,
-                         candidatesFrom=cand_source, auditId=audit_id)
+                         candidatesFrom=cand_source, auditId=audit_id, identity=identity)

@@ -29,3 +29,12 @@ def _no_real_singlestore(monkeypatch, request):
     if request.node.fspath.basename != "test_store.py":
         monkeypatch.delenv("SINGLESTORE_URL", raising=False)
         monkeypatch.delenv("SINGLESTORE_DB_URL", raising=False)
+
+
+
+@pytest.fixture(autouse=True)
+def _no_real_persona(monkeypatch):
+    """Tests never call Persona; test_persona.py fakes it."""
+    monkeypatch.delenv("PERSONA_API_KEY", raising=False)
+    from harness import store
+    store._verifications.clear()
