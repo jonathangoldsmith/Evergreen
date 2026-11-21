@@ -116,3 +116,4 @@ class ShoesResponse(BaseModel):
     candidatesFrom: Optional[str] = None
     memorySource: Optional[str] = None     # "phone" | "bundled" | None   # "web-singlestore" | "web-snapshot" | "catalog"
     auditId: Optional[str] = None          # SingleStore recommendations row, when logging is on
+    identity: Optional[dict] = None        # Persona age check: {required, verified, claimType, method?}

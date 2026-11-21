@@ -67,6 +67,18 @@ The whole route has a 5 s budget. Measured on Jordan with web candidates: about 
 
 Actions use the app's `AgentAction` shape (`addWorkout` with an `after` slot; ids are stable as `wk-<date>-<activity>`), so the app can put them on the calendar. Memory facts are rebuilt with `node harness/scripts/build_memory.mjs` (from the repo root).
 
+## Age check (Persona Relay)
+
+Purchases unlock once the person passes a Persona age check (18+). Only a yes/no claim comes back: no name, birthdate or ID. On when `PERSONA_API_KEY` is set (a key with `privacy_pass.write` is enough, no inquiry template).
+
+| Route | What it does |
+|---|---|
+| `POST /verify/start` `{persona}` | Creates a Relay for `age_over18_verified`; returns `sessionToken` for the app to open Persona's flow. The relay secret stays on the server. |
+| `POST /verify/check` `{persona}` | After the flow: gets a challenge, blinds a token, has Persona sign it (Privacy Pass, API key), unblinds and checks it locally, redeems it on the relay, and stores the claim (`passed`/`failed`, method). Redeems once. |
+| `GET /verify/status?persona=` | `{required, verified, state, claimType, method, verifiedAt, sandbox}` |
+
+`/shoes/recommend` returns `identity` and keeps every purchase `awaitingApproval` (with "Verify you're over 18 with Persona…" in `noticed`) until the person is verified; the audit record includes it. Verification state is stored in SingleStore (`verifications` table; memory fallback). Blind RSA follows RFC 9474 (SHA-384 PSS, salt 48); Persona's token input hashes the nonce, MAC and key id as text, checked against Persona's published test vector in `tests/test_persona.py`. In sandbox, claims pass even if the flow wasn't completed.
+
 ## SingleStore (audit log and candidate store)
 
 Off until `SINGLESTORE_URL` is set; the harness works the same without it.

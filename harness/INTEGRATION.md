@@ -160,3 +160,15 @@ In the Simulator: Demo → "Jordan: shoes near 400 mi". The card should show the
 - `facts`: the fact lines from the `profile` and `rolling` files (`text`, and `kind` if you have it; the harness infers it otherwise).
 - Both routes return `memorySource: "phone"` when they used it, `"bundled"` when they fell back. Fixed slots set the week plan's session times; load, sleep and resting-HR facts go into the reasons and the shoe pick's runner description.
 - Shoe wear still reads per-run distances from the persona data, because memory holds counts and minutes, not mileage.
+
+
+## 8. Age check before purchases (Persona)
+
+When the harness has a Persona key, `/shoes/recommend` returns `identity: {required: true, verified: false, ...}` and keeps the purchase `awaitingApproval`. To unlock:
+
+1. `POST /verify/start {"persona": "jordan"}` (with the secret header) → `{sessionToken, claimType, sandbox}`.
+2. Open Persona's Relay flow with `sessionToken`: Persona's iOS SDK, or their hosted Relay page in an `SFSafariViewController`. In sandbox you can skip this step for the demo; the claim still passes.
+3. When it closes, `POST /verify/check {"persona": "jordan"}` → `{verified: true, method: "document_selfie", ...}`.
+4. Tick again: purchases now follow the mandate. Show "Verified 18+ by Persona" on the Why screen (`identity.verified`, `identity.method`).
+
+`GET /verify/status?persona=jordan` reads the state at any time. Only the yes/no claim is stored.
