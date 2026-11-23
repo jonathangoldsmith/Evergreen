@@ -57,6 +57,7 @@ The founder's own workaround is nothing: notice fatigue, run anyway. In the mark
   - the coach link (item 20): swaps, reasons and the weekly report, with pain answers only if the runner opts in;
   - buddy notes (item 22): completed workouts only.
   - Injury location and the "where" of a pain answer never leave the phone.
+- **Health data leaves the phone only with consent (business notes decision BN2).** Onboarding's "What leaves your phone" step asks before anything is uploaded, as Washington's health data law requires separate consent to collect. Research use is a second, separate opt-in that's off by default. Both can be changed in Your data.
 - **A push token is a new identifier.** Buddy notes use Apple push (item 22). The token is stored under the anonymous ID and removed on unpair, on DELETE, and when APNs reports it invalid.
 - **The harness needs a persistent store.** SingleStore is required in production for guardrail events, coach shares, buddy pairs and push tokens. Without it the harness keeps data in memory and loses it on a cold start, so it refuses to create a share, a buddy invite or a push token (503) when no persistent store is configured. The deployed harness must have SingleStore before the first cohort, because guardrail events still fall back to memory. `/coach/{token}` is registered before the catch-all route in `harness/api/index.py`.
 
@@ -132,10 +133,11 @@ Milestones 3 and 4 can run alongside milestone 2. The Swift/Python fixture pipel
 - **Order (design review decision 3):**
   1. Welcome
   2. Permissions (Health, calendar, notifications)
-  3. pick training calendars (item 1)
-  4. injury question
-  5. backtest
-  6. the return-plan offer, if the injury was recent
+  3. What leaves your phone (consent, item 9, business notes decision BN2)
+  4. pick training calendars (item 1)
+  5. injury question
+  6. backtest
+  7. the return-plan offer, if the injury was recent
 - **Not medical advice, beside the injury question:** one muted line under it: "Evergreen suggests training changes. It isn't medical advice; see a physio or doctor for pain or injury." Not a separate first screen.
 - **Injury question:** "Any injury in the last 12 months? No / Yes" and, if yes, roughly when (month). The location stays on the phone. If the injury was in the last 3 months, onboarding ends by offering the return plan (item 21, once milestone 4 ships).
 - **Then the backtest.** A one-time HealthKit query reads the last 395 days of runs (365 to check, plus 30 for the first lookback). It's separate from HealthReader's 60-day read and isn't cached beyond its result. The raw runs are never uploaded. Each quiz answer is uploaded as a `backtest_answer` event (eng re-run D1; see item 9). While it runs: "Checking your last year…".
@@ -166,7 +168,7 @@ Milestones 3 and 4 can run alongside milestone 2. The Swift/Python fixture pipel
   - at most 2 guardrail notifications a day;
   - an evening spike note says "Tomorrow's 18 km is a big jump from your longest run (13 km). Make it 12?";
   - no morning check is sent once that run's swap is decided;
-  - Sunday's pain question and range report go out as one 6 PM notification: "How was your week? Any pain?" with No / A little / Yes.
+  - Sunday's pain question and range report go out as one 6 PM notification: "How was your week? Any pain?" with No / A little / Yes. "No" is recorded in the background; "A little" and "Yes" record the answer and open the app to the OSTRC questions (item 17).
   - **Counting and the Sunday rule (eng re-run D3):**
     - the cap counts by the day a note fires;
     - the Sunday note is never dropped, and a competing evening spike note is folded into its text;
@@ -182,14 +184,23 @@ Milestones 3 and 4 can run alongside milestone 2. The Swift/Python fixture pipel
 - **Undo** marks that action undone, and the next sync removes the event, as Undo works today. If no run on the source calendar matches the key any more (moved, renamed or deleted), Evergreen records its own cancel action (like `cancelPurchase` today), not the person's Undo, so the change isn't read as a refusal and the replacement run can be flagged again.
 
 **9. Logging and privacy.**
-- **On the harness:** each flag, morning answer, choice (accept / keep / undo) and the run actually done go to a new `guardrail_events` table under the anonymous per-device ID. So does each weekly pain answer (No / A little / Yes / no answer). Injury is sent as yes/no and months ago, never the location. Pain answers never include where. A swap event carries the planned size, the suggested size and the 30-day longest (rounded, in the plan's unit) and its reason kind, which is what the coach page shows.
-- **One upload path (eng review D1).** The phone keeps one durable outbox (`EventOutbox`) for every uploaded event: flags, choices, pain answers, misses, comebacks, `workout_completed`, `range_week` and `backtest_answer`. A `backtest_answer` carries yes / no / don't know, whether the day was flagged or a control, the jump percent rounded to 5, and the months ago. It carries no date or distance (eng re-run D1). It sends them to one route, `POST /users/{user}/events`, as typed events with a client-generated id. The harness validates each event type and ignores ids it has already seen, so a retry never doubles an event. It fails closed: a 503 without SingleStore, and an error status on any write failure. It returns the ids it stored, and the outbox acknowledges only those, so an event is never lost to a quiet failure.
+- **On the harness:** each flag, morning answer, choice (accept / keep / undo) and the run actually done go to a new `guardrail_events` table under the anonymous per-device ID. So does each weekly pain answer (No / A little / Yes / no answer), with its four OSTRC answer codes when they were given (item 17). Injury is sent as yes/no and months ago, never the location. Pain answers never include where. A swap event carries the planned size, the suggested size and the 30-day longest (rounded, in the plan's unit) and its reason kind, which is what the coach page shows.
+- **One upload path (eng review D1).** The phone keeps one durable outbox (`EventOutbox`) for every uploaded event: flags, choices, pain answers, misses, comebacks, `workout_completed`, `range_week`, `backtest_answer` and `consent` (BN2). A `backtest_answer` carries yes / no / don't know, whether the day was flagged or a control, the jump percent rounded to 5, and the months ago. It carries no date or distance (eng re-run D1). It sends them to one route, `POST /users/{user}/events`, as typed events with a client-generated id. The harness validates each event type and ignores ids it has already seen, so a retry never doubles an event. It fails closed: a 503 without SingleStore, and an error status on any write failure. It returns the ids it stored, and the outbox acknowledges only those, so an event is never lost to a quiet failure.
 - **New harness tables (five):**
   - `guardrail_events`: every event type above (`workout_completed` for paired people only, with type and rounded minutes);
   - `coach_shares`: item 20;
   - `buddy_pairs`: item 22, holding invites too, with status invited, paired or ended;
   - `push_tokens`: item 22;
   - `devices`: per-device auth (eng review D7), holding each install's token hash.
+- **Consent (business notes decision BN2):**
+  - **The screen:** onboarding's "What leaves your phone" step lists, in plain words, what's uploaded (flags, choices, weekly pain answers with their OSTRC answers, injury as yes/no and months ago, backtest answers, week counts) and what never is (raw Health data, injury or pain location, calendar titles). Primary button: "Allow and continue". Ghost button: "Keep it on my phone".
+  - **Declining:** nothing is uploaded and the outbox holds nothing. The brake, the swap and the range report still work, because they run on the phone. Sharing a coach link or inviting a buddy needs uploads, so those screens ask for this consent first.
+  - **Research opt-in:** one tick on the same screen, off by default: "Let researchers use my answers, without my name, to study running injuries." It's separate from the upload consent and can be turned off at any time.
+  - **The record:** each consent choice is a `consent {uploads: yes | no, research: yes | no, version}` event with its time, kept on the phone and sent through the outbox only once uploads are allowed (a "no" to uploads never leaves the phone). Uploads begin only after a "yes" is recorded. Research exports include only people whose latest consent event says research yes; turning it off removes them from later exports. DELETE erases these events with the rest.
+  - **Existing users:** the eng re-run's one-time catch-up flow (R8) starts with this step, since PR 24 already uploads their history.
+  - **The buddy's friend:** the short path (item 22) includes this step, because pairing uploads a push token.
+  - **Before any research use:** a lawyer's read on Apple guideline 5.1.3 and the state health data laws, and the research partner's ethics approval, as the business notes say.
+- **Wellness wording (business notes decision BN3):** every app screen, notification, the coach page and App Store and marketing copy say what Evergreen does ("in range", "a big jump from your longest run", "shortened"), never that it makes running safe. No "safe", "prevents injury", "lowers your risk" or "injury-proof". The not-medical-advice line stays as it is.
 - **Delete covers every one.** `GET` and `DELETE /users/{user}` and the Your data screen cover all five tables. `store.delete_user` today erases only `user_history`, `recommendations` and `verifications`, so it's extended, with a test per table.
   - **When one side of a pair deletes:** the pair and that person's push token are removed. The other person's own data is untouched; their buddy row disappears and their notes stop.
   - **When a runner deletes:** each coach link shows "This link is no longer active."
@@ -244,7 +255,8 @@ Each traces to a ledger row (X1–X8) below.
 - **Everyone, every week:** asked of every person who did or planned any workout that week, flagged or not, on both the brake and the push side. The 2× check needs outcomes for unflagged weeks too.
 - **The week:** runs Monday to Sunday in the person's local time.
 - **When it's asked:** a local notification on Sunday at 6 PM with the actions No / A little / Yes. The same card shows on Today until Tuesday night.
-- **"Yes":** the app asks where (a body-part picker). The answer stays on the phone; the harness gets only "yes". A "Yes" also sets the injury month to this month (X9), so item 5's tighter threshold applies for the next 12 months. Pain answers and the injury month live in their own model, not in ActionRecord (which is the feed's event log), so they never appear in the feed or the tick payload. A "Yes" also offers the return plan (item 21, once milestone 4 ships), unless a return plan is already active, in which case it pauses that plan instead.
+- **The one-tap answer plus OSTRC (business notes decision BN1):** the one-tap answer is recorded the moment it's tapped. "No" is recorded as an OSTRC week with no problem (all four answers zero) and needs nothing more. "A little" and "Yes" open the app to the 4 OSTRC overuse questions (Oslo Sports Trauma Research Center): taking part in running, how much training was reduced, how much performance was affected, and how bad the symptoms were. Each has its fixed answer options and a Skip. A skipped sheet keeps the one-tap answer, with no OSTRC score for that week. The OSTRC version (one body area or any health problem), its exact wording and its terms of use are confirmed with a research partner before the first cohort. The one-tap question keeps its wording unless that check changes it, because "No" has to mean "no pain or problems at all" for the zero to be valid.
+- **"Yes":** after the OSTRC questions, the app asks where (a body-part picker). The answer stays on the phone; the harness gets only "yes". A "Yes" also sets the injury month to this month (X9), so item 5's tighter threshold applies for the next 12 months. Pain answers and the injury month live in their own model, not in ActionRecord (which is the feed's event log), so they never appear in the feed or the tick payload. A "Yes" also offers the return plan (item 21, once milestone 4 ships), unless a return plan is already active, in which case it pauses that plan instead.
 - **No answer:** after Tuesday the week is recorded as "no answer". It's left out of outcome counts and not asked again.
 - **The link to flags:** each answer is linked to the flags of that week and the week before, matching the backtest's "within 2 weeks" question.
 
@@ -272,7 +284,7 @@ Each traces to a ledger row (X1–X8) below.
 - **The page:** `GET /coach/{token}` is public and exempt from `require_secret`, like `/health`. It returns a server-rendered page with `noindex` and `no-store` headers.
 - **What the page shows:** the last 4 weeks of swaps with their reasons (planned size, suggested size, the 30-day longest, rounded) and the weekly report.
 - **What it leaves out:** calendar titles, injury details and raw Health samples.
-- **How the runner felt (X7, X10):** shown only if the runner ticked "Include how I've felt" when sharing. That covers weekly pain answers, Sore and Tired reasons, and the 30-day longest on injury-adjusted swaps. Without the tick, swaps read "Shortened: big jump" or "Shortened: how you felt", and injury-adjusted swaps show only the planned and suggested sizes. The tick is stored with the share and can be changed at any time.
+- **How the runner felt (X7, X10):** shown only if the runner ticked "Include how I've felt" when sharing. That covers weekly pain answers (the one-tap answer only; OSTRC answers are never shown to a coach), Sore and Tired reasons, and the 30-day longest on injury-adjusted swaps. Without the tick, swaps read "Shortened: big jump" or "Shortened: how you felt", and injury-adjusted swaps show only the planned and suggested sizes. The tick is stored with the share and can be changed at any time.
 - **Lifecycle:**
   - a share expires after 90 days, and the runner can renew it;
   - revoke lives in Your data under "Coach links", and a revoked or expired link shows "This link is no longer active";
@@ -292,7 +304,7 @@ Each traces to a ledger row (X1–X8) below.
 
 **22. Accountability buddy (X6 and X8, milestone 2).**
 - **Inviting:** a push-side person creates an invite. The harness (`POST /users/{user}/buddy`) creates a `buddy_pairs` row with status invited and returns an 8-character code that expires after 48 hours and works once.
-- **The friend's onboarding:** a short path: a TestFlight invite, the disclaimer, notification permission and the code. There's no backtest or injury question unless they later choose to use Evergreen for themselves.
+- **The friend's onboarding:** a short path: a TestFlight invite, the disclaimer, notification permission, the "What leaves your phone" consent (item 9) and the code. There's no backtest or injury question unless they later choose to use Evergreen for themselves.
 - **Redeeming safely:** redeem runs `UPDATE buddy_pairs ... WHERE code=%s AND status='invited'` and checks the rowcount, because SingleStore runs in autocommit here and can't enforce every unique rule. It's refused when either person already has a paired row. A test redeems one code twice at once.
 - **Joining:** the friend installs Evergreen, gets their own anonymous ID, enters the code, and both see a consent screen saying what's shared. The harness moves that `buddy_pairs` row to paired. Each person has at most one buddy.
 - **What triggers a note:**
@@ -322,7 +334,7 @@ Each traces to a ledger row (X1–X8) below.
 
 - **Plan titles:** how reliably do Runna and coach calendar titles carry a distance? Check with the first runners' real calendars before building the parser past the obvious patterns.
 - **Thresholds:** are +10% / +5% and "60+ minutes or 10+ km" right, or too noisy? The backtest answers per person, and the founder's own history is the first check.
-- **Outcome tracking:** settled by item 17 (the weekly pain check-in). Still open: whether a wearable signal could add anything (it can't detect injury reliably today).
+- **Outcome tracking:** settled by item 17 (the weekly pain check-in, with OSTRC after "A little" or "Yes"). Still open: whether a wearable signal could add anything (it can't detect injury reliably today), and which OSTRC version and wording a research partner signs off on (business notes decision BN1).
 - **Age check:** does the guardrail need Persona's age check at all, given it never buys anything?
 - **Liability wording:** placement is settled in item 9. Open: whether the return plan (item 21) needs a physio to review its template before the second cohort.
 
@@ -334,7 +346,7 @@ Each traces to a ledger row (X1–X8) below.
 - **Retention:** at least 6 of the 10 still answering the morning check in week 3.
 - **Push, first newcomers (3):** over 4 weeks, each completes more workouts than their own prior 4-week normal, and at least half of comebacks are completed.
 - **Evidence for YC:** each of the first runners can say, in their own words, a time Evergreen changed a run.
-- **Live outcomes (item 17):** the second cohort answers at least 70% of weekly check-ins in weeks 1–4. After 8 weeks, the share of "A little" or "Yes" answers in the 2 weeks after a kept flag is compared with the share after unflagged weeks. The target is 2× again. With about 10 runners this is directional, not proof.
+- **Live outcomes (item 17):** the second cohort answers at least 70% of weekly check-ins in weeks 1–4, and at least 70% of "A little" or "Yes" answers come with all four OSTRC answers. After 8 weeks, the share of "A little" or "Yes" answers in the 2 weeks after a kept flag is compared with the share after unflagged weeks. The target is 2× again. With about 10 runners this is directional, not proof.
 - **Range report (item 18):** at least 6 of the 10 open it in weeks 2 and 3.
 - **Watch (item 19):** among runners with a watch, at least half of morning answers come from the watch by week 2 of using it.
 - **Coach view (item 20):** at least 2 runners share with a coach, and at least 1 coach asks how to add another runner.
@@ -1912,13 +1924,13 @@ Outside voice: Codex not installed, so a native Claude design subagent ran (9 fi
     3. the return-plan offer or resume;
     4. the agent's latest action.
   - **A deliberate departure from DESIGN.md:** "the agent's latest action is the only card on screen" and "Don't stack cards". DESIGN.md gets a decision-log row, and its Do's and Don'ts change to "Cards on Today stack in urgency order; never nest a card inside a card".
-- **Decision 2 (2A):** the range report is the "This week" sentence, not a card. From Sunday 7 PM through Monday it reads "In range 5 of 6 days. 1 swap kept your long run safe.", then returns to the weekly count. Item 18's "when it shows" follows this.
-- **Decision 3 (3A):** onboarding runs Welcome → Permissions → training calendars → injury (No / Yes, then a month) with the disclaimer line under it → backtest → return-plan offer. The wireframe's "Yes · where?" becomes "Yes · when?", and the injury question moves before the backtest. Item 4 is updated.
+- **Decision 2 (2A):** the range report is the "This week" sentence, not a card. From Sunday 7 PM through Monday it reads "In range 5 of 6 days. 1 swap kept your long run in range.", then returns to the weekly count. (Wording amended by BN3: it said "safe".) Item 18's "when it shows" follows this.
+- **Decision 3 (3A):** onboarding runs Welcome → Permissions → training calendars → injury (No / Yes, then a month) with the disclaimer line under it → backtest → return-plan offer. The wireframe's "Yes · where?" becomes "Yes · when?", and the injury question moves before the backtest. Item 4 is updated. **Amended by BN2 (2026-11-23):** a "What leaves your phone" step follows Permissions.
 - **Decision 4 (4A):** a "People" section in Your data holds Coach links (share, the "Include how I've felt" tick, revoke) and Buddy (invite, enter a code, unpair). Push-side people also get one dismissible line under the week sentence: "Want a friend to cheer you on? Invite one". It stays until they invite someone or dismiss it. No sharing card on Today.
 
 Screen structure after decisions 1–4:
 ```
-Onboarding: Welcome → Permissions → Training calendars → Injury (+ disclaimer line) → Backtest → [Return-plan offer]
+Onboarding: Welcome → Permissions → What leaves your phone (BN2) → Training calendars → Injury (+ disclaimer line) → Backtest → [Return-plan offer]
 Today (one scroll, cards stack in urgency order, then rows):
   date line
   [card] run decision: morning check → swap (until the run starts)
@@ -1928,7 +1940,7 @@ Today (one scroll, cards stack in urgency order, then rows):
   "On your calendar" rows (paused external runs say "Paused for your return plan")
   week sentence: "This week: 1 of 3 done"  |  Sun 7 PM–Mon: "In range 5 of 6 days. …"
   (push side) quiet line: "Want a friend to cheer you on? Invite one"
-Your data: What's kept · People (Coach links, Buddy) · Delete
+Your data: What's kept · Uploads and research (BN2) · People (Coach links, Buddy) · Delete
 Watch: complication → today's run → Fresh/Tired/Sore → swap accept
 Coach page (web): runner's swaps and week, read-only
 ```
@@ -1943,7 +1955,7 @@ Pass 1 re-rated: **4/10 → 8/10.** Each screen now has an order and a home. The
 |---|---|---|
 | Morning check | Fresh → the card shrinks to "Got it. Enjoy the run." Tired on an easy run with no flag → "Keep it easy today." | Two runs in one day: asked once, for the first. Not asked again once a swap was decided. |
 | Swap | Make it 12 km → "Changed to 12 km" with Undo. Keep 18 km → "Kept 18 km." with Undo | Calendar access off → "Changed in Evergreen. Allow calendar access to update your calendar." Background apply failed → the notification opens the app on the card. |
-| Pain check-in | No / A little → "Thanks. See you next week." Yes → a body-part list sheet with Skip | After Yes, the return-plan offer joins the stack. No forced chain of screens. |
+| Pain check-in | No → "Thanks. See you next week." A little → the 4 OSTRC questions in one sheet with Skip. Yes → the same sheet, then a body-part list with Skip (BN1) | After Yes, the return-plan offer joins the stack. No forced chain of screens beyond the one sheet. |
 | Return plan | Active: "Return plan · Week 2 of 4", with sessions as plan rows carrying a "Return" badge | Missed session → not chased: "Next one Thursday". Paused → Resume / End. Done → "Back to your plan." |
 - **Decision 8 (8A):** a display name is asked only when sharing: "The name your coach or buddy sees", one field on the coach-share and buddy-invite screens. It's never prefilled from the device or iCloud name. It's stored with the share or pair (`coach_shares`, `buddy_pairs`), editable in People, and deleted with them. Items 20 and 22 use it.
 - **Decision 9 (9A):** states for the coach page, buddy and watch (items 19, 20 and 22):
@@ -1966,14 +1978,14 @@ Journey storyboard (decisions 1–12 applied):
 | Step | User does | User feels | Plan specifies? |
 |---|---|---|---|
 | 1 | Opens Evergreen (Welcome, the buddy waves) | Curious, welcomed | Yes (existing Welcome) |
-| 2 | Allows Health, calendar, notifications; picks Runna | "It reads what I already use" | Yes (decision 3, item 1) |
+| 2 | Allows Health, calendar, notifications; reads what leaves the phone and allows it; picks Runna | "It reads what I already use, and tells me what it keeps" | Yes (decision 3, item 1, BN2) |
 | 3 | Injury? Yes, in August (disclaimer line under it) | Slightly exposed | Yes (decision 3) |
 | 4 | Answers up to 8 blind "hurt within 2 weeks?" questions | Reflective | Yes (decision 5) |
 | 5 | Reveal: "I'd have stepped in on 6 days" | "It would have caught me" | Yes (decision 5) |
 | 6 | Saturday 7 PM: "Tomorrow's 18 km is a big jump…" | Caught out, then relieved | Yes (decision 10) |
 | 7 | Sunday: taps "Make it 12 km" on the Lock Screen; "You were hurt after a jump like this in August" | Trusting, personal | Yes (items 7–8, decision 12) |
 | 8 | Sunday 6 PM: "How was your week? Any pain?" → No | Done in one tap | Yes (decisions 7, 10) |
-| 9 | Today's sentence: "In range 5 of 6 days. 1 swap kept your long run safe." | Quietly proud | Yes (decision 2) |
+| 9 | Today's sentence: "In range 5 of 6 days. 1 swap kept your long run in range." | Quietly proud | Yes (decision 2, BN3) |
 | 10 | Shares with the coach (types a first name) | Backed up, not second-guessed | Yes (decisions 4, 8) |
 
 Time horizons: 5 seconds, the swap card's one clear choice; 5 minutes, onboarding ends on a personal reveal; 5 years, the week sentence and coach link make a habit of training in range.
@@ -2064,8 +2076,8 @@ Pass 5 re-rated after decision 20: **9/10 → 10/10.**
 ## Implementation Tasks (design review)
 Synthesized from this review's findings. Each task derives from a specific decision above. Ratios: features ~30x, docs ~10x.
 
-- [ ] **G1 (P1, human: ~1h / CC: ~10min)**: DESIGN.md: stacked-card rule, accent rule, Watch and Coach page sections, refreshed overview, decision-log rows
-  - Surfaced by: decisions 1, 13, 14, 15 and 20
+- [ ] **G1 (P1, human: ~1h / CC: ~10min)**: DESIGN.md: stacked-card rule, accent rule, Watch and Coach page sections, refreshed overview, the wellness-wording rule (BN3) in Do's and Don'ts, decision-log rows
+  - Surfaced by: decisions 1, 13, 14, 15 and 20, and BN3
   - Files: DESIGN.md
   - Verify: DESIGN.md states each rule. Its decision log has rows dated 2026-11-22.
 - [ ] **G2 (P1, human: ~1 day / CC: ~30min)**: Today: the card stack in urgency order, cards only for decisions, past actions become badged rows
@@ -2386,6 +2398,41 @@ The outside voice's 8 other findings are required proof or plumbing for approved
 - Effort: the re-run adds about 1.5 human weeks (CC about 5 hours) to milestones 1, 3 and 4. The plan's total is now about 17.5–20.5 human weeks.
 
 
+## Business notes amendments (2026-11-23)
+
+Source: `docs/designs/evergreen-business-notes.md`, section 8, "Decisions to make now in the app". Each is cheap now and expensive later, because the data and copy it shapes start with the first cohort. Folded in by the founder after the reviews, not re-reviewed.
+
+| # | Decision | Founder answer | Plan changes |
+|---|---|---|---|
+| BN1 | Weekly pain question: the one-tap question, OSTRC, or both | Both: one tap every Sunday; "No" is recorded as an OSTRC zero week; "A little" and "Yes" open the 4 OSTRC questions | Items 7, 17, 9 (upload), 20 (coach never sees OSTRC), design decision 7's table, Success Criteria, Open Questions |
+| BN2 | Consent: a "What leaves your phone" step before any upload, plus a separate research opt-in, off by default | Accepted as proposed ("Yes, add them") | Constraints, items 4, 9 and 22, design decision 3 and the storyboard, the R8 catch-up flow, Your data |
+| BN3 | Wellness wording: "in range", never "safe" or "prevents injury" | Accepted as proposed | Item 9, design decision 2 and the journey table, G1 (DESIGN.md) |
+
+**Effort:** about half a human week more (CC about 2 hours). The plan's total is now about 18–21 human weeks.
+
+### Implementation tasks added by the business notes
+- [ ] **B1 (P1, human: ~1 day / CC: ~30min)**: OSTRC sheet after "A little" or "Yes"; "A little" and "Yes" notification actions open the app; "No" stays a background action; OSTRC answer codes on the `pain_checkin` upload
+  - Surfaced by: BN1
+  - Files: app/Evergreen/Notifications/, app/Evergreen/Views/Today/, the pain/injury model, harness/tests/test_events.py
+  - Verify: "No" records a zero week with no sheet; a skipped sheet keeps the one-tap answer; OSTRC codes never reach Amplitude or the coach page
+- [ ] **B2 (P1, human: ~1 day / CC: ~30min)**: "What leaves your phone" step with the research tick; `consent` events; the outbox sends nothing before a "yes"; coach share and buddy invite ask first when uploads are off; the step leads the R8 catch-up flow and the friend's path
+  - Surfaced by: BN2
+  - Files: app/Evergreen/Views/Onboarding/, app/Evergreen/Agent/EventOutbox.swift, app/Evergreen/Views/Today/YourDataView.swift, harness/tests/test_events.py
+  - Verify: with "Keep it on my phone", no request reaches the harness and the swap and report still work; research is off by default; DELETE erases consent events
+- [ ] **B3 (P1, human: ~1h / CC: ~10min)**: Wording sweep of app strings, notification text and the coach page for "safe", "prevent", "risk" and "injury-proof"
+  - Surfaced by: BN3
+  - Files: app/Evergreen/, harness/ (coach page)
+  - Verify: a test or grep check over the string catalog and coach template finds none of those words
+- [ ] **B4 (P1, human: ~2 meetings / CC: n/a)**: Confirm the OSTRC version, wording and terms of use with a research partner before the first cohort
+  - Surfaced by: BN1
+  - Files: this plan (item 17)
+  - Verify: item 17 names the confirmed version and wording
+- [ ] **B5 (P2, human: ~1 meeting / CC: n/a)**: A lawyer's read on Apple guideline 5.1.3 and state health data laws before any research export or coach link ships
+  - Surfaced by: BN2 and the business notes' data section
+  - Files: none
+  - Verify: the answer is recorded in the business notes
+
+
 ## GSTACK REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |
@@ -2400,5 +2447,6 @@ The outside voice's 8 other findings are required proof or plumbing for approved
 - **VERDICT:** CEO CLEARED.
   - **Eng review (re-run):** ISSUES OPEN means mapped work, not undecided questions: 23 issues in this run, each with a task (E15–E23), 0 unresolved decisions and 0 critical gaps. Eng review required.
   - **Design review:** ISSUES OPEN (7/10), held below 8 by an accepted tradeoff.
+  - **Business notes amendments (2026-11-23):** 3 founder decisions (BN1–BN3) folded in after the reviews, with tasks B1–B5. Not re-reviewed; they touch onboarding, the pain check-in and copy, so a /plan-design-review pass would cover them.
 
 NO UNRESOLVED DECISIONS

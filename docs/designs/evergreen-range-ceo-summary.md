@@ -21,7 +21,7 @@ You rarely open Evergreen. Each morning one tap ("Fresh / Tired / Sore") on your
 
 | # | Proposal | Effort | Decision | Reasoning |
 |---|----------|--------|----------|-----------|
-| X1 | Weekly "Any pain this week?" check-in linked to that week's flags | S | ACCEPTED | Turns every flag into a labeled outcome, the data the thesis depends on (D2) |
+| X1 | Weekly "Any pain this week?" check-in linked to that week's flags; since 2026-11-23, "A little" or "Yes" adds the 4 OSTRC questions (business notes BN1) | S | ACCEPTED | Turns every flag into a labeled outcome, the data the thesis depends on (D2) |
 | X2 | Sunday range report: days in range, swaps, comebacks, pain answer | S | ACCEPTED | Makes quiet saves visible; retention and YC evidence (D3) |
 | X3 | Dedicated Apple Watch app: morning check, swap accept, "in range" complication | M | ACCEPTED | Founder's choice over the defer recommendation; runners live on the wrist (D4) |
 | X4 | Coach view: opt-in, revocable read-only link showing swaps, reasons and the weekly report | M | ACCEPTED | Coaches as the distribution channel; Evergreen as the coach's safety net (D5) |
