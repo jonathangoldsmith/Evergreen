@@ -40,8 +40,9 @@ enum Storage {
         let folder = url.deletingLastPathComponent()
         var moved: URL?
         for suffix in ["", "-shm", "-wal"] {
-            let from = URL(filePath: url.path() + suffix)
-            guard FileManager.default.fileExists(atPath: from.path()) else { continue }
+            // path(percentEncoded: false): "Application Support" has a space.
+            let from = URL(filePath: url.path(percentEncoded: false) + suffix)
+            guard FileManager.default.fileExists(atPath: from.path(percentEncoded: false)) else { continue }
             let to = folder.appending(path: "\(base)-unreadable-\(stamp).\(url.pathExtension)\(suffix)")
             do {
                 try FileManager.default.moveItem(at: from, to: to)

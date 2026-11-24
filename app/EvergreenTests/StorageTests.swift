@@ -9,7 +9,8 @@ import Testing
 @MainActor
 struct StorageTests {
     static func tempStore() -> URL {
-        let folder = URL.temporaryDirectory.appending(path: "storage-\(UUID().uuidString)")
+        // A space in the path, like "Application Support".
+        let folder = URL.temporaryDirectory.appending(path: "storage \(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         return folder.appending(path: "Evergreen.store")
     }
@@ -58,7 +59,7 @@ struct StorageTests {
         #expect(try container.mainContext.fetch(FetchDescriptor<Run>()).isEmpty)
 
         let folder = url.deletingLastPathComponent()
-        let names = try FileManager.default.contentsOfDirectory(atPath: folder.path())
+        let names = try FileManager.default.contentsOfDirectory(atPath: folder.path(percentEncoded: false))
         let aside = try #require(names.first { $0.hasPrefix("Evergreen-unreadable-") && $0.hasSuffix(".store") })
         #expect(try Data(contentsOf: folder.appending(path: aside)) == Data("not a database".utf8))
     }
