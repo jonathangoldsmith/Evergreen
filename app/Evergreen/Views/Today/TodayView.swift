@@ -18,11 +18,16 @@ struct TodayView: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.warning)
                 }
+                // Cards stack in urgency order (design decisions 1 and 13):
+                // run decisions first, then the agent's latest action.
+                ForEach(model.guardrailRuns) { run in
+                    GuardrailCard(run: run)
+                }
                 if let action = model.latestAction, let purchaseId = action.purchaseId {
                     PurchaseCard(purchaseId: purchaseId)
                 } else if let action = model.latestAction {
                     AgentCard(action: action)
-                } else {
+                } else if model.guardrailRuns.isEmpty {
                     QuietState()
                 }
                 TodayPlanSection()
@@ -31,7 +36,7 @@ struct TodayView: View {
                 }
                 HStack(spacing: Theme.md) {
                     Group {
-                        if doneCount >= model.plan.count && doneCount > 0 {
+                        if model.weekDone >= model.weekTotal && model.weekDone > 0 {
                             PineBuddy(pose: .cheering, filled: weekTiers)
                         } else {
                             // Waves hi each time Today opens, then walks.
@@ -70,22 +75,17 @@ struct TodayView: View {
         return model.clockMinutes == nil ? day : "\(day) · \(model.now.clock)"
     }
 
-    /// "This week: 1 of 3 done. Keep it up!", counting the planned workouts
-    /// above so it agrees with the card's "three workouts".
-    private var doneCount: Int {
-        model.plan.filter { model.completion(for: $0) != nil }.count
-    }
-
     /// The buddy's tiers filled so far, scaled to its three tiers.
     private var weekTiers: Int {
-        let total = max(model.plan.count, 1)
-        return min(3, (doneCount * 3 + total - 1) / total)
+        let total = max(model.weekTotal, 1)
+        return min(3, (model.weekDone * 3 + total - 1) / total)
     }
 
     /// The pine grows a tier for each workout done this week.
     private var weekLine: String {
-        let done = doneCount
-        let total = model.plan.count
+        // Evergreen's plan and the training calendar's runs, each once (task E19).
+        let done = model.weekDone
+        let total = model.weekTotal
         let cheer = done == 0 ? "Let’s grow." : done < total ? "Growing nicely!" : "Fully grown. You did it!"
         return "This week: \(done) of \(total) done. \(cheer)"
     }

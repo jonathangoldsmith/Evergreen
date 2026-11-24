@@ -11,7 +11,10 @@ struct RootView: View {
     var body: some View {
         @Bindable var model = model
         Group {
-            if model.onboarded {
+            if model.needsRangeSetup {
+                // People who onboarded before the range steps see them once (R8).
+                RangeSetupView(catchUp: true, onFinish: {})
+            } else if model.onboarded {
                 TodayView()
             } else {
                 OnboardingView()

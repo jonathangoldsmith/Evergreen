@@ -117,14 +117,47 @@ final class CalendarSync {
     /// The person's busy times on their other calendars for the synced window,
     /// for slot defense: timed events not marked free. Only start and end leave
     /// this function; titles stay on the phone.
-    func busyTimes(from storyDay: Date) -> [Busy] {
+    func busyTimes(from storyDay: Date, excludingCalendars training: Set<String> = []) -> [Busy] {
         guard prepareStore() else { return [] }
-        let others = store.calendars(for: .event).filter { $0.title != Self.calendarTitle }
+        // A Runna run is never a meeting (plan item 1): training calendars aren't busy time.
+        let others = store.calendars(for: .event)
+            .filter { $0.title != Self.calendarTitle && !training.contains($0.calendarIdentifier) }
         guard !others.isEmpty else { return [] }
         let end = Calendar.current.date(byAdding: .day, value: Self.window, to: storyDay) ?? storyDay
         return store.events(matching: store.predicateForEvents(withStart: storyDay, end: end, calendars: others))
             .filter { !$0.isAllDay && $0.availability != .free && !CalendarEntry.isAppKey($0.url) }
             .map { Busy(start: $0.startDate, end: $0.endDate) }
+            .sorted { $0.start < $1.start }
+    }
+
+    // MARK: Training calendars (plan item 1)
+
+    /// Every calendar but Evergreen's own, for the "Which calendars hold your
+    /// training?" step. Names like Runna or TrainingPeaks come pre-selected.
+    func trainingCalendarOptions() -> [TrainingCalendarOption] {
+        guard prepareStore() else { return [] }
+        return store.calendars(for: .event)
+            .filter { $0.title != Self.calendarTitle }
+            .map { TrainingCalendarOption(id: $0.calendarIdentifier, title: $0.title,
+                                          source: $0.source?.title ?? "",
+                                          suggested: TrainingCalendarOption.looksLikeTraining($0.title)) }
+            .sorted { ($0.suggested ? 0 : 1, $0.title) < ($1.suggested ? 0 : 1, $1.title) }
+    }
+
+    /// Planned runs on the picked calendars from `start` for `days` days. Events
+    /// on other calendars are never read (plan item 1). Read-only: nothing here
+    /// changes a training calendar.
+    func plannedRuns(on calendarIds: Set<String>, from start: Date, days: Int,
+                     calendar: Calendar = .current) -> [PlannedRun] {
+        guard !calendarIds.isEmpty, prepareStore() else { return [] }
+        let picked = store.calendars(for: .event).filter { calendarIds.contains($0.calendarIdentifier) }
+        guard !picked.isEmpty, let end = calendar.date(byAdding: .day, value: days, to: start) else { return [] }
+        return store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: picked))
+            .compactMap { event in
+                RunParser.parse(title: event.title ?? "", start: event.startDate, end: event.endDate,
+                                isAllDay: event.isAllDay, calendarId: event.calendar.calendarIdentifier,
+                                calendarTitle: event.calendar.title, calendar: calendar)
+            }
             .sorted { $0.start < $1.start }
     }
 
@@ -155,6 +188,44 @@ final class CalendarSync {
         } catch {
             Self.log.error("Couldn't add the test meeting: \(error.localizedDescription)")
             return false
+        }
+    }
+
+    static let demoTrainingTitle = "Runna (demo)"
+
+    /// Demo control: a "Runna (demo)" calendar with a week of runs, the way a
+    /// training app's subscription looks. Its events carry the demo scheme, so
+    /// Reset demo removes them. Returns the calendar's identifier.
+    @discardableResult
+    func addDemoTrainingWeek(_ runs: [(title: String, start: Date, minutes: Int)]) -> String? {
+        guard prepareStore() else { return nil }
+        do {
+            let calendar: EKCalendar
+            if let existing = store.calendars(for: .event).first(where: { $0.title == Self.demoTrainingTitle }) {
+                calendar = existing
+            } else {
+                guard let source = preferredSource() else { return nil }
+                calendar = EKCalendar(for: .event, eventStore: store)
+                calendar.title = Self.demoTrainingTitle
+                calendar.source = source
+                calendar.cgColor = CGColor(srgbRed: 0.95, green: 0.45, blue: 0.2, alpha: 1)
+                try store.saveCalendar(calendar, commit: true)
+            }
+            for run in runs {
+                let event = EKEvent(eventStore: store)
+                event.calendar = calendar
+                event.title = run.title
+                event.startDate = run.start
+                event.endDate = run.start.addingTimeInterval(Double(run.minutes) * 60)
+                event.url = URL(string: "\(Self.testMeetingScheme)://training/\(UUID().uuidString)")
+                try store.save(event, span: .thisEvent, commit: false)
+            }
+            try store.commit()
+            return calendar.calendarIdentifier
+        } catch {
+            store.reset()
+            Self.log.error("Couldn't add the demo training week: \(error.localizedDescription)")
+            return nil
         }
     }
 

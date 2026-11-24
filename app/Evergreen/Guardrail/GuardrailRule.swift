@@ -61,7 +61,8 @@ enum GuardrailRule {
         // A floor that lifts the suggestion to the planned size means no flag.
         guard suggested < planned.value else { return nil }
         return GuardrailFlag(kind: .spike, planned: planned, suggested: RunSize(value: suggested, unit: planned.unit),
-                             longest30: RunSize(value: longest, unit: planned.unit), keepEasy: false, injuryAdjusted: injured)
+                             longest30: RunSize(value: shown(longest, planned.unit), unit: planned.unit),
+                             keepEasy: false, injuryAdjusted: injured)
     }
 
     /// The sizes of completed runs in the 30 days before the run's day, in the plan's unit.
@@ -121,6 +122,14 @@ enum GuardrailRule {
         switch unit {
         case .km: (value + 1e-9).rounded(.down)
         case .minutes: ((value + 1e-9) / 5).rounded(.down) * 5
+        }
+    }
+
+    /// The 30-day longest as the card shows it: whole minutes, or km to 0.1.
+    static func shown(_ value: Double, _ unit: RunUnit) -> Double {
+        switch unit {
+        case .km: (value * 10).rounded() / 10
+        case .minutes: value.rounded()
         }
     }
 
