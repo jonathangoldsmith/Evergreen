@@ -23,7 +23,7 @@ final class AppModel {
 
     let calendar = Calendar.current
     @ObservationIgnored let calendarSync = CalendarSync()
-    @ObservationIgnored private let notifier = Notifier()
+    @ObservationIgnored let notifier = Notifier()
     /// Tony's memory bundle in JavaScriptCore; nil if it doesn't load.
     @ObservationIgnored private let memory = MemoryEngine.standard()
     /// The app's Amplitude client, made once in the app entry; nil without a key.
@@ -70,6 +70,8 @@ final class AppModel {
     private(set) var painRecords: [PainRecord] = []
     /// "Not now" on the catch-up setup hides it until the next launch.
     var rangeSetupDeferredThisLaunch = false
+    /// The week whose OSTRC questions are waiting, after "A little" or "Yes" (BN1).
+    var ostrcWeek: Date?
 
     init(context: ModelContext, amplitude: Amplitude? = nil) {
         self.context = context
@@ -96,6 +98,7 @@ final class AppModel {
         save()
         calendarSync.onChange = { [weak self] in self?.calendarChanged() }
         notifier.onOpen = { [weak self] in Task { await self?.tick() } }
+        notifier.onAction = { [weak self] action, payload in await self?.handleNotificationAction(action, payload) }
         Task { await refreshNotifications() }
         if persona.key.isReal { Task { await refreshHealth() } }
     }
@@ -236,6 +239,7 @@ final class AppModel {
     }
 
     func tick() async {
+        recordUnansweredWeeks()
         latestTick += 1
         let thisTick = latestTick
         let agent = AgentChoice.current()
@@ -380,8 +384,10 @@ final class AppModel {
     }
 
     private func scheduleNotifications() async {
-        let upcoming = plan.filter { completion(for: $0) == nil }
+        // A swap's run already had its notes and morning check; no 30-minute reminder too (R9).
+        let upcoming = plan.filter { completion(for: $0) == nil && $0.source != .swap }
         await notifier.scheduleReminders(for: upcoming)
+        await notifier.scheduleGuardrail(guardrailNotes)
     }
 
     /// Starts clean: a reinstall keeps calendar events, so clear the plan and

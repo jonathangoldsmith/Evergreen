@@ -50,4 +50,17 @@ final class GuardrailDecision {
     var planned: RunSize { RunSize(value: plannedValue, unit: unit) }
     var suggested: RunSize { RunSize(value: suggestedValue, unit: unit) }
     var inEffect: Bool { !undone && !cancelled }
+
+    /// The run as it was when decided, for when the calendar can't be read
+    /// (a Lock Screen Undo with the phone locked).
+    var plannedRun: PlannedRun {
+        PlannedRun(key: runKey, title: runTitle, calendarTitle: calendarTitle, start: runStart, end: runEnd,
+                   size: planned, isHard: false, isAllDay: false)
+    }
+
+    var flag: GuardrailFlag {
+        GuardrailFlag(kind: flagKind, planned: planned, suggested: suggested,
+                      longest30: longestValue.map { RunSize(value: $0, unit: unit) },
+                      keepEasy: keepEasy, injuryAdjusted: false)
+    }
 }

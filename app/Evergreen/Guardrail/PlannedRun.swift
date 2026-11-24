@@ -2,7 +2,7 @@ import Foundation
 
 /// A run on one of the person's training calendars (Runna, a coach's plan),
 /// read but never changed (plan item 1).
-struct PlannedRun: Hashable, Sendable, Identifiable {
+struct PlannedRun: Codable, Hashable, Sendable, Identifiable {
     /// The source calendar's identifier, the run's start day and its title.
     /// Never `eventIdentifier`, which the calendar code doesn't trust (item 8).
     var key: String

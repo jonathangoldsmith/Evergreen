@@ -70,11 +70,9 @@ extension AppModel {
     func undoDecision(_ decision: GuardrailDecision) {
         guard !decision.undone else { return }
         decision.undone = true
-        if decision.choice == .accept, let run = trainingRuns.first(where: { $0.key == decision.runKey }) {
-            let flag = GuardrailFlag(kind: decision.flagKind, planned: decision.planned, suggested: decision.suggested,
-                                     longest30: decision.longestValue.map { RunSize(value: $0, unit: decision.unit) },
-                                     keepEasy: decision.keepEasy, injuryAdjusted: false)
-            context.insert(GuardrailDecision(run: run, flag: flag, choice: .keep, at: Date()))
+        if decision.choice == .accept {
+            let run = trainingRuns.first { $0.key == decision.runKey } ?? decision.plannedRun
+            context.insert(GuardrailDecision(run: run, flag: decision.flag, choice: .keep, at: Date()))
         }
         save()
     }

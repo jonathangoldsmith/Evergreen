@@ -23,11 +23,14 @@ struct TodayView: View {
                 ForEach(model.guardrailRuns) { run in
                     GuardrailCard(run: run)
                 }
+                if let week = model.pendingPainWeek {
+                    PainCheckInCard(week: week)
+                }
                 if let action = model.latestAction, let purchaseId = action.purchaseId {
                     PurchaseCard(purchaseId: purchaseId)
                 } else if let action = model.latestAction {
                     AgentCard(action: action)
-                } else if model.guardrailRuns.isEmpty {
+                } else if model.guardrailRuns.isEmpty && model.pendingPainWeek == nil {
                     QuietState()
                 }
                 TodayPlanSection()
@@ -66,6 +69,12 @@ struct TodayView: View {
         }
         .background(Theme.surface)
         .sheet(isPresented: $showYourData) { YourDataView() }
+        .sheet(item: ostrcBinding) { week in OSTRCSheet(week: week.date) }
+    }
+
+    /// The OSTRC sheet shows while a week's questions are waiting.
+    private var ostrcBinding: Binding<OSTRCWeek?> {
+        Binding(get: { model.ostrcWeek.map(OSTRCWeek.init) }, set: { if $0 == nil { model.skipOSTRC() } })
     }
 
     /// "Friday, Nov 20", plus the time when the demo clock is set ("· 4:00 PM"),
