@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// The range setup after Permissions (plan item 4, design decision 3, BN2):
-/// what leaves your phone, which calendars hold your training, and the
-/// injury question. People who onboarded before these steps see them once
+/// what leaves your phone, which calendars hold your training, the injury
+/// question, and the check of the last year. People who onboarded before these steps see them once
 /// (eng re-run R8), with "Not now" allowed once.
 struct RangeSetupView: View {
     /// True for the one-time catch-up of an existing user.
@@ -12,7 +12,7 @@ struct RangeSetupView: View {
     @Environment(AppModel.self) private var model
     @State private var step = Step.consent
 
-    enum Step: Int, CaseIterable { case consent, calendars, injury }
+    enum Step: Int, CaseIterable { case consent, calendars, injury, backtest }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -30,6 +30,7 @@ struct RangeSetupView: View {
                 case .consent: ConsentStep(onDone: next)
                 case .calendars: TrainingCalendarsStep(onDone: next)
                 case .injury: InjuryStep(onDone: next)
+                case .backtest: BacktestStep(onDone: next)
                 }
             }
             .transition(.move(edge: .trailing))

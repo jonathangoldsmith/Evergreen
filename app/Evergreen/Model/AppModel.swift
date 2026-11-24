@@ -13,7 +13,7 @@ final class AppModel {
     private(set) var persona: Persona
     /// What Evergreen last read from Apple Health, for the person's own week (`.me`).
     private(set) var health = HealthHistory.cached()
-    @ObservationIgnored private let healthReader = HealthReader()
+    @ObservationIgnored let healthReader = HealthReader()
     /// The last good answer, decoded once from `run.lastResponse`.
     private(set) var response: TickResponse?
     private(set) var offline = false

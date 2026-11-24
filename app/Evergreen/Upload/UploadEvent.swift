@@ -109,6 +109,17 @@ struct UploadEvent: Codable, Hashable, Sendable {
         return e
     }
 
+    /// One backtest answer (R7): no date or distance, the jump rounded to 5.
+    static func backtestAnswer(_ answer: String, day: Backtest.Day, seed: UInt64, at: Date, calendar: Calendar) -> UploadEvent {
+        var e = UploadEvent(id: "bt-\(StableHash.hex("\(seed)-\(day.date.timeIntervalSince1970)", length: 20))",
+                            type: "backtest_answer", at: at, calendar: calendar)
+        e.answer = answer
+        e.flagged = day.flagged
+        e.jumpPercent = max(-100, day.jumpPercentRounded)
+        e.monthsAgo = max(0, min(13, calendar.dateComponents([.month], from: day.date, to: at).month ?? 0))
+        return e
+    }
+
     static func consent(research: Bool, version: Int, at: Date, calendar: Calendar) -> UploadEvent {
         var e = UploadEvent(id: "consent-\(Int(at.timeIntervalSince1970))", type: "consent", at: at, calendar: calendar)
         e.uploads = true
