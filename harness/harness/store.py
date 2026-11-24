@@ -7,6 +7,7 @@ Tables (created on first use):
   shoe_candidates(persona, id, fetched_at, doc JSON)          web research, one row per shoe
   recommendations(id, created_at, persona, source, item, latency_ms, doc JSON)   one row per pick
   user_history(user_id, updated_at, doc JSON)                  a real person's Apple Health history, latest copy
+  guardrail_events(user_id, event_id, type, created_at, doc)  the brake's events from the phone (plan item 9)
 For a real person, `persona` in recommendations and verifications holds their anonymous `usr_` id.
 Without SINGLESTORE_URL, user history and verifications live in memory (lost on a cold start).
 """
@@ -36,7 +37,27 @@ DDL = [
     """CREATE TABLE IF NOT EXISTS user_history (
         user_id VARCHAR(80) NOT NULL, updated_at DATETIME(6) NOT NULL, doc JSON NOT NULL,
         PRIMARY KEY (user_id))""",
+    """CREATE TABLE IF NOT EXISTS guardrail_events (
+        user_id VARCHAR(80) NOT NULL, event_id VARCHAR(64) NOT NULL, type VARCHAR(32) NOT NULL,
+        created_at DATETIME(6) NOT NULL, received_at DATETIME(6) NOT NULL, doc JSON NOT NULL,
+        PRIMARY KEY (user_id, event_id), SHARD KEY (user_id))""",
 ]
+# Columns that hold a user's anonymous id. delete_user erases every table that has one,
+# so a new table is covered the moment its DDL names one (eng review E8).
+USER_COLUMNS = ("user_id", "persona")
+
+
+def user_tables() -> list[tuple[str, str]]:
+    """(table, column) for every table in DDL with a user column, read from the DDL itself."""
+    import re
+    out = []
+    for stmt in DDL:
+        table = re.search(r"CREATE TABLE IF NOT EXISTS (\w+)", stmt).group(1)
+        for column in USER_COLUMNS:
+            if re.search(rf"\b{column}\b\s+VARCHAR", stmt):
+                out.append((table, column))
+                break
+    return out
 CANDIDATE_TTL_S = 300
 LOG_WAIT_S = 0.4          # how long a request waits for its audit write before answering anyway
 
@@ -320,18 +341,63 @@ def user_summary(user: str) -> dict:
             pass
     return {"user": user, "historyStored": h is not None, "updatedAt": (h or {}).get("updatedAt"),
             "workouts": len((h or {}).get("workouts", [])), "days": len((h or {}).get("daily", [])),
-            "recommendations": recs, "ageCheck": get_verification(user) is not None}
+            "recommendations": recs, "ageCheck": get_verification(user) is not None,
+            "guardrailEvents": count_events(user)}
+
+
+# Names the app's privacy screen already shows for the original three tables.
+_DELETE_KEYS = {"user_history": "history", "recommendations": "recommendations", "verifications": "verifications"}
 
 
 def delete_user(user: str) -> dict:
-    """Erases everything kept for a user: history, recommendation records and the age check."""
+    """Erases everything kept for a user: every table with a user column in DDL (history,
+    recommendation records, the age check, guardrail events, and any table added later)."""
     removed = {"history": int(_histories.pop(user, None) is not None), "recommendations": 0,
                "verifications": int(_verifications.pop(user, None) is not None)}
     if enabled():
         with _conn().cursor() as cur:
-            for table, column, key in (("user_history", "user_id", "history"),
-                                       ("recommendations", "persona", "recommendations"),
-                                       ("verifications", "persona", "verifications")):
+            for table, column in user_tables():
+                if table == "shoe_candidates":
+                    continue            # keyed by demo persona name, never a user id
                 cur.execute(f"DELETE FROM {table} WHERE {column} = %s", (user,))
-                removed[key] = max(removed[key], cur.rowcount or 0)
+                key = _DELETE_KEYS.get(table, table)
+                removed[key] = max(removed.get(key, 0), cur.rowcount or 0)
     return removed
+
+
+# --- guardrail events (plan item 9, eng review D1); no memory fallback: fail closed ---
+
+class StoreUnavailable(Exception):
+    """No persistent store: the events route answers 503 so the phone keeps them."""
+
+
+def save_events(user: str, events: list[dict], upsert_types: set[str]) -> list[str]:
+    """Stores each event once, keyed by (user, event id). A repeated id is skipped (a retry never
+    doubles an event), except upsert types, where the newest copy wins. Returns every id now stored.
+    Raises on any failure, so the phone never drops an event it thinks was stored."""
+    if not enabled():
+        raise StoreUnavailable()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    insert, replace = [], []
+    for e in events:
+        at = datetime.fromisoformat(str(e["at"])).astimezone(timezone.utc).replace(tzinfo=None)
+        row = (user, e["id"], e["type"], at, now, json.dumps(e, default=str))
+        (replace if e["type"] in upsert_types else insert).append(row)
+    cols = "(user_id, event_id, type, created_at, received_at, doc) VALUES (%s, %s, %s, %s, %s, %s)"
+    with _conn().cursor() as cur:
+        if insert:
+            cur.executemany(f"INSERT IGNORE INTO guardrail_events {cols}", insert)
+        if replace:
+            cur.executemany(f"REPLACE INTO guardrail_events {cols}", replace)
+    return [e["id"] for e in events]
+
+
+def count_events(user: str) -> int:
+    if not enabled():
+        return 0
+    try:
+        with _conn().cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM guardrail_events WHERE user_id = %s", (user,))
+            return int(cur.fetchone()[0])
+    except Exception:
+        return 0

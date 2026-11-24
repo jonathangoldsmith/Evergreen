@@ -7,7 +7,7 @@ import re
 from pydantic import BaseModel
 from fastapi import Depends, FastAPI, Header, HTTPException
 
-from harness import config, store
+from harness import config, events, store
 from harness.clients import sie
 from harness.evidence import senso
 from harness.models import USER_ID, EvidenceRequest, EvidenceResponse, ShoesRequest, ShoesResponse
@@ -54,6 +54,21 @@ def user_delete(user: str) -> dict:
         return {"deleted": store.delete_user(_user(user))}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"singlestore: {type(exc).__name__}")
+
+
+@app.post("/users/{user}/events", dependencies=[Depends(require_secret)])
+def user_events(user: str, req: events.EventsRequest) -> dict:
+    """The phone's guardrail events (plan item 9, eng review D1). Fails closed: 503 without a
+    persistent store and 502 on a write failure, so the phone's outbox keeps them; on success,
+    returns the ids stored, which the outbox acknowledges. A repeated id is stored once."""
+    user = _user(user)
+    try:
+        stored = store.save_events(user, [e.model_dump(mode="json") for e in req.events], events.UPSERT_TYPES)
+    except store.StoreUnavailable:
+        raise HTTPException(status_code=503, detail="no persistent store")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"singlestore: {type(exc).__name__}")
+    return {"stored": stored}
 
 
 @app.post("/workouts/recommend", dependencies=[Depends(require_secret)])
