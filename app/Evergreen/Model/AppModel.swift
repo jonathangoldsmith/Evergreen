@@ -69,8 +69,9 @@ final class AppModel {
         persona = Persona.load(run.personaKey, storyDay: today)
         response = nil
         if run.storyDay != today {
-            // A new day is a new story day: keep the person and onboarding, drop the run.
-            clearRun(storyDay: today)
+            // A new day is a new story day. A demo person's run starts over; a
+            // real person's decisions carry on (eng review D4).
+            run.startDay(today, keepingHistory: persona.key.isReal, in: context)
         } else {
             response = run.lastResponse.flatMap { try? JSONDecoder.contract.decode(TickResponse.self, from: $0) }
         }
@@ -513,18 +514,7 @@ final class AppModel {
     /// Drops the day's actions, logged workouts, points and clock. The person
     /// and onboarding stay.
     private func clearRun(storyDay: Date) {
-        run.actions.forEach(context.delete)
-        run.workouts.forEach(context.delete)
-        run.actions = []
-        run.workouts = []
-        run.storyDay = storyDay
-        run.clockMinutes = nil
-        run.seenCompletions = []
-        run.lastResponse = nil
-        run.approvedPurchaseIds = []
-        run.demo = nil
-        run.visits = []
-        run.planMadeAt = Date()
+        run.startDay(storyDay, keepingHistory: false, in: context)
         response = nil
     }
 

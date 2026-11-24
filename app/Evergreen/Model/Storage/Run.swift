@@ -48,6 +48,28 @@ final class Run {
 
     var personaKey: PersonaKey { PersonaKey(rawValue: persona) ?? .jordan }
 
+    /// Moves the run to a new story day. A demo person starts clean (their
+    /// story replays each day). A real person keeps every action and logged
+    /// workout, so a swap or a move made on Sunday is still in effect on Monday
+    /// (eng review D4). Either way the clock, demo conditions and the last
+    /// answer reset, and the plan counts as made now.
+    func startDay(_ day: Date, keepingHistory: Bool, in context: ModelContext, now: Date = Date()) {
+        if !keepingHistory {
+            actions.forEach(context.delete)
+            workouts.forEach(context.delete)
+            actions = []
+            workouts = []
+            seenCompletions = []
+            approvedPurchaseIds = []
+        }
+        storyDay = day
+        clockMinutes = nil
+        lastResponse = nil
+        demo = nil
+        visits = []
+        planMadeAt = now
+    }
+
     var approvedPurchaseIds: [String] {
         get { approvedPurchaseText.split(separator: "\n").map(String.init) }
         set { approvedPurchaseText = newValue.joined(separator: "\n") }

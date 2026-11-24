@@ -49,7 +49,11 @@ The harness keeps nothing between calls, so the phone saves everything it needs 
 - `ActionRecord`: every applied action, in order, with an `undone` flag. This is the feed and the plan replay.
 - `LoggedWorkout`: workouts added with "Log a workout".
 
-The contract structs stay the wire format; the models convert to and from them. `AppModel` is the only code that reads or writes the store. If a model change can't be migrated automatically, the store is deleted and the app starts a fresh run, since it's demo state. Give new properties a default value so existing runs keep working.
+Outside the run, and never cleared by a new day: `GuardrailDecision` (a swap taken or a plan kept), `CheckInRecord` (Fresh / Tired / Sore), `PainRecord` (Sunday's answer and its OSTRC answers) and `Profile` (injury month, training calendars, consent, onboarding version).
+
+A new day starts a demo person's run over; a real person (`.me`) keeps their actions and logged workouts (eng review D4).
+
+The contract structs stay the wire format; the models convert to and from them. `AppModel` is the only code that reads or writes the store. The store is versioned (`EvergreenSchemaV1`, `EvergreenSchemaV2`, `EvergreenMigrationPlan`). If it still can't be opened, the file is renamed to `Evergreen-unreadable-<time>.store` and a fresh store starts; it's never deleted (eng review D5). Give new properties a default value so existing runs keep working, and freeze a copy of a model inside its schema version before changing a stored property.
 
 ## Data
 
