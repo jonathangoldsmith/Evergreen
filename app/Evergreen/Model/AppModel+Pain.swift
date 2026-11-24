@@ -9,9 +9,16 @@ extension AppModel {
 
     /// The week asked about right now (Sunday 6 PM to Tuesday night), if not answered yet.
     var pendingPainWeek: Date? {
-        guard onboarded, let week = PainWeek.openWeek(at: now, calendar: calendar), painRecord(for: week) == nil
+        guard onboarded, let week = PainWeek.openWeek(at: now, calendar: calendar), painRecord(for: week) == nil,
+              wasSetUp(before: week)
         else { return nil }
         return week
+    }
+
+    /// Only weeks the person used the brake for: set up before that Sunday's question.
+    func wasSetUp(before week: Date) -> Bool {
+        guard let since = profile.consentAt else { return false }
+        return since < PainWeek.asksAt(week, calendar: calendar)
     }
 
     /// Records the one-tap answer at once. "No" is an OSTRC week with no
@@ -58,11 +65,10 @@ extension AppModel {
     /// A week whose card closed unanswered is recorded as "no answer" and not
     /// asked again. Only weeks after the person set up the brake.
     func recordUnansweredWeeks() {
-        guard let since = profile.consentAt else { return }
         let thisWeek = PainWeek.monday(of: now, calendar: calendar)
         guard let lastWeek = calendar.date(byAdding: .day, value: -7, to: thisWeek),
               now >= PainWeek.closesAt(lastWeek, calendar: calendar),
-              PainWeek.asksAt(lastWeek, calendar: calendar) > since,
+              wasSetUp(before: lastWeek),
               painRecord(for: lastWeek) == nil
         else { return }
         context.insert(PainRecord(weekStart: lastWeek, answer: .noAnswer, at: Date()))

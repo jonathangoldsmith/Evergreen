@@ -20,6 +20,8 @@ struct UserDataClient: Sendable {
         var workouts: Int
         var days: Int
         var recommendations: Int
+        /// The brake's events (flags, choices, answers); absent from older harnesses.
+        var guardrailEvents: Int? = nil
     }
 
     enum Failure: Error { case unreachable, refused }

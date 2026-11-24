@@ -54,13 +54,12 @@ struct TodayView: View {
                 .frame(minHeight: 44)
                 .padding(.top, Theme.sm)
                 .accessibilityElement(children: .combine)
-                if model.persona.key.isReal {
-                    Button("Your data") { showYourData = true }
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textMuted)
-                        .frame(minHeight: 44)
-                        .accessibilityHint("What Evergreen read from Apple Health and what its planner keeps")
-                }
+                // For everyone: the brake's settings (calendars, injury, uploads) live here.
+                Button("Your data") { showYourData = true }
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textMuted)
+                    .frame(minHeight: 44)
+                    .accessibilityHint("Training calendars, what leaves your phone, and what Evergreen keeps")
             }
             .padding(.horizontal, Theme.md)
             .padding(.top, Theme.lg)
