@@ -32,6 +32,9 @@ extension AppModel {
         }
         ostrcWeek = answer.asksOSTRC ? week : nil
         save()
+        upload(.pain(answer, ostrc: record.ostrc, week: week, at: Date(), calendar: calendar), ownAnswer: true)
+        if answer == .yes { upload(.injury(month: profile.injuryMonth, at: Date(), calendar: calendar), ownAnswer: true) }
+        track(.painCheckIn(answered: true))
     }
 
     /// The four OSTRC answers, and where it hurts after a "Yes". Both stay
@@ -42,6 +45,10 @@ extension AppModel {
         if let bodyPart { record.bodyPart = bodyPart }
         ostrcWeek = nil
         save()
+        // The body part stays on the phone; only the OSTRC answers go up.
+        if let ostrc = record.ostrc {
+            upload(.pain(record.answer, ostrc: ostrc, week: week, at: Date(), calendar: calendar), ownAnswer: true)
+        }
     }
 
     func skipOSTRC() {
@@ -60,5 +67,7 @@ extension AppModel {
         else { return }
         context.insert(PainRecord(weekStart: lastWeek, answer: .noAnswer, at: Date()))
         save()
+        upload(.pain(.noAnswer, ostrc: nil, week: lastWeek, at: Date(), calendar: calendar), ownAnswer: true)
+        track(.painCheckIn(answered: false))
     }
 }

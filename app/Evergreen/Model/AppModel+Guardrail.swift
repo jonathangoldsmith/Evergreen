@@ -57,12 +57,36 @@ extension AppModel {
     func acceptSwap(_ run: PlannedRun, flag: GuardrailFlag) {
         context.insert(GuardrailDecision(run: run, flag: flag, choice: .accept, at: Date()))
         save()
+        recordChoice("accept", run: run, flag: flag)
     }
 
     /// "Keep 18 km".
     func keepPlan(_ run: PlannedRun, flag: GuardrailFlag) {
         context.insert(GuardrailDecision(run: run, flag: flag, choice: .keep, at: Date()))
         save()
+        recordChoice("keep", run: run, flag: flag)
+    }
+
+    /// The flag and the choice go to the harness (item 9) and, as words only, to Amplitude.
+    private func recordChoice(_ choice: String, run: PlannedRun, flag: GuardrailFlag) {
+        upload(.flag(flag, run: run, at: Date(), calendar: calendar))
+        upload(.choice(choice, kind: flag.kind, run: run, at: Date(), calendar: calendar))
+        track(.choice(choice))
+    }
+
+    /// Counts a flag as shown once per run per launch.
+    func noteFlagShown(_ run: PlannedRun, _ flag: GuardrailFlag) {
+        guard flagsShown.insert(run.key + flag.kind.rawValue).inserted else { return }
+        track(.flagShown(flag.kind))
+    }
+
+    /// Queues an event for the harness once uploads are allowed (BN2). Runs
+    /// and choices go up only for the person's own week, not a demo person's;
+    /// the owner's own answers (consent, injury, pain) always count.
+    func upload(_ event: UploadEvent, ownAnswer: Bool = false) {
+        guard profile.uploadsAllowed == true, ownAnswer || persona.key.isReal else { return }
+        outbox.enqueue(event)
+        Task { await outbox.flush() }
     }
 
     /// Undo on a decided run. Undoing a swap keeps the plan, so a flag fires
@@ -70,6 +94,8 @@ extension AppModel {
     func undoDecision(_ decision: GuardrailDecision) {
         guard !decision.undone else { return }
         decision.undone = true
+        upload(.choice("undo", kind: decision.flagKind, run: decision.plannedRun, at: Date(), calendar: calendar))
+        track(.choice("undo"))
         if decision.choice == .accept {
             let run = trainingRuns.first { $0.key == decision.runKey } ?? decision.plannedRun
             context.insert(GuardrailDecision(run: run, flag: decision.flag, choice: .keep, at: Date()))
@@ -80,6 +106,7 @@ extension AppModel {
     func answerMorningCheck(_ run: PlannedRun, _ answer: MorningCheck) {
         context.insert(CheckInRecord(runKey: run.key, answer: answer, at: Date()))
         save()
+        upload(.checkIn(answer, run: run, at: Date(), calendar: calendar))
     }
 
     // MARK: Swaps on the plan

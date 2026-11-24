@@ -48,6 +48,7 @@ struct GuardrailCard: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(GuardrailCopy.spoken(run, flag, now: model.now))
+        .onAppear { model.noteFlagShown(run, flag) }
     }
 
     @ViewBuilder

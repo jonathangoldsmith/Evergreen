@@ -40,6 +40,10 @@ extension AppModel {
         profile.consentVersion = Self.consentVersion
         profile.consentAt = Date()
         save()
+        // A "no" never leaves the phone; a "yes" is the first event sent.
+        if uploads {
+            upload(.consent(research: profile.researchAllowed, version: Self.consentVersion, at: Date(), calendar: calendar), ownAnswer: true)
+        }
     }
 
     // MARK: Training calendars (item 1)
@@ -62,5 +66,6 @@ extension AppModel {
         profile.injuryMonth = month.map { calendar.dateInterval(of: .month, for: $0)?.start ?? $0 }
         profile.injuryAnswered = true
         save()
+        upload(.injury(month: profile.injuryMonth, at: Date(), calendar: calendar), ownAnswer: true)
     }
 }

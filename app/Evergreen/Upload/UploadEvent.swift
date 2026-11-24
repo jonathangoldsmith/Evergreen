@@ -1,0 +1,108 @@
+import Foundation
+
+/// One guardrail event for `POST /users/{id}/events` (plan item 9). Flat, with
+/// only the fields its type uses; unset fields aren't encoded. The harness
+/// refuses any field it doesn't know, so nothing here may carry a pain
+/// location, a calendar title or a date of a past run.
+struct UploadEvent: Codable, Hashable, Sendable {
+    var id: String
+    var type: String
+    /// ISO 8601 with the phone's UTC offset.
+    var at: String
+
+    var kind: String?
+    var unit: String?
+    var planned: Double?
+    var suggested: Double?
+    var longest30: Double?
+    var injuryAdjusted: Bool?
+    var runDay: String?
+    var choice: String?
+    var run: String?
+    var answer: String?
+    var ostrc: [Int]?
+    var weekStart: String?
+    var injured: Bool?
+    var monthsAgo: Int?
+    var flagged: Bool?
+    var jumpPercent: Int?
+    var daysCounted: Int?
+    var daysInRange: Int?
+    var swaps: Int?
+    var comebacks: Int?
+    var uploads: Bool?
+    var research: Bool?
+    var version: Int?
+    var activityType: String?
+    var minutes: Int?
+
+    init(id: String, type: String, at: Date, calendar: Calendar = .current) {
+        self.id = id
+        self.type = type
+        self.at = Self.stamp(at, calendar: calendar)
+    }
+
+    static func stamp(_ date: Date, calendar: Calendar) -> String {
+        Date.ISO8601FormatStyle(timeZone: calendar.timeZone).format(date)
+    }
+
+    static func day(_ date: Date, calendar: Calendar) -> String {
+        Date.ISO8601FormatStyle(timeZone: calendar.timeZone).year().month().day().format(date)
+    }
+
+    // MARK: The event types
+
+    static func flag(_ flag: GuardrailFlag, run: PlannedRun, at: Date, calendar: Calendar) -> UploadEvent {
+        var e = UploadEvent(id: "flag-\(StableHash.hex(run.key + flag.kind.rawValue, length: 20))", type: "flag", at: at, calendar: calendar)
+        e.kind = flag.kind.rawValue
+        e.unit = flag.planned.unit.rawValue
+        e.planned = flag.planned.rounded.value
+        e.suggested = flag.suggested.value
+        e.longest30 = flag.longest30?.rounded.value
+        e.injuryAdjusted = flag.injuryAdjusted
+        e.runDay = day(run.start, calendar: calendar)
+        return e
+    }
+
+    static func choice(_ choice: String, kind: GuardrailFlag.Kind, run: PlannedRun, at: Date, calendar: Calendar) -> UploadEvent {
+        var e = UploadEvent(id: "choice-\(UUID().uuidString.lowercased())", type: "choice", at: at, calendar: calendar)
+        e.choice = choice
+        e.kind = kind.rawValue
+        e.run = run.swapItemId
+        e.runDay = day(run.start, calendar: calendar)
+        return e
+    }
+
+    static func checkIn(_ answer: MorningCheck, run: PlannedRun, at: Date, calendar: Calendar) -> UploadEvent {
+        var e = UploadEvent(id: "check-\(StableHash.hex(run.key, length: 20))", type: "check_in", at: at, calendar: calendar)
+        e.answer = answer.rawValue
+        e.runDay = day(run.start, calendar: calendar)
+        return e
+    }
+
+    /// The one-tap answer, then (with `ostrc`) the full answer as a second event.
+    static func pain(_ answer: PainAnswer, ostrc: [Int]?, week: Date, at: Date, calendar: Calendar) -> UploadEvent {
+        let stage = ostrc == nil || answer == .no ? "1" : "2"
+        var e = UploadEvent(id: "pain-\(day(week, calendar: calendar))-\(stage)", type: "pain", at: at, calendar: calendar)
+        e.answer = answer.rawValue
+        e.ostrc = ostrc
+        e.weekStart = day(week, calendar: calendar)
+        return e
+    }
+
+    /// Injury as yes/no and months ago, never where (item 9).
+    static func injury(month: Date?, at: Date, calendar: Calendar) -> UploadEvent {
+        var e = UploadEvent(id: "injury-\(Int(at.timeIntervalSince1970))", type: "injury", at: at, calendar: calendar)
+        e.injured = month != nil
+        e.monthsAgo = month.map { max(0, min(12, calendar.dateComponents([.month], from: $0, to: at).month ?? 0)) }
+        return e
+    }
+
+    static func consent(research: Bool, version: Int, at: Date, calendar: Calendar) -> UploadEvent {
+        var e = UploadEvent(id: "consent-\(Int(at.timeIntervalSince1970))", type: "consent", at: at, calendar: calendar)
+        e.uploads = true
+        e.research = research
+        e.version = version
+        return e
+    }
+}

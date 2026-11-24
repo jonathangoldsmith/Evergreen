@@ -72,6 +72,10 @@ final class AppModel {
     var rangeSetupDeferredThisLaunch = false
     /// The week whose OSTRC questions are waiting, after "A little" or "Yes" (BN1).
     var ostrcWeek: Date?
+    /// Guardrail events waiting for the harness (eng review D1).
+    @ObservationIgnored let outbox: EventOutbox
+    /// Flags already counted as shown this launch, for Amplitude.
+    @ObservationIgnored var flagsShown: Set<String> = []
 
     init(context: ModelContext, amplitude: Amplitude? = nil) {
         self.context = context
@@ -85,6 +89,7 @@ final class AppModel {
         let profile = savedProfile ?? Profile()
         if savedProfile == nil { context.insert(profile) }
         self.profile = profile
+        outbox = EventOutbox(context: context, sender: EventsClient.currentSender)
         calendarAccess = calendarSync.access
         persona = Persona.load(run.personaKey, storyDay: today)
         response = nil
@@ -240,6 +245,7 @@ final class AppModel {
 
     func tick() async {
         recordUnansweredWeeks()
+        Task { await outbox.flush() }
         latestTick += 1
         let thisTick = latestTick
         let agent = AgentChoice.current()
@@ -272,6 +278,11 @@ final class AppModel {
             offline = true
         }
         await syncMemory()
+    }
+
+    /// Sends a brake event to Amplitude: fixed words only (item 9).
+    func track(_ event: AnalyticsEvent) {
+        amplitude?.track(eventType: event.name, eventProperties: event.properties)
     }
 
     /// Rolls the person's memory and sends its staged events to Amplitude when
