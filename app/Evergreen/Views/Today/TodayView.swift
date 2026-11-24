@@ -92,6 +92,8 @@ struct TodayView: View {
 
     /// The pine grows a tier for each workout done this week.
     private var weekLine: String {
+        // Sunday 7 PM through Monday, the week's range report (design decision 2).
+        if let report = model.rangeReport { return report.sentence }
         // Evergreen's plan and the training calendar's runs, each once (task E19).
         let done = model.weekDone
         let total = model.weekTotal

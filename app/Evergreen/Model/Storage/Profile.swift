@@ -22,6 +22,9 @@ final class Profile {
     var consentAt: Date?
     /// The newest onboarding this install has finished (eng re-run R8).
     var onboardingVersion: Int = 0
+    /// Days the app was opened (yyyy-MM-dd, one per line, last 14), so the
+    /// range report can count a rest day the person checked in on (item 18).
+    var openedDaysText: String = ""
 
     init() {}
 

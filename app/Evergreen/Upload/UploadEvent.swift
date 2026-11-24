@@ -98,6 +98,17 @@ struct UploadEvent: Codable, Hashable, Sendable {
         return e
     }
 
+    /// A week's counts for the coach page (item 18); the newest upload wins.
+    static func rangeWeek(_ report: RangeReport, week: Date, at: Date, calendar: Calendar) -> UploadEvent {
+        var e = UploadEvent(id: "range_week-\(day(week, calendar: calendar))", type: "range_week", at: at, calendar: calendar)
+        e.weekStart = day(week, calendar: calendar)
+        e.daysCounted = report.daysCounted
+        e.daysInRange = report.daysInRange
+        e.swaps = report.swaps
+        e.comebacks = 0
+        return e
+    }
+
     static func consent(research: Bool, version: Int, at: Date, calendar: Calendar) -> UploadEvent {
         var e = UploadEvent(id: "consent-\(Int(at.timeIntervalSince1970))", type: "consent", at: at, calendar: calendar)
         e.uploads = true

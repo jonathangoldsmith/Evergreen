@@ -76,6 +76,8 @@ final class AppModel {
     @ObservationIgnored let outbox: EventOutbox
     /// Flags already counted as shown this launch, for Amplitude.
     @ObservationIgnored var flagsShown: Set<String> = []
+    /// The last week counts queued, so a tick only uploads a change.
+    @ObservationIgnored var lastRangeUpload: UploadEvent?
 
     init(context: ModelContext, amplitude: Amplitude? = nil) {
         self.context = context
@@ -245,6 +247,7 @@ final class AppModel {
 
     func tick() async {
         recordUnansweredWeeks()
+        uploadRangeWeek()
         Task { await outbox.flush() }
         latestTick += 1
         let thisTick = latestTick
