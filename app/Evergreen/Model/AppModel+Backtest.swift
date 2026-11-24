@@ -17,7 +17,6 @@ extension AppModel {
     }
 
     private static let seedKey = "backtest_seed"
-    private static let yesDaysKey = "backtest_yes_days"
 
     /// The sample's seed, kept so a restarted onboarding asks the same days.
     var backtestSeed: UInt64 {
@@ -37,11 +36,21 @@ extension AppModel {
 
     func answerBacktest(_ answer: BacktestAnswer, day: Backtest.Day) {
         upload(.backtestAnswer(answer.rawValue, day: day, seed: backtestSeed, at: Date(), calendar: calendar), ownAnswer: true)
-        if answer == .yes {
-            var days = UserDefaults.standard.array(forKey: Self.yesDaysKey) as? [Double] ?? []
-            days.append(day.date.timeIntervalSince1970)
-            UserDefaults.standard.set(days, forKey: Self.yesDaysKey)
+        if answer == .yes, let jump = day.jumpPercent {
+            let line = "\(day.date.timeIntervalSince1970):\(jump)"
+            profile.hurtAfterJumpText = (profile.hurtAfterJumpText.split(separator: "\n").map(String.init) + [line])
+                .joined(separator: "\n")
+            try? context.save()
         }
+    }
+
+    /// "You were hurt after a jump like this in August": the latest backtest
+    /// "Yes" day whose jump was this size or smaller (design decision 12).
+    func hurtAfterJumpMonth(for flag: GuardrailFlag) -> String? {
+        guard flag.kind == .spike, let jump = flag.jumpPercent else { return nil }
+        return profile.hurtAfterJumps.filter { $0.jumpPercent > 0 && $0.jumpPercent <= jump }
+            .max { $0.date < $1.date }
+            .map { $0.date.formatted(.dateTime.month(.wide)) }
     }
 
     func finishBacktest(answered: Int) {

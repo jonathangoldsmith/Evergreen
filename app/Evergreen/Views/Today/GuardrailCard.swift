@@ -37,6 +37,11 @@ struct GuardrailCard: View {
                     .font(.body.monospacedDigit())
             }
             Text(GuardrailCopy.reason(flag)).font(.body).foregroundStyle(Theme.text)
+            if let month = model.hurtAfterJumpMonth(for: flag) {
+                Text("You were hurt after a jump like this in \(month).")
+                    .font(.body)
+                    .foregroundStyle(Theme.text)
+            }
             Text(GuardrailCopy.sourceNote(run, flag.planned))
                 .font(.footnote)
                 .foregroundStyle(Theme.textMuted)

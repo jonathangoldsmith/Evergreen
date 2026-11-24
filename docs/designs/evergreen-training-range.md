@@ -2104,7 +2104,7 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decisions 2 and 11
   - Files: app/Evergreen/Views/Today/
   - Verify: a fixture at Sunday 8 PM shows the range sentence, and Tuesday shows the count.
-- [ ] **G8 (P2, human: ~2h / CC: ~10min)**: Swap history line backed by stored backtest "Yes" days
+- [x] **G8 (P2, human: ~2h / CC: ~10min)**: Swap history line backed by stored backtest "Yes" days
   - Surfaced by: decision 12
   - Files: app/Evergreen/Model/, app/Evergreen/Views/Today/AgentCard.swift
   - Verify: the line shows only when a past "Yes" day had a jump this size or smaller.

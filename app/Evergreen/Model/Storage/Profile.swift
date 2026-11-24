@@ -25,6 +25,19 @@ final class Profile {
     /// Days the app was opened (yyyy-MM-dd, one per line, last 14), so the
     /// range report can count a rest day the person checked in on (item 18).
     var openedDaysText: String = ""
+    /// Backtest days answered "Yes" (hurt within 2 weeks), as "time:jump%" per
+    /// line, for the swap card's history line (design decision 12). Never uploaded
+    /// beyond the yes/no answer.
+    var hurtAfterJumpText: String = ""
+
+    /// (when, jump percent) for each backtest "Yes" day.
+    var hurtAfterJumps: [(date: Date, jumpPercent: Int)] {
+        hurtAfterJumpText.split(separator: "\n").compactMap { line in
+            let parts = line.split(separator: ":")
+            guard parts.count == 2, let time = Double(parts[0]), let jump = Int(parts[1]) else { return nil }
+            return (Date(timeIntervalSince1970: time), jump)
+        }
+    }
 
     init() {}
 
