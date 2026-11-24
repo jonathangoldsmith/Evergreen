@@ -1231,7 +1231,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Section 6, the 2 AM Friday test. Item 9's delete list
   - Files: harness/tests/test_people.py, harness/harness/store.py
   - Verify: `uv run pytest -q`
-- [ ] **T7 (P1, human: ~2h / CC: ~10min)**: App: a test that no Amplitude event carries pain, injury or soreness values
+- [x] **T7 (P1, human: ~2h / CC: ~10min)**: App: a test that no Amplitude event carries pain, injury or soreness values
   - Surfaced by: Section 6 and item 9's Amplitude rules
   - Files: to be determined (Amplitude wrapper)
   - Verify: Swift Testing in EvergreenTests
@@ -1817,11 +1817,11 @@ Critical gaps (no test, no handling, silent): **0** after D4–D7 and the requir
 ## Implementation Tasks
 Synthesized from this review's findings. Each task derives from a specific finding above. Run with Claude Code or Codex; checkbox as you ship. Assumed ratios: tests ~50x, features ~30x, architecture ~5x.
 
-- [ ] **E1 (P1, human: ~2 days / CC: ~1h)**: App model: real people's decisions survive midnight; story-day reset for demo personas only
+- [x] **E1 (P1, human: ~2 days / CC: ~1h)**: App model: real people's decisions survive midnight; story-day reset for demo personas only
   - Surfaced by: Outside voice #1, D4. AppModel.swift:71–73 `clearRun(storyDay: today)`
   - Files: app/Evergreen/Model/AppModel.swift, app/Evergreen/Model/Storage/
   - Verify: Swift test: a swap accepted Sunday survives Monday's launch and its calendar event stays
-- [ ] **E2 (P1, human: ~1 day / CC: ~30min)**: Storage: versioned schemas, migration plan, no delete for real people
+- [x] **E2 (P1, human: ~1 day / CC: ~30min)**: Storage: versioned schemas, migration plan, no delete for real people
   - Surfaced by: Outside voice #2, D5. Storage.swift:7–22
   - Files: app/Evergreen/Model/Storage/Storage.swift
   - Verify: migration test from the previous schema keeps the outbox and injury month
@@ -1833,19 +1833,19 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R1, D2
   - Files: app/Evergreen/Agent/ (UserDataClient, RecommendClient, PlannerClient, new HarnessRequest.swift)
   - Verify: HarnessRequestTests plus a request-path test; PlannerClientTests and RecommendClientTests green
-- [ ] **E5 (P1, human: ~2 days / CC: ~1h)**: Harness: `POST /users/{u}/events`, fail closed, dedupe on (user_id, event_id), return stored ids
+- [x] **E5 (P1, human: ~2 days / CC: ~1h)**: Harness: `POST /users/{u}/events`, fail closed, dedupe on (user_id, event_id), return stored ids
   - Surfaced by: D1, Outside voice #3 and #6
   - Files: harness/api/index.py, harness/harness/store.py, harness/tests/test_events.py
   - Verify: `uv run pytest -q`: 503 without the store, a duplicate id is skipped, an unknown type gets 422
-- [ ] **E6 (P1, human: ~1 day / CC: ~30min)**: Phone: EventOutbox acknowledges only the returned ids
+- [x] **E6 (P1, human: ~1 day / CC: ~30min)**: Phone: EventOutbox acknowledges only the returned ids
   - Surfaced by: D1, Outside voice #3
   - Files: app/Evergreen/Agent/EventOutbox.swift (new)
   - Verify: EventOutboxTests: offline then online, each id lands once
-- [ ] **E7 (P1, human: ~1 day / CC: ~30min)**: Notifier: route action ids in the background; swap payload in userInfo; pain answers to their own model
+- [x] **E7 (P1, human: ~1 day / CC: ~30min)**: Notifier: route action ids in the background; swap payload in userInfo; pain answers to their own model
   - Surfaced by: Section 1 #1 (CRITICAL), Outside voice #5 and #8
   - Files: app/Evergreen/Notifications/, app/Evergreen/Model/
   - Verify: NotifierActionTests: each action id records exactly one decision
-- [ ] **E8 (P1, human: ~half day / CC: ~15min)**: Harness: `delete_user` driven by DDL, with a test that every user table is erased
+- [x] **E8 (P1, human: ~half day / CC: ~15min)**: Harness: `delete_user` driven by DDL, with a test that every user table is erased
   - Surfaced by: Section 1 red flag #8 (store.py:333–335)
   - Files: harness/harness/store.py, harness/tests/test_people.py
   - Verify: the DDL-walk test fails if a new user table isn't erased
@@ -2076,7 +2076,7 @@ Pass 5 re-rated after decision 20: **9/10 → 10/10.**
 ## Implementation Tasks (design review)
 Synthesized from this review's findings. Each task derives from a specific decision above. Ratios: features ~30x, docs ~10x.
 
-- [ ] **G1 (P1, human: ~1h / CC: ~10min)**: DESIGN.md: stacked-card rule, accent rule, Watch and Coach page sections, refreshed overview, the wellness-wording rule (BN3) in Do's and Don'ts, decision-log rows
+- [x] **G1 (P1, human: ~1h / CC: ~10min)**: DESIGN.md: stacked-card rule, accent rule, Watch and Coach page sections, refreshed overview, the wellness-wording rule (BN3) in Do's and Don'ts, decision-log rows
   - Surfaced by: decisions 1, 13, 14, 15 and 20, and BN3
   - Files: DESIGN.md
   - Verify: DESIGN.md states each rule. Its decision log has rows dated 2026-11-22.
@@ -2084,7 +2084,7 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decisions 1, 13 and 14 (TodayView.swift:21–25 has one slot)
   - Files: app/Evergreen/Views/Today/TodayView.swift, AgentCard.swift, PlanRow.swift
   - Verify: a Sunday long-run fixture shows run, pain and return cards in order. A past swap shows as a badged row.
-- [ ] **G3 (P1, human: ~1.5 days / CC: ~45min)**: Onboarding order, blind backtest with reveal, one no-history message
+- [x] **G3 (P1, human: ~1.5 days / CC: ~45min)**: Onboarding order, blind backtest with reveal, one no-history message
   - Surfaced by: decisions 3, 5 and 6
   - Files: app/Evergreen/Views/Onboarding/
   - Verify: the flow runs Welcome → … → reveal. There are at most 8 questions and none shows a percentage. The zero-flag state appears.
@@ -2092,7 +2092,7 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decision 7
   - Files: app/Evergreen/Views/Today/
   - Verify: each state in decision 7's table renders in a SwiftUI preview or UI test.
-- [ ] **G5 (P1, human: ~half day / CC: ~20min)**: Notification budget: 2 a day, "Tomorrow's" copy, no morning check after a decided swap, merged Sunday note
+- [x] **G5 (P1, human: ~half day / CC: ~20min)**: Notification budget: 2 a day, "Tomorrow's" copy, no morning check after a decided swap, merged Sunday note
   - Surfaced by: decision 10
   - Files: app/Evergreen/Notifications/
   - Verify: a test that a Sunday long-run weekend schedules at most 2 a day
@@ -2100,7 +2100,7 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decision 16
   - Files: app/Evergreen/Views/
   - Verify: VoiceOver reads the swap as one sentence. Accessibility XXXL stacks every button row.
-- [ ] **G7 (P2, human: ~2h / CC: ~10min)**: Week sentence: the range line Sunday 7 PM–Monday, workout count otherwise
+- [x] **G7 (P2, human: ~2h / CC: ~10min)**: Week sentence: the range line Sunday 7 PM–Monday, workout count otherwise
   - Surfaced by: decisions 2 and 11
   - Files: app/Evergreen/Views/Today/
   - Verify: a fixture at Sunday 8 PM shows the range sentence, and Tuesday shows the count.
@@ -2343,11 +2343,11 @@ Approval readiness (re-run): PASS. Checked rows:
 The outside voice's 8 other findings are required proof or plumbing for approved decisions (design 2, 11, 13, 18, 19; eng D1; X4). No earlier answer changed.
 
 ### Implementation tasks added by the re-run
-- [ ] **E15 (P1, human: ~half day / CC: ~20min)**: Backtest answers as outbox events; stored, seeded sample; interleaved flagged and control questions
+- [x] **E15 (P1, human: ~half day / CC: ~20min)**: Backtest answers as outbox events; stored, seeded sample; interleaved flagged and control questions
   - Surfaced by: R7 (re-run D1), outside voice #10
   - Files: app/Evergreen/Views/Onboarding/, app/Evergreen/Agent/EventOutbox.swift, harness/tests/test_events.py
   - Verify: no date or distance in the payload; a restarted onboarding asks the same days; DELETE erases them
-- [ ] **E16 (P1, human: ~half day / CC: ~20min)**: `onboardingVersion` with a one-time catch-up flow for existing users
+- [x] **E16 (P1, human: ~half day / CC: ~20min)**: `onboardingVersion` with a one-time catch-up flow for existing users
   - Surfaced by: R8 (re-run D2), RootView.swift:14
   - Files: app/Evergreen/App/RootView.swift, app/Evergreen/Model/
   - Verify: an install with the old flag lands in the catch-up flow once
@@ -2355,15 +2355,15 @@ The outside voice's 8 other findings are required proof or plumbing for approved
   - Surfaced by: re-run Section 1 #1–2, Section 2 #1, outside voice #5
   - Files: app/Evergreen/Model/AppModel+Today.swift, app/Evergreen/Views/Today/TodayView.swift
   - Verify: table test of card order; no duplicate swap card
-- [ ] **E18 (P1, human: ~half day / CC: ~20min)**: Notification scheduler: 2 a day by firing day, Sunday note protected with fold-in, reminder skipped after a morning check
+- [x] **E18 (P1, human: ~half day / CC: ~20min)**: Notification scheduler: 2 a day by firing day, Sunday note protected with fold-in, reminder skipped after a morning check
   - Surfaced by: R9 (re-run D3), Section 1 #6, outside voice #4
   - Files: app/Evergreen/Notifications/
   - Verify: Sunday plus a Monday spike schedules exactly 2
-- [ ] **E19 (P1, human: ~2h / CC: ~10min)**: `weekWorkouts` counts external runs, swaps and return sessions once per day
+- [x] **E19 (P1, human: ~2h / CC: ~10min)**: `weekWorkouts` counts external runs, swaps and return sessions once per day
   - Surfaced by: outside voice #1 (TodayView.swift:85–89)
   - Files: app/Evergreen/Views/Today/TodayView.swift, app/Evergreen/Model/
   - Verify: a Runna fixture counts kept and swapped runs alike
-- [ ] **E20 (P2, human: ~half day / CC: ~20min)**: `range_week` upserted by (user, week_start) until Tuesday; `run_day` and `week_start` on events
+- [x] **E20 (P2, human: ~half day / CC: ~20min)**: `range_week` upserted by (user, week_start) until Tuesday; `run_day` and `week_start` on events
   - Surfaced by: outside voice #2 and #7
   - Files: harness/ (events route), app/Evergreen/Agent/EventOutbox.swift
   - Verify: a late comeback updates the coach page's count; dates render in the runner's local day
@@ -2411,7 +2411,7 @@ Source: `docs/designs/evergreen-business-notes.md`, section 8, "Decisions to mak
 **Effort:** about half a human week more (CC about 2 hours). The plan's total is now about 18–21 human weeks.
 
 ### Implementation tasks added by the business notes
-- [ ] **B1 (P1, human: ~1 day / CC: ~30min)**: OSTRC sheet after "A little" or "Yes"; "A little" and "Yes" notification actions open the app; "No" stays a background action; OSTRC answer codes on the `pain_checkin` upload
+- [x] **B1 (P1, human: ~1 day / CC: ~30min)**: OSTRC sheet after "A little" or "Yes"; "A little" and "Yes" notification actions open the app; "No" stays a background action; OSTRC answer codes on the `pain_checkin` upload
   - Surfaced by: BN1
   - Files: app/Evergreen/Notifications/, app/Evergreen/Views/Today/, the pain/injury model, harness/tests/test_events.py
   - Verify: "No" records a zero week with no sheet; a skipped sheet keeps the one-tap answer; OSTRC codes never reach Amplitude or the coach page

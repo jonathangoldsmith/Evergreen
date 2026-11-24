@@ -14,7 +14,7 @@ Layout: `App/` (entry point and root view), `Agent/` (who answers `/tick`), `Con
 
 ## Tests
 
-`EvergreenTests/StandInAgentTests.swift` covers the stand-in's rules: goal rounding, the very-active cap, thin history, the grace period, comeback length and time, no repeat or undone bookings, a missed comeback, completion points and duplicate merging. `CalendarSyncTests.swift` covers how plan items become calendar events and what a sync creates, moves and deletes. `SlotDefenseTests.swift` covers moves, shrinks and when the agent leaves a workout alone. Run them with ⌘U in Xcode, or:
+`EvergreenTests/StandInAgentTests.swift` covers the stand-in's rules: goal rounding, the very-active cap, thin history, the grace period, comeback length and time, no repeat or undone bookings, a missed comeback, completion points and duplicate merging. `CalendarSyncTests.swift` covers how plan items become calendar events and what a sync creates, moves and deletes. `SlotDefenseTests.swift` covers moves, shrinks and when the agent leaves a workout alone. The brake has its own: `GuardrailRuleTests` (spikes, the injury window, Sore and Tired, floors), `RunParserTests` (which calendar events are runs, and their size), `GuardrailScheduleTests` (the 2-a-day note budget and the pain week), `GuardrailCopyTests` (the words, and no "safe"), `BacktestTests`, `RangeReportTests`, `StorageTests` (migration, set-aside, midnight), `NotifierActionTests` (Lock Screen buttons) and `EventOutboxTests` (uploads and the Amplitude list). Run them with ⌘U in Xcode, or:
 
 ```
 xcodebuild test -project app/Evergreen.xcodeproj -scheme Evergreen -destination 'platform=iOS Simulator,name=iPhone 17'
@@ -140,9 +140,21 @@ The bundle is a built copy: after changing `memory-agent/src`, refresh it with
 cd memory-agent && npm install && node scripts/build-phone.mjs ../app/Evergreen/Resources/Memory/memory-phone.js
 ```
 
+## The brake (training range, milestone 1)
+
+The plan is [docs/designs/evergreen-training-range.md](../docs/designs/evergreen-training-range.md). In short: Evergreen reads the runs on the calendars the person picks (Runna, TrainingPeaks, a coach's), checks each against their longest run in the last 30 days, and offers a shorter run before a big jump. It never changes the training calendar; a swap is Evergreen's own event.
+
+- `Guardrail/`: the pure parts, each with table tests. `RunParser` (which events are runs, how big), `GuardrailRule` (+10% past the 30-day longest, +5% within 12 months of an injury; Sore and Tired from the morning check; floors of 3 km or 20 min), `GuardrailSchedule` (at most 2 notes a day, the Sunday pain note never dropped), `PainWeek`, `RangeReport`, `Backtest` and `OSTRC`.
+- `Model/AppModel+Guardrail.swift`: flags, decisions, swap plan items and the week count. `+Notes` (scheduling and Lock Screen buttons), `+Pain`, `+Range`, `+Setup`, `+Backtest`.
+- Onboarding after Permissions: What leaves your phone (consent and a separate research opt-in), training calendars, the injury question, then the backtest. People who onboarded earlier see these once (`Profile.onboardingVersion`).
+- Today stacks cards in urgency order: the run decision (morning check, swap, or the choice with Undo), the Sunday pain check-in, then the agent's latest action. From Sunday 7 PM through Monday the week line is the range report.
+- `Upload/`: after "Allow and continue", events go to `POST /users/{id}/events` through `EventOutbox`, which keeps each one until the harness returns its id. Amplitude gets only `AnalyticsEvent`'s fixed words.
+- Demo controls: "A big jump on tomorrow's long run" adds a "Runna (demo)" calendar with a 2½-hour long run for Jordan, whose longest this month was under 2 hours.
+
 ## Not built yet
 
-- Routines and the load guardrail (P1 and P2, task T11).
+- Routines (P1, task T11).
+- From the range plan: the watch app, the coach page, the return-to-running plan and the buddy (milestones 2–4), and the swap card's "You were hurt after a jump like this in August" line (task G8).
 - Real HealthKit reads and workout import (P2). Health permission is already requested in onboarding.
 - General Sans: drop `GeneralSans-Semibold.otf` into `Evergreen/Resources/Fonts/`. It registers at launch; until then the agent's voice falls back to SF Pro Semibold.
 - The contract test that decodes the harness's golden fixtures (task T3). It goes in `EvergreenTests/` once `contract/fixtures/` exists.
