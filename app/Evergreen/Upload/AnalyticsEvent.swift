@@ -9,6 +9,11 @@ enum AnalyticsEvent: Hashable, Sendable {
     case painCheckIn(answered: Bool)
     case backtestCompleted(answered: Int)
     case rangeReportViewed
+    /// The push (range plan item 16): no durations or health values.
+    case comebackBooked
+    case comebackDone
+    /// paired or unpaired (item 9's list).
+    case buddy(String)
 
     var name: String {
         switch self {
@@ -17,6 +22,9 @@ enum AnalyticsEvent: Hashable, Sendable {
         case .painCheckIn: "pain_checkin"
         case .backtestCompleted: "backtest_completed"
         case .rangeReportViewed: "range_report_viewed"
+        case .comebackBooked: "comeback_booked"
+        case .comebackDone: "comeback_done"
+        case .buddy: "buddy"
         }
     }
 
@@ -31,7 +39,9 @@ enum AnalyticsEvent: Hashable, Sendable {
             ["answered": answered ? "true" : "false"]
         case .backtestCompleted(let answered):
             ["answered": String(answered)]
-        case .rangeReportViewed:
+        case .buddy(let action):
+            ["action": action == "paired" ? "paired" : "unpaired"]
+        case .rangeReportViewed, .comebackBooked, .comebackDone:
             [:]
         }
     }

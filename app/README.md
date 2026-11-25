@@ -151,10 +151,15 @@ The plan is [docs/designs/evergreen-training-range.md](../docs/designs/evergreen
 - `Upload/`: after "Allow and continue", events go to `POST /users/{id}/events` through `EventOutbox`, which keeps each one until the harness returns its id. Amplitude gets only `AnalyticsEvent`'s fixed words.
 - Demo controls: "A big jump on tomorrow's long run" adds a "Runna (demo)" calendar with a 2½-hour long run for Jordan, whose longest this month was under 2 hours.
 
+## The push and the buddy (milestone 2)
+
+- **The push** (range plan items 10–16): people at 2 workouts a week or fewer get one comeback after a miss, at about 60% of their usual length in the next free time within a day, for 2× points (`StandInAgent+Comeback.swift`). A missed comeback gets a quiet note, never another. The card says what the points keep, and finishing a plan item shows the Done sheet with the buddy celebrating. Sam is the newcomer persona; the demo controls have "A missed walk books a comeback" and "Finish the comeback".
+- **The buddy** (item 22): Your data → People invites a friend with a code or pairs with a friend's code; Welcome has "Have a code from a friend?" for the short path. A paired inviter's finished workouts go up as `workout_completed`, on every Health read and from HealthKit's background observer (`WorkoutObserver`), and the harness sends the friend one note per workout over APNs. `EvergreenAppDelegate` sends the push token. The entitlements include `aps-environment` and HealthKit background delivery, so device builds need those capabilities on the App ID (automatic signing adds them).
+
 ## Not built yet
 
 - Routines (P1, task T11).
-- From the range plan: the watch app, the coach page, the return-to-running plan and the buddy (milestones 2–4), and the swap card's "You were hurt after a jump like this in August" line (task G8).
+- From the range plan: the watch app, the coach page and the return-to-running plan (milestones 3 and 4).
 - Real HealthKit reads and workout import (P2). Health permission is already requested in onboarding.
 - General Sans: drop `GeneralSans-Semibold.otf` into `Evergreen/Resources/Fonts/`. It registers at launch; until then the agent's voice falls back to SF Pro Semibold.
 - The contract test that decodes the harness's golden fixtures (task T3). It goes in `EvergreenTests/` once `contract/fixtures/` exists.

@@ -5,8 +5,9 @@ import Foundation
 /// (one candidate answer to the open R2 question).
 ///
 /// It implements the demo's rules: normal and goal with the very-active cap,
-/// thin-history defaults (D8), duplicate merging (D9), completions, slot
-/// defense (StandInAgent+SlotDefense.swift) and purchases
+/// thin-history defaults (D8), duplicate merging (D9), completions, the push's
+/// first-miss comeback (range plan items 10–13, StandInAgent+Comeback.swift),
+/// slot defense (StandInAgent+SlotDefense.swift) and purchases
 /// (StandInAgent+Purchases.swift). When the two disagree, the harness wins.
 struct StandInAgent: Agent {
     var name: String { "Offline stand-in" }
@@ -78,6 +79,13 @@ struct StandInAgent: Agent {
         }
 
         var booked = plan
+
+        // The push (range plan item 10): newcomers and people at 2 workouts a
+        // week or fewer get a comeback after a miss. Regulars on the brake don't.
+        if thin || perWeek <= Self.pushPerWeek {
+            actions += comebackActions(s, plan: plan, done: done, history: history, known: known,
+                                       booked: &booked, cal: cal)
+        }
 
         // Slot defense: an upcoming workout a busy time landed on moves before
         // it can be missed. One action per workout and conflict, so an undone

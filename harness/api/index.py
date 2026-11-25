@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import hmac
 import re
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi import Depends, FastAPI, Header, HTTPException
 
-from harness import config, events, store
+from harness import buddy, config, events, store
 from harness.clients import sie
 from harness.evidence import senso
 from harness.models import USER_ID, EvidenceRequest, EvidenceResponse, ShoesRequest, ShoesResponse
@@ -62,13 +63,76 @@ def user_events(user: str, req: events.EventsRequest) -> dict:
     persistent store and 502 on a write failure, so the phone's outbox keeps them; on success,
     returns the ids stored, which the outbox acknowledges. A repeated id is stored once."""
     user = _user(user)
+    docs = [e.model_dump(mode="json") for e in req.events]
     try:
-        stored = store.save_events(user, [e.model_dump(mode="json") for e in req.events], events.UPSERT_TYPES)
+        stored = store.save_events(user, docs, events.UPSERT_TYPES)
     except store.StoreUnavailable:
         raise HTTPException(status_code=503, detail="no persistent store")
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"singlestore: {type(exc).__name__}")
-    return {"stored": stored}
+    # A paired inviter's finished workouts become buddy notes; earlier notes that failed are retried (D6).
+    try:
+        notes = buddy.on_workouts(user, [d for d in docs if d["type"] == "workout_completed"])
+    except Exception:
+        notes = {"queued": 0, "sent": 0}
+    return {"stored": stored, "buddyNotes": notes}
+
+
+# --- the accountability buddy (range plan item 22) ---
+
+class BuddyName(BaseModel):
+    displayName: str
+
+
+class BuddyCode(BaseModel):
+    code: str
+
+
+class PushToken(BaseModel):
+    token: str = Field(min_length=16, max_length=200, pattern=r"^[0-9a-fA-F]+$")
+    environment: Literal["production", "sandbox"]
+
+
+def _buddy(call):
+    try:
+        return call()
+    except store.StoreUnavailable:
+        raise HTTPException(status_code=503, detail="no persistent store")
+    except buddy.BuddyError as err:
+        raise HTTPException(status_code=err.status, detail=err.code)
+
+
+@app.post("/users/{user}/buddy", dependencies=[Depends(require_secret)])
+def buddy_invite(user: str, req: BuddyName) -> dict:
+    """A new 8-character invite code, good for 48 hours and one friend."""
+    return _buddy(lambda: buddy.create_invite(_user(user), req.displayName))
+
+
+@app.post("/users/{user}/buddy/redeem", dependencies=[Depends(require_secret)])
+def buddy_redeem(user: str, req: BuddyCode) -> dict:
+    return _buddy(lambda: buddy.redeem(_user(user), req.code))
+
+
+@app.get("/users/{user}/buddy", dependencies=[Depends(require_secret)])
+def buddy_status(user: str) -> dict:
+    return _buddy(lambda: buddy.status(_user(user)))
+
+
+@app.patch("/users/{user}/buddy", dependencies=[Depends(require_secret)])
+def buddy_rename(user: str, req: BuddyName) -> dict:
+    return _buddy(lambda: buddy.rename(_user(user), req.displayName))
+
+
+@app.delete("/users/{user}/buddy", dependencies=[Depends(require_secret)])
+def buddy_unpair(user: str) -> dict:
+    return _buddy(lambda: buddy.unpair(_user(user)))
+
+
+@app.put("/users/{user}/push-token", dependencies=[Depends(require_secret)])
+def push_token(user: str, req: PushToken) -> dict:
+    """This device's APNs token and its environment, for buddy notes only."""
+    _buddy(lambda: buddy.save_token(_user(user), req.token, req.environment))
+    return {"saved": True}
 
 
 @app.post("/workouts/recommend", dependencies=[Depends(require_secret)])

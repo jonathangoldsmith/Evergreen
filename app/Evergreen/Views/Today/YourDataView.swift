@@ -29,6 +29,13 @@ struct YourDataView: View {
                         }
                     }
                     BrakeSettingsSection()
+                    VStack(alignment: .leading, spacing: Theme.md) {
+                        Text("People")
+                            .font(.headline)
+                            .foregroundStyle(Theme.text)
+                            .accessibilityAddTraits(.isHeader)
+                        BuddySection()
+                    }
                     section("On Evergreen's planner") {
                         Text("To plan your week, your workouts, sleep and resting heart rate are sent to Evergreen's planner and kept under an anonymous ID. No name, email or account is attached.")
                         planner

@@ -24,6 +24,13 @@ enum PinnedPlan {
                 Entry(focus: .long, dayOffset: 1, hour: 8, minute: 30, minutes: 90, activityType: "Running"),
                 Entry(focus: .strength, dayOffset: 2, hour: 7, minute: 0, minutes: 40, activityType: "FunctionalStrengthTraining"),
             ]
+        case .sam:
+            // The lunchtime walk is on the story day, so a 1:30 PM miss happens every rehearsal.
+            [
+                Entry(focus: .easy, dayOffset: 0, hour: 12, minute: 0, minutes: 30, activityType: "Walking"),
+                Entry(focus: .easy, dayOffset: 1, hour: 7, minute: 30, minutes: 25, activityType: "Elliptical"),
+                Entry(focus: .strength, dayOffset: 3, hour: 10, minute: 0, minutes: 30, activityType: "TraditionalStrengthTraining"),
+            ]
         case .me:
             [] // A real person's week comes from their history (HistoryPlan).
         }

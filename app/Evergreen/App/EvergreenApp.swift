@@ -4,6 +4,7 @@ import SwiftUI
 
 @main
 struct EvergreenApp: App {
+    @UIApplicationDelegateAdaptor(EvergreenAppDelegate.self) private var appDelegate
     private let container: ModelContainer
     @State private var model: AppModel
     /// The one Amplitude client. Nil when no key is set (app/Secrets.xcconfig), so nothing is sent.
@@ -29,7 +30,9 @@ struct EvergreenApp: App {
         }
         let container = Storage.container()
         self.container = container
-        _model = State(initialValue: AppModel(context: container.mainContext, amplitude: amplitude))
+        let model = AppModel(context: container.mainContext, amplitude: amplitude)
+        _model = State(initialValue: model)
+        EvergreenAppDelegate.model = model
     }
 
     var body: some Scene {

@@ -26,6 +26,13 @@ extension AppModel {
         rangeSetupDeferredThisLaunch = true
     }
 
+    /// The buddy's friend paired from Welcome: onboarding ends there, and the
+    /// range steps aren't forced on them later (range plan item 22).
+    func finishFriendSetup() {
+        profile.onboardingVersion = Self.onboardingVersion
+        completeOnboarding()
+    }
+
     func finishRangeSetup() {
         profile.onboardingVersion = Self.onboardingVersion
         save()

@@ -43,6 +43,9 @@ struct AgentCard: View {
                 if let change = ActionCopy.beforeAfter(action) {
                     change.font(.body).foregroundStyle(Theme.text)
                 }
+                if let keep = ActionCopy.comebackKeep(action, now: model.now) {
+                    Text(keep).font(.body).foregroundStyle(Theme.text)
+                }
                 Text(action.reason)
                     .font(.footnote)
                     .foregroundStyle(Theme.textMuted)

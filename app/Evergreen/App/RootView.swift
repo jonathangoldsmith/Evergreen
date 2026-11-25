@@ -32,6 +32,7 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             model.noteAppOpened()
+            Task { await model.refreshBuddy() }
             Task {
                 if model.persona.key.isReal { await model.refreshHealth() }
                 await model.tick()

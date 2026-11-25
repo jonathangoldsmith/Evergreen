@@ -8,6 +8,7 @@ Tables (created on first use):
   recommendations(id, created_at, persona, source, item, latency_ms, doc JSON)   one row per pick
   user_history(user_id, updated_at, doc JSON)                  a real person's Apple Health history, latest copy
   guardrail_events(user_id, event_id, type, created_at, doc)  the brake's events from the phone (plan item 9)
+  buddy_pairs, buddy_notes, buddy_redeem_failures, push_tokens  the accountability buddy (item 22)
 For a real person, `persona` in recommendations and verifications holds their anonymous `usr_` id.
 Without SINGLESTORE_URL, user history and verifications live in memory (lost on a cold start).
 """
@@ -41,14 +42,30 @@ DDL = [
         user_id VARCHAR(80) NOT NULL, event_id VARCHAR(64) NOT NULL, type VARCHAR(32) NOT NULL,
         created_at DATETIME(6) NOT NULL, received_at DATETIME(6) NOT NULL, doc JSON NOT NULL,
         PRIMARY KEY (user_id, event_id), SHARD KEY (user_id))""",
+    """CREATE TABLE IF NOT EXISTS buddy_pairs (
+        pair_id VARCHAR(36) NOT NULL, inviter_id VARCHAR(80) NOT NULL, friend_id VARCHAR(80),
+        code_hash VARCHAR(64) NOT NULL, status VARCHAR(16) NOT NULL, inviter_display_name VARCHAR(40) NOT NULL,
+        created_at DATETIME(6) NOT NULL, expires_at DATETIME(6) NOT NULL, paired_at DATETIME(6),
+        PRIMARY KEY (pair_id), SHARD KEY (pair_id))""",
+    """CREATE TABLE IF NOT EXISTS buddy_notes (
+        pair_id VARCHAR(36) NOT NULL, note_id VARCHAR(64) NOT NULL, inviter_id VARCHAR(80) NOT NULL,
+        friend_id VARCHAR(80) NOT NULL, status VARCHAR(16) NOT NULL, attempts INT NOT NULL,
+        created_at DATETIME(6) NOT NULL, doc JSON NOT NULL,
+        PRIMARY KEY (pair_id, note_id), SHARD KEY (pair_id))""",
+    """CREATE TABLE IF NOT EXISTS buddy_redeem_failures (
+        user_id VARCHAR(80) NOT NULL, at DATETIME(6) NOT NULL, SHARD KEY (user_id))""",
+    """CREATE TABLE IF NOT EXISTS push_tokens (
+        user_id VARCHAR(80) NOT NULL, token VARCHAR(200) NOT NULL, environment VARCHAR(16) NOT NULL,
+        updated_at DATETIME(6) NOT NULL, PRIMARY KEY (user_id), SHARD KEY (user_id))""",
 ]
 # Columns that hold a user's anonymous id. delete_user erases every table that has one,
 # so a new table is covered the moment its DDL names one (eng review E8).
-USER_COLUMNS = ("user_id", "persona")
+USER_COLUMNS = ("user_id", "persona", "inviter_id", "friend_id")
 
 
 def user_tables() -> list[tuple[str, str]]:
-    """(table, column) for every table in DDL with a user column, read from the DDL itself."""
+    """(table, column) for every user column of every table in DDL, read from the DDL itself.
+    A buddy pair has two (inviter and friend), so deleting either person removes it."""
     import re
     out = []
     for stmt in DDL:
@@ -56,7 +73,6 @@ def user_tables() -> list[tuple[str, str]]:
         for column in USER_COLUMNS:
             if re.search(rf"\b{column}\b\s+VARCHAR", stmt):
                 out.append((table, column))
-                break
     return out
 CANDIDATE_TTL_S = 300
 LOG_WAIT_S = 0.4          # how long a request waits for its audit write before answering anyway

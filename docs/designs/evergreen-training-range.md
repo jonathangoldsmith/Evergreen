@@ -1219,11 +1219,11 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Section 3, "Coach token leaks through Vercel request logs"
   - Files: harness/api/index.py
   - Verify: open a coach link and confirm the token isn't in the Vercel logs
-- [ ] **T4 (P1, human: ~half day / CC: ~20min)**: Harness: rate-limit invite redeem and use codes with at least 40 bits
+- [x] **T4 (P1, human: ~half day / CC: ~20min)**: Harness: rate-limit invite redeem and use codes with at least 40 bits
   - Surfaced by: Section 3, "Invite codes guessed by brute force"
   - Files: to be determined
   - Verify: a test that the 11th failed redeem in an hour is refused
-- [ ] **T5 (P1, human: ~half day / CC: ~20min)**: Harness: never return another user's id, and use pair ids on buddy routes
+- [x] **T5 (P1, human: ~half day / CC: ~20min)**: Harness: never return another user's id, and use pair ids on buddy routes
   - Surfaced by: Section 3, HARNESS_SECRET extraction (pre-existing)
   - Files: to be determined
   - Verify: a test that no buddy or coach response contains a `usr_` id other than the caller's
@@ -1853,15 +1853,15 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R6, D7
   - Files: harness/api/index.py, harness/harness/store.py, app/Evergreen/Agent/DeviceIdentity.swift
   - Verify: a token can't read another user's data; DELETE removes the device row
-- [ ] **E10 (P2, human: ~half day / CC: ~20min)**: App delegate plus both entitlements for APNs and background delivery
+- [x] **E10 (P2, human: ~half day / CC: ~20min)**: App delegate plus both entitlements for APNs and background delivery
   - Surfaced by: Outside voice #5
   - Files: app/Evergreen/App/EvergreenApp.swift, app/Evergreen.entitlements
   - Verify: a TestFlight build receives a token; the observer registers at launch
-- [ ] **E11 (P2, human: ~half day / CC: ~20min)**: Harness: buddy redeem by conditional UPDATE; one buddy each
+- [x] **E11 (P2, human: ~half day / CC: ~20min)**: Harness: buddy redeem by conditional UPDATE; one buddy each
   - Surfaced by: Outside voice #6
   - Files: harness/ (buddy routes), harness/tests/test_buddy.py
   - Verify: two simultaneous redeems give exactly one pair
-- [ ] **E12 (P2, human: ~half day / CC: ~20min)**: Harness: buddy notes pending/sent with retry on next call, dropped after 24h
+- [x] **E12 (P2, human: ~half day / CC: ~20min)**: Harness: buddy notes pending/sent with retry on next call, dropped after 24h
   - Surfaced by: R5, D6
   - Files: harness/ (APNs sender), harness/tests/test_push.py
   - Verify: a timed-out send is delivered on the next events call

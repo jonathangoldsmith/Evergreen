@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 
 [[package]]
@@ -519,8 +519,10 @@ source = { virtual = "." }
 dependencies = [
     { name = "cryptography" },
     { name = "fastapi" },
+    { name = "h2" },
     { name = "httpx" },
     { name = "pydantic" },
+    { name = "pyjwt" },
     { name = "python-dotenv" },
     { name = "sie-sdk" },
     { name = "singlestoredb" },
@@ -536,8 +538,10 @@ dev = [
 requires-dist = [
     { name = "cryptography", specifier = ">=50.0.2" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "h2", specifier = ">=4.1" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "pydantic", specifier = ">=2.9" },
+    { name = "pyjwt", specifier = ">=2.8" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "sie-sdk", specifier = ">=0.11.1" },
     { name = "singlestoredb", specifier = ">=1.20.0" },
@@ -666,6 +670,28 @@ wheels = [
 ]
 
 [[package]]
+name = "h2"
+version = "4.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "hpack" },
+    { name = "hyperframe" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e7/85/7c366e69d84c17bb778fe41419e1fbcce3033d5b7ce29bbffff0a98b859f/h2-4.4.1.tar.gz", hash = "sha256:4e866ffb1a869ae14dd9b5e6beb5c24a13da0495ad72b65925ded182521c1516", size = 2157281, upload-time = "2026-08-03T11:45:09.509Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/22/e85faf23bd72a92d1921e37d674ca56eb298a3c8be31fdecef0ff2b3aaac/h2-4.4.1-py3-none-any.whl", hash = "sha256:0e25f1462b23c9cb82d9eb02e28bc706dac2a68cb457c6a0d74d63c8a2a5d0e6", size = 62636, upload-time = "2026-08-03T11:44:59.164Z" },
+]
+
+[[package]]
+name = "hpack"
+version = "4.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/26/5b/fcabf6028144a8723726318b07a32c2f3314acdff6265743cf08a344b18e/hpack-4.2.0.tar.gz", hash = "sha256:0895cfa3b5531fc65fe439c05eb65144f123bf7a394fcaa56aa423548d8e45c0", size = 51300, upload-time = "2026-06-23T18:34:46.667Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/71/b4/4a9fcfb2aef6ba44d9073ecd301443aa00b3dac95de5619f2a7de7ec8a91/hpack-4.2.0-py3-none-any.whl", hash = "sha256:858ac0b02280fa582b5080d68db0899c62a80375e0e5413a74970c5e518b6986", size = 34246, upload-time = "2026-06-23T18:34:45.472Z" },
+]
+
+[[package]]
 name = "httpcore"
 version = "1.0.9"
 source = { registry = "https://pypi.org/simple" }
@@ -691,6 +717,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc", size = 141406, upload-time = "2024-12-06T15:37:23.222Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad", size = 73517, upload-time = "2024-12-06T15:37:21.509Z" },
+]
+
+[[package]]
+name = "hyperframe"
+version = "6.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/02/e7/94f8232d4a74cc99514c13a9f995811485a6903d48e5d952771ef6322e30/hyperframe-6.1.0.tar.gz", hash = "sha256:f630908a00854a7adeabd6382b43923a4c4cd4b821fcb527e6ab9e15382a3b08", size = 26566, upload-time = "2025-01-22T21:41:49.302Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/48/30/47d0bf6072f7252e6521f3447ccfa40b421b6824517f82854703d0f5a98b/hyperframe-6.1.0-py3-none-any.whl", hash = "sha256:b03380493a519fce58ea5af42e4a42317bf9bd425596f7a0835ffce80f1a42e5", size = 13007, upload-time = "2025-01-22T21:41:47.295Z" },
 ]
 
 [[package]]
@@ -1613,6 +1648,11 @@ dependencies = [
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/4f/154d18d96369944d306d4ebcc44f9ea7a3d8678f8fb6a2ee1a8fcec0d4e2/singlestoredb-1.20.0.tar.gz", hash = "sha256:cef5a1173b6b2bdeb9a2e7c0911bd86747c4b468dc4376801f0e61baa58eb6dc", size = 636106, upload-time = "2026-11-19T17:52:02.958Z" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/5d/3d/af6904f6171842b7adc2d032734cd445b8aeba2118b24604c06a3ebe319c/singlestoredb-1.20.0-cp315-abi3t-macosx_10_15_universal2.whl", hash = "sha256:fa81ac3f4668b2c7d725bf1269f58d70f8da5a118ae0e9d066879e32cd17ae4c", size = 760822, upload-time = "2026-11-19T17:51:45.684Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/04/6f5904c9733afbd3c7f83f697c2116af557cda21044a3b7ee6cb1908f5ea/singlestoredb-1.20.0-cp315-abi3t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:ec7cf496283f44a00ca5d7cc9e64b56b0a09fa67ec98d89b5f715fa79920bac3", size = 832708, upload-time = "2026-11-19T17:51:47.596Z" },
+    { url = "https://files.pythonhosted.org/packages/81/2c/e38a9c4afdf1253884c1ae990d87faa7833cc389082c8bca901b71d3a5bb/singlestoredb-1.20.0-cp315-abi3t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:3afc43c4f3ab127c77b3db11b0844b7dca08617d423bfb4751c77fafb8ba672a", size = 840852, upload-time = "2026-11-19T17:51:49.101Z" },
+    { url = "https://files.pythonhosted.org/packages/36/e1/6e47846767a46cfa7310876a0c174d1e82332ccd6050eb36b7162f801c0d/singlestoredb-1.20.0-cp315-abi3t-win32.whl", hash = "sha256:c396adff8eb0b27c3ed16b03389ddf9415c8db60d2a95419c99a5a994836b48c", size = 735659, upload-time = "2026-11-19T17:51:50.757Z" },
+    { url = "https://files.pythonhosted.org/packages/77/32/26fd68c296125b3ad31b38bd01c9e7a6829e9adb0ae10826730a11f34a7a/singlestoredb-1.20.0-cp315-abi3t-win_amd64.whl", hash = "sha256:4c739c70fe1265588458f416cb96aa875307374100e622fa70027f8b2e893a24", size = 732407, upload-time = "2026-11-19T17:51:52.145Z" },
     { url = "https://files.pythonhosted.org/packages/13/f0/0fd30984f37b541b0390a57321ba068df995d7cb1f8504130926401ae295/singlestoredb-1.20.0-cp38-abi3-macosx_10_9_universal2.whl", hash = "sha256:bf5ed895a2bb93b2c7e265ebbe5893f7d97bac7b0dd5c0598a8ecd718f04b315", size = 762474, upload-time = "2026-11-19T17:51:53.924Z" },
     { url = "https://files.pythonhosted.org/packages/ce/9f/c9c2460316f5f050dcc7ef35289d026c98ae73b94e45230630421ff4e95e/singlestoredb-1.20.0-cp38-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:8329507de2e1a5528eee5d62b39f76db973d7de35c6963a24cc9ba353ce7bb08", size = 836263, upload-time = "2026-11-19T17:51:55.406Z" },
     { url = "https://files.pythonhosted.org/packages/f7/3e/697a676d256e6b33ecd423878a3441f9f8a3b0525d4dc6ac0d470a9ede95/singlestoredb-1.20.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:485c1daccbd4a74618f546b4473e74426b96620c973a89ea37dec59c524331a2", size = 841958, upload-time = "2026-11-19T17:51:56.933Z" },

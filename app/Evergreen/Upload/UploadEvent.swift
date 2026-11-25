@@ -35,6 +35,8 @@ struct UploadEvent: Codable, Hashable, Sendable {
     var version: Int?
     var activityType: String?
     var minutes: Int?
+    var action: String?
+    var points: Int?
 
     init(id: String, type: String, at: Date, calendar: Calendar = .current) {
         self.id = id
@@ -117,6 +119,24 @@ struct UploadEvent: Codable, Hashable, Sendable {
         e.flagged = day.flagged
         e.jumpPercent = max(-100, day.jumpPercentRounded)
         e.monthsAgo = max(0, min(13, calendar.dateComponents([.month], from: day.date, to: at).month ?? 0))
+        return e
+    }
+
+    /// A missed workout and the comeback's life (range plan item 16): offered,
+    /// undone or completed. Kind and minutes only.
+    static func miss(_ item: PlanItem, at: Date, calendar: Calendar) -> UploadEvent {
+        var e = UploadEvent(id: "miss-\(StableHash.hex(item.id, length: 20))", type: "miss", at: at, calendar: calendar)
+        e.activityType = item.slot.activityType
+        e.minutes = item.slot.minutes
+        return e
+    }
+
+    static func comeback(_ action: String, item: Slot, points: Int?, comebackId: String, at: Date, calendar: Calendar) -> UploadEvent {
+        var e = UploadEvent(id: "comeback-\(action)-\(StableHash.hex(comebackId, length: 16))", type: "comeback", at: at, calendar: calendar)
+        e.action = action
+        e.activityType = item.activityType
+        e.minutes = item.minutes
+        e.points = points
         return e
     }
 
