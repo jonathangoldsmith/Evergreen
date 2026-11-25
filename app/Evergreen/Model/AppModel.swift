@@ -6,14 +6,14 @@ import SwiftData
 @Observable
 @MainActor
 final class AppModel {
-    private let context: ModelContext
+    let context: ModelContext
     /// The saved run (see Storage.swift). SwiftData models are observable, so
     /// views that read through this class update when the run changes.
     private let run: Run
     private(set) var persona: Persona
     /// What Evergreen last read from Apple Health, for the person's own week (`.me`).
     private(set) var health = HealthHistory.cached()
-    @ObservationIgnored private let healthReader = HealthReader()
+    @ObservationIgnored let healthReader = HealthReader()
     /// The last good answer, decoded once from `run.lastResponse`.
     private(set) var response: TickResponse?
     private(set) var offline = false
@@ -21,9 +21,9 @@ final class AppModel {
     /// Whether the plan is also on the Evergreen calendar.
     private(set) var calendarAccess: CalendarAccess
 
-    private let calendar = Calendar.current
-    @ObservationIgnored private let calendarSync = CalendarSync()
-    @ObservationIgnored private let notifier = Notifier()
+    let calendar = Calendar.current
+    @ObservationIgnored let calendarSync = CalendarSync()
+    @ObservationIgnored let notifier = Notifier()
     /// Tony's memory bundle in JavaScriptCore; nil if it doesn't load.
     @ObservationIgnored private let memory = MemoryEngine.standard()
     /// The app's Amplitude client, made once in the app entry; nil without a key.
@@ -57,6 +57,28 @@ final class AppModel {
     /// Waits for a burst of calendar changes to settle before ticking.
     @ObservationIgnored private var calendarChangeTask: Task<Void, Never>?
 
+    // The brake (plan items 1–8). Not part of the story day's run, so none of
+    // it is cleared at midnight or by switching demo people (eng review D4).
+
+    /// The person's own settings: injury month, training calendars, consent.
+    let profile: Profile
+    /// Runs on the picked training calendars, from the start of today for 8 days.
+    private(set) var trainingRuns: [PlannedRun] = []
+    /// Every swap taken or plan kept, oldest first.
+    private(set) var decisions: [GuardrailDecision] = []
+    private(set) var checkIns: [CheckInRecord] = []
+    private(set) var painRecords: [PainRecord] = []
+    /// "Not now" on the catch-up setup hides it until the next launch.
+    var rangeSetupDeferredThisLaunch = false
+    /// The week whose OSTRC questions are waiting, after "A little" or "Yes" (BN1).
+    var ostrcWeek: Date?
+    /// Guardrail events waiting for the harness (eng review D1).
+    @ObservationIgnored let outbox: EventOutbox
+    /// Flags already counted as shown this launch, for Amplitude.
+    @ObservationIgnored var flagsShown: Set<String> = []
+    /// The last week counts queued, so a tick only uploads a change.
+    @ObservationIgnored var lastRangeUpload: UploadEvent?
+
     init(context: ModelContext, amplitude: Amplitude? = nil) {
         self.context = context
         self.amplitude = amplitude
@@ -65,18 +87,25 @@ final class AppModel {
         let run = saved ?? Run(persona: .jordan, storyDay: today)
         if saved == nil { context.insert(run) }
         self.run = run
+        let savedProfile = (try? context.fetch(FetchDescriptor<Profile>()))?.first
+        let profile = savedProfile ?? Profile()
+        if savedProfile == nil { context.insert(profile) }
+        self.profile = profile
+        outbox = EventOutbox(context: context, sender: EventsClient.currentSender)
         calendarAccess = calendarSync.access
         persona = Persona.load(run.personaKey, storyDay: today)
         response = nil
         if run.storyDay != today {
-            // A new day is a new story day: keep the person and onboarding, drop the run.
-            clearRun(storyDay: today)
+            // A new day is a new story day. A demo person's run starts over; a
+            // real person's decisions carry on (eng review D4).
+            run.startDay(today, keepingHistory: persona.key.isReal, in: context)
         } else {
             response = run.lastResponse.flatMap { try? JSONDecoder.contract.decode(TickResponse.self, from: $0) }
         }
         save()
         calendarSync.onChange = { [weak self] in self?.calendarChanged() }
         notifier.onOpen = { [weak self] in Task { await self?.tick() } }
+        notifier.onAction = { [weak self] action, payload in await self?.handleNotificationAction(action, payload) }
         Task { await refreshNotifications() }
         if persona.key.isReal { Task { await refreshHealth() } }
     }
@@ -97,9 +126,13 @@ final class AppModel {
 
     /// Jordan's pinned demo week, or a real person's week from their own history.
     var basePlan: [PlanItem] {
-        persona.key.isReal
+        let items = persona.key.isReal
             ? HistoryPlan.items(health.workouts, storyDay: storyDay, calendar: calendar, madeAt: run.planMadeAt)
             : PinnedPlan.items(for: persona.key, storyDay: storyDay)
+        // One plan per day (item 1): a training calendar's run wins over
+        // Evergreen's own workout that day.
+        let runDays = Set(trainingRuns.map { calendar.startOfDay(for: $0.start) })
+        return items.filter { !runDays.contains(calendar.startOfDay(for: $0.slot.start)) }
     }
 
     /// Where the person's history begins: Apple Health's first workout, or Jordan's mock history.
@@ -131,7 +164,7 @@ final class AppModel {
                 break
             }
         }
-        return items.sorted { $0.slot.start < $1.slot.start }
+        return (items + swapItems).sorted { $0.slot.start < $1.slot.start }
     }
 
     var todayPlan: [PlanItem] { plan.filter { calendar.isDate($0.slot.start, inSameDayAs: storyDay) } }
@@ -170,9 +203,10 @@ final class AppModel {
     func plannerRequest() -> PlannerClient.Request {
         var request = PlannerClient.request(
             persona: persona.key.rawValue, now: now, demo: run.demo, newPairArrives: newShoesArrive,
-            busy: calendarSync.busyTimes(from: storyDay), cal: calendar
+            busy: calendarSync.busyTimes(from: storyDay, excludingCalendars: profile.trainingCalendarIds), cal: calendar
         )
-        if persona.key.isReal {
+        // "Keep it on my phone" (BN2) keeps the history on the phone too.
+        if persona.key.isReal, profile.uploadsAllowed != false {
             request.user = DeviceIdentity.userId
             request.history = HistoryPayload(health, cal: calendar)
         }
@@ -212,6 +246,9 @@ final class AppModel {
     }
 
     func tick() async {
+        recordUnansweredWeeks()
+        uploadRangeWeek()
+        Task { await outbox.flush() }
         latestTick += 1
         let thisTick = latestTick
         let agent = AgentChoice.current()
@@ -226,7 +263,7 @@ final class AppModel {
             workouts: workouts,
             actions: appliedActions.filter { !isUndone($0) },
             undoneActionIds: appliedActions.map(\.id).filter(undoneIds.contains),
-            busy: calendarSync.busyTimes(from: storyDay),
+            busy: calendarSync.busyTimes(from: storyDay, excludingCalendars: profile.trainingCalendarIds),
             mandate: Self.mandate,
             approvedPurchaseIds: run.approvedPurchaseIds,
             demo: run.demo,
@@ -244,6 +281,11 @@ final class AppModel {
             offline = true
         }
         await syncMemory()
+    }
+
+    /// Sends a brake event to Amplitude: fixed words only (item 9).
+    func track(_ event: AnalyticsEvent) {
+        amplitude?.track(eventType: event.name, eventProperties: event.properties)
     }
 
     /// Rolls the person's memory and sends its staged events to Amplitude when
@@ -356,8 +398,10 @@ final class AppModel {
     }
 
     private func scheduleNotifications() async {
-        let upcoming = plan.filter { completion(for: $0) == nil }
+        // A swap's run already had its notes and morning check; no 30-minute reminder too (R9).
+        let upcoming = plan.filter { completion(for: $0) == nil && $0.source != .swap }
         await notifier.scheduleReminders(for: upcoming)
+        await notifier.scheduleGuardrail(guardrailNotes)
     }
 
     /// Starts clean: a reinstall keeps calendar events, so clear the plan and
@@ -473,6 +517,23 @@ final class AppModel {
         addTestMeeting()
     }
 
+    /// The brake (plan items 5–8): Jordan's training app plans a 2½-hour long
+    /// run tomorrow morning; his longest run this month was under 2 hours.
+    func showBrakeDemo() {
+        resetDemo()
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: storyDay) ?? storyDay
+        func at(_ day: Date, _ hour: Int, plus days: Int = 0) -> Date {
+            let date = calendar.date(byAdding: .day, value: days, to: day) ?? day
+            return calendar.date(bySettingHour: hour, minute: 0, second: 0, of: date) ?? date
+        }
+        let id = calendarSync.addDemoTrainingWeek([
+            ("Long run 2h 30", at(tomorrow, 8), 150),
+            ("Easy 40 min", at(tomorrow, 7, plus: 2), 40),
+            ("Tempo 45 min", at(tomorrow, 18, plus: 3), 45),
+        ])
+        if let id { setTrainingCalendars(profile.trainingCalendarIds.union([id])) }
+    }
+
     /// Rain on Saturday's run: the agent suggests a gym day pass.
     func showRainDemo() {
         resetDemo()
@@ -513,30 +574,20 @@ final class AppModel {
     /// Drops the day's actions, logged workouts, points and clock. The person
     /// and onboarding stay.
     private func clearRun(storyDay: Date) {
-        run.actions.forEach(context.delete)
-        run.workouts.forEach(context.delete)
-        run.actions = []
-        run.workouts = []
-        run.storyDay = storyDay
-        run.clockMinutes = nil
-        run.seenCompletions = []
-        run.lastResponse = nil
-        run.approvedPurchaseIds = []
-        run.demo = nil
-        run.visits = []
-        run.planMadeAt = Date()
+        run.startDay(storyDay, keepingHistory: false, in: context)
         response = nil
     }
 
     /// Saves the run, refreshes what views read, then brings the
     /// Evergreen calendar in line with the plan. Every change to the run
     /// goes through here.
-    private func save() {
+    func save() {
         do {
             try context.save()
         } catch {
             assertionFailure("Couldn't save the run: \(error)")
         }
+        refreshTrainingRuns()
         refreshFromStore()
         syncCalendar()
         Task { await scheduleNotifications() }
@@ -547,6 +598,20 @@ final class AppModel {
         appliedActions = records.map(\.action)
         undoneIds = Set(records.filter(\.undone).map(\.actionId))
         loggedWorkouts = run.workouts.map(\.workout).sorted { $0.start < $1.start }
+        decisions = (try? context.fetch(FetchDescriptor<GuardrailDecision>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
+        checkIns = (try? context.fetch(FetchDescriptor<CheckInRecord>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
+        painRecords = (try? context.fetch(FetchDescriptor<PainRecord>(sortBy: [SortDescriptor(\.weekStart)]))) ?? []
+    }
+
+    /// Reads the picked training calendars again (plan item 1), and withdraws
+    /// swaps whose source run is gone (item 8).
+    func refreshTrainingRuns() {
+        let today = calendar.startOfDay(for: now)
+        guard calendarSync.access == .on else { return }
+        let runs = calendarSync.plannedRuns(on: profile.trainingCalendarIds, from: today, days: Self.trainingWindowDays,
+                                            calendar: calendar)
+        if runs != trainingRuns { trainingRuns = runs }
+        withdrawOrphanedSwaps(window: today..<(calendar.date(byAdding: .day, value: Self.trainingWindowDays, to: today) ?? today))
     }
 
     /// Puts the plan on the calendar: the pinned week and the agent's moves,
@@ -558,7 +623,8 @@ final class AppModel {
         for action in appliedActions where !isUndone(action) {
             if let id = action.planItemId { reasons[id] = action.reason }
         }
-        let entries = CalendarEntry.entries(for: plan, reasons: reasons, storyDay: storyDay, calendar: calendar)
+        let entries = CalendarEntry.entries(for: plan, reasons: reasons, titles: swapTitles,
+                                            storyDay: storyDay, calendar: calendar)
         calendarSync.sync(entries, from: storyDay)
     }
 }

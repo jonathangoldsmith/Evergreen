@@ -76,6 +76,20 @@ struct HealthReader: Sendable {
         }
     }
 
+    /// Runs only, from the last `days` days, for onboarding's one-time backtest
+    /// (plan item 4). Separate from `read`'s 60 days and never cached.
+    func runs(days: Int, now: Date = Date(), calendar: Calendar = .current) async -> [Workout] {
+        guard isAvailable else { return [] }
+        let from = calendar.date(byAdding: .day, value: -days, to: calendar.startOfDay(for: now)) ?? now
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            HKQuery.predicateForSamples(withStart: from, end: now),
+            HKQuery.predicateForWorkouts(with: .running),
+        ])
+        let query = HKSampleQueryDescriptor(predicates: [.workout(predicate)], sortDescriptors: [SortDescriptor(\.startDate)])
+        guard let samples = try? await query.result(for: Permissions.healthStore) else { return [] }
+        return samples.map(Self.workout)
+    }
+
     // MARK: Daily summaries
 
     /// Minutes asleep per night, counted on the day the night ended.

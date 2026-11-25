@@ -18,11 +18,19 @@ struct TodayView: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.warning)
                 }
+                // Cards stack in urgency order (design decisions 1 and 13):
+                // run decisions first, then the agent's latest action.
+                ForEach(model.guardrailRuns) { run in
+                    GuardrailCard(run: run)
+                }
+                if let week = model.pendingPainWeek {
+                    PainCheckInCard(week: week)
+                }
                 if let action = model.latestAction, let purchaseId = action.purchaseId {
                     PurchaseCard(purchaseId: purchaseId)
                 } else if let action = model.latestAction {
                     AgentCard(action: action)
-                } else {
+                } else if model.guardrailRuns.isEmpty && model.pendingPainWeek == nil {
                     QuietState()
                 }
                 TodayPlanSection()
@@ -31,7 +39,7 @@ struct TodayView: View {
                 }
                 HStack(spacing: Theme.md) {
                     Group {
-                        if doneCount >= model.plan.count && doneCount > 0 {
+                        if model.weekDone >= model.weekTotal && model.weekDone > 0 {
                             PineBuddy(pose: .cheering, filled: weekTiers)
                         } else {
                             // Waves hi each time Today opens, then walks.
@@ -46,13 +54,12 @@ struct TodayView: View {
                 .frame(minHeight: 44)
                 .padding(.top, Theme.sm)
                 .accessibilityElement(children: .combine)
-                if model.persona.key.isReal {
-                    Button("Your data") { showYourData = true }
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textMuted)
-                        .frame(minHeight: 44)
-                        .accessibilityHint("What Evergreen read from Apple Health and what its planner keeps")
-                }
+                // For everyone: the brake's settings (calendars, injury, uploads) live here.
+                Button("Your data") { showYourData = true }
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textMuted)
+                    .frame(minHeight: 44)
+                    .accessibilityHint("Training calendars, what leaves your phone, and what Evergreen keeps")
             }
             .padding(.horizontal, Theme.md)
             .padding(.top, Theme.lg)
@@ -61,6 +68,12 @@ struct TodayView: View {
         }
         .background(Theme.surface)
         .sheet(isPresented: $showYourData) { YourDataView() }
+        .sheet(item: ostrcBinding) { week in OSTRCSheet(week: week.date) }
+    }
+
+    /// The OSTRC sheet shows while a week's questions are waiting.
+    private var ostrcBinding: Binding<OSTRCWeek?> {
+        Binding(get: { model.ostrcWeek.map(OSTRCWeek.init) }, set: { if $0 == nil { model.skipOSTRC() } })
     }
 
     /// "Friday, Nov 20", plus the time when the demo clock is set ("· 4:00 PM"),
@@ -70,22 +83,19 @@ struct TodayView: View {
         return model.clockMinutes == nil ? day : "\(day) · \(model.now.clock)"
     }
 
-    /// "This week: 1 of 3 done. Keep it up!", counting the planned workouts
-    /// above so it agrees with the card's "three workouts".
-    private var doneCount: Int {
-        model.plan.filter { model.completion(for: $0) != nil }.count
-    }
-
     /// The buddy's tiers filled so far, scaled to its three tiers.
     private var weekTiers: Int {
-        let total = max(model.plan.count, 1)
-        return min(3, (doneCount * 3 + total - 1) / total)
+        let total = max(model.weekTotal, 1)
+        return min(3, (model.weekDone * 3 + total - 1) / total)
     }
 
     /// The pine grows a tier for each workout done this week.
     private var weekLine: String {
-        let done = doneCount
-        let total = model.plan.count
+        // Sunday 7 PM through Monday, the week's range report (design decision 2).
+        if let report = model.rangeReport { return report.sentence }
+        // Evergreen's plan and the training calendar's runs, each once (task E19).
+        let done = model.weekDone
+        let total = model.weekTotal
         let cheer = done == 0 ? "Let’s grow." : done < total ? "Growing nicely!" : "Fully grown. You did it!"
         return "This week: \(done) of \(total) done. \(cheer)"
     }

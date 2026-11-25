@@ -1,24 +1,28 @@
 import SwiftUI
 
-/// Onboarding: Welcome, then the three permissions on one page, then Today.
+/// Onboarding (design decision 3): Welcome, the three permissions on one
+/// page, the range setup (what leaves your phone, training calendars, injury),
+/// then Today.
 struct OnboardingView: View {
     @Environment(AppModel.self) private var model
-    @State private var showPermissions = false
+    @State private var page = Page.welcome
+
+    enum Page { case welcome, permissions, range }
 
     var body: some View {
         Group {
-            if showPermissions {
-                PermissionsView(onContinue: finish)
+            switch page {
+            case .welcome:
+                WelcomeView(onStart: { page = .permissions })
+            case .permissions:
+                PermissionsView(onContinue: { page = .range })
                     .transition(.move(edge: .trailing))
-            } else {
-                WelcomeView(onStart: start)
+            case .range:
+                RangeSetupView(onFinish: finish)
+                    .transition(.move(edge: .trailing))
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: showPermissions)
-    }
-
-    private func start() {
-        showPermissions = true
+        .animation(.easeInOut(duration: 0.3), value: page)
     }
 
     private func finish() {

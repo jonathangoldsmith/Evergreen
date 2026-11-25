@@ -11,7 +11,10 @@ struct RootView: View {
     var body: some View {
         @Bindable var model = model
         Group {
-            if model.onboarded {
+            if model.needsRangeSetup {
+                // People who onboarded before the range steps see them once (R8).
+                RangeSetupView(catchUp: true, onFinish: {})
+            } else if model.onboarded {
                 TodayView()
             } else {
                 OnboardingView()
@@ -28,6 +31,7 @@ struct RootView: View {
         .task { await model.keepTicking() }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
+            model.noteAppOpened()
             Task {
                 if model.persona.key.isReal { await model.refreshHealth() }
                 await model.tick()

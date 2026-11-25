@@ -1,0 +1,38 @@
+import Foundation
+
+/// Every Amplitude event the brake sends (plan item 9). Properties are fixed
+/// words, never a distance, a soreness answer, a pain answer or an injury, so
+/// a new event can't leak a health value (task T7 tests this list).
+enum AnalyticsEvent: Hashable, Sendable {
+    case flagShown(GuardrailFlag.Kind)
+    case choice(String)
+    case painCheckIn(answered: Bool)
+    case backtestCompleted(answered: Int)
+    case rangeReportViewed
+
+    var name: String {
+        switch self {
+        case .flagShown: "guardrail_flag_shown"
+        case .choice: "guardrail_choice"
+        case .painCheckIn: "pain_checkin"
+        case .backtestCompleted: "backtest_completed"
+        case .rangeReportViewed: "range_report_viewed"
+        }
+    }
+
+    var properties: [String: String] {
+        switch self {
+        case .flagShown(let kind):
+            // Sore and Tired come from the morning check; only that it was a check-in leaves the phone.
+            ["kind": kind == .spike || kind == .returnSpike ? "spike" : "check_in"]
+        case .choice(let choice):
+            ["choice": ["accept", "keep", "undo"].contains(choice) ? choice : "other"]
+        case .painCheckIn(let answered):
+            ["answered": answered ? "true" : "false"]
+        case .backtestCompleted(let answered):
+            ["answered": String(answered)]
+        case .rangeReportViewed:
+            [:]
+        }
+    }
+}

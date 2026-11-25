@@ -71,14 +71,15 @@ components:
 ## Overview
 
 **Creative North Star:** Training that grows with you. Evergreen is an encouraging coach that shows its reasoning: every workout says why it was picked, from Apple Health data (runs, heart rate, training load) and the open time on the calendar ("Easy pace. Your training load is up 18%, so this one stays light."). Shopping is an occasional, helpful extra that protects training, and it always asks first. Its work is recognizable at a glance because it alone gets the accent and the display face.
-**Product context:** native iOS personal fitness agent (Personal Agents Hackathon, 2026-11-20) for people who want to work out a bit more than their normal; peers are Google Health Coach, Apple Workout Buddy, Fitbod, WHOOP and Oura.
+**Product context:** native iOS personal fitness agent that keeps training in each person's range, in both directions: for committed runners on a plan (Runna, a coach) it offers a shorter run before a big jump from their recent longest (the brake); for newcomers drifting under their normal it books a short comeback (the push). It started at the Personal Agents Hackathon (2026-11-20); peers are Runna, Google Health Coach, Apple Workout Buddy, WHOOP and Oura. The range plan is docs/designs/evergreen-training-range.md.
 **Mode per surface:** Operate for every screen (onboarding, Today).
 **Reference sites:** Oura's 2025 "Today" redesign (one daily focus), WHOOP's one-screen home, Gentler Streak (Apple Design Award 2024, humane fitness).
 **Key characteristics:**
-- the agent's latest action is the only card on screen
+- only what needs an answer is a card: the run decision, the Sunday pain check-in and the return-plan ask, stacked in that urgency order above the agent's latest action; once its Undo is gone, an action becomes a plan row with a badge
 - pine accent + General Sans appear only on what the agent did
 - progress is a sentence, never a ring or chart
 - encouraging at the miss: a muted "Next time", never red, guilt or a minus number
+- wellness wording: Evergreen says what it changed and why ("a big jump from your longest run", "in range"), never that a run is safe or that it prevents injury
 - every workout carries its reason, citing the health data or calendar time behind it
 - one character: the pine buddy, a round, friendly pine with dot eyes, rosy cheeks and coral running shoes. It is the mark, the Welcome art (waving hi) and the week's progress (a tier fills per finished workout; it waves when Today opens, walks, and cheers when the week is done). It hops and cheers when an order is placed. No other illustration. Its leaf green, blush and shoe coral are decoration only, never text or UI color
 
@@ -94,7 +95,7 @@ General Sans (Fontshare, ITF Free Font License, 12 static styles + variable) is 
 
 ## Layout
 
-iPhone portrait only. Single column, 16pt side margins, 24pt between sections. Onboarding: Welcome → Permissions (three Allow rows on one page). Today: date → agent card → "On your calendar" rows → "This week: 1 of 3 done".
+iPhone portrait only. Single column, 16pt side margins, 24pt between sections. Onboarding: Welcome → Permissions (three Allow rows on one page) → What leaves your phone → training calendars → injury (with the not-medical-advice line) → the backtest. Today: date → cards in urgency order (run decision, pain check-in, return plan, agent's latest action) → "On your calendar" rows, training-calendar runs among them → "This week: 1 of 3 done", which reads as the range report ("In range 5 of 6 days. 1 swap kept your long run in range.") from Sunday 7 PM through Monday.
 
 ## Elevation & Depth
 
@@ -106,10 +107,11 @@ Only the agent card is elevated: 0 2px 8px at 6% ink in light mode; a 1px rule i
 
 ## Components
 
-- **Agent card:** verb (General Sans, accent) · struck-through before → after · one-line reason · one muted line (what it keeps, or the terms) · Undo + Pick another time, or the ask's primary + Not now. VoiceOver reads it as one sentence.
+- **Agent card:** verb (General Sans, accent) · struck-through before → after · one-line reason · one muted line (what it keeps, or the terms) · Undo + Pick another time, or the ask's primary + Not now. VoiceOver reads it as one sentence. The swap uses it: "Make tomorrow's run 12 km?" · ~~18 km~~ → 12 km · why · "Runna will still say 18 km." · Make it 12 km + Keep 18 km.
+- **Question card:** the same card for questions the person answers (morning check, pain check-in): an SF Pro `.headline` in `{colors.text}` and ghost answer buttons (Fresh / Tired / Sore, No / A little / Yes). Three-button rows stack vertically at accessibility sizes.
 - **Plan row:** day (with a "Moved" badge when the agent moved it) · activity and length · time on the right. No radius, 1px rules between.
 - **Buttons:** primary = solid accent, ghost = 1px rule; at least 44pt tall; focus ring is 2px accent.
-- **Badge:** "Moved", accent outline.
+- **Badge:** "Moved", "Changed" (a swap), "Kept" (a kept run) and "Return", accent outline.
 - **Demo controls:** floating debug button, toggled from the app's page in iOS Settings. On by default in Debug builds (simulator or phone from Xcode), off in Release. One button per beat: the plan, a meeting moves a workout, rain buys a day pass, shoes near 400 miles.
 
 ## Do's and Don'ts
@@ -119,8 +121,17 @@ Only the agent card is elevated: 0 2px 8px at 6% ink in light mode; a 1px rule i
 - Do keep the last good screen up with a quiet label instead of a spinner.
 - Don't use rings, charts, progress circles or confetti.
 - Don't show minus points or red at a missed workout.
-- Don't stack cards or nest a card inside a card.
+- Do stack Today's cards in urgency order; never nest a card inside a card, and never make information a card.
+- Don't say "safe", "prevents injury", "lowers your risk" or "injury-proof" anywhere: app, notifications, coach page, App Store or marketing.
 - Don't put neon accents or glowing edges on dark surfaces.
+
+## Watch
+
+System font and the dark palette (`{colors.dark-surface}`, `{colors.dark-text}`, `{colors.dark-accent}` for agent actions only), one screen per step, and text-only complications ("5/6", no ring) with VoiceOver labels ("5 of 6 days in range").
+
+## Coach page
+
+One reading column of about 640 px (full width with 16 px margins on a phone); the light and dark tokens as CSS variables chosen by `prefers-color-scheme`; General Sans only for the runner's name; system body text at 17 px or larger at 4.5:1; no cards, swaps are a plain list between `{colors.rule}` lines; a themed focus ring; works without JavaScript.
 
 ## Motion
 
@@ -142,3 +153,6 @@ Only the agent card is elevated: 0 2px 8px at 6% ink in light mode; a 1px rule i
 | 2026-11-20 | Renamed to Evergreen; tailored-training proposition | Value moves to picking the right, sustainable workout from health data and calendar time, with occasional ask-first shopping. Coach voice that cites its data; pine tree as the one image, including the week's progress |
 | 2026-11-20 | Pine buddy mascot | Asked for a cuter brand: an original kawaii pine with running shoes replaces the flat pine |
 | 2026-11-20 | Buddy waves hi and celebrates orders | Asked for: the buddy says hi (Welcome, Today) and celebrates a placed order. The first authored motion, kept to the character itself so the no-confetti rule stands |
+| 2026-11-22 | Cards stack on Today in urgency order | Founder's answer in the range plan's design review (decisions 1 and 13): several cards are fine; only things that need an answer are cards, and past actions become badged rows |
+| 2026-11-22 | Question card, Watch and Coach page | Design review decisions 14 and 15: questions reuse the card with SF Pro and ghost buttons; the watch and the coach page reuse these tokens |
+| 2026-11-24 | Overview for the range product; wellness wording | Design review decision 20 and business notes BN3: the product keeps training in range; copy never makes a safety claim |

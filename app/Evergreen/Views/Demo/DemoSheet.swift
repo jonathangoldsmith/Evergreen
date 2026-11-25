@@ -18,6 +18,10 @@ struct DemoSheet: View {
                         model.showMovedDemo()
                     }
                     .disabled(model.calendarAccess != .on)
+                    beat("A big jump on tomorrow's long run", detail: "A Runna-style calendar plans 2½ hours; Jordan's longest this month was under 2. Evergreen asks to shorten it and leaves Runna's event alone.") {
+                        model.showBrakeDemo()
+                    }
+                    .disabled(model.calendarAccess != .on)
                     beat("Rain: suggest a gym day pass", detail: "Rain on Saturday's 8:30 AM long run; Evergreen suggests a $15 pass at 24 Hour Fitness in San Francisco and books it only if you say yes.") {
                         model.showRainDemo()
                     }

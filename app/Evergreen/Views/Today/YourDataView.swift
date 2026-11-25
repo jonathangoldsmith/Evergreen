@@ -28,6 +28,7 @@ struct YourDataView: View {
                                 .foregroundStyle(Theme.textMuted)
                         }
                     }
+                    BrakeSettingsSection()
                     section("On Evergreen's planner") {
                         Text("To plan your week, your workouts, sleep and resting heart rate are sent to Evergreen's planner and kept under an anonymous ID. No name, email or account is attached.")
                         planner
@@ -54,7 +55,7 @@ struct YourDataView: View {
             .confirmationDialog("Delete your data from Evergreen's planner?", isPresented: $confirmErase, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) { Task { await erase() } }
             } message: {
-                Text("This erases the history, recommendations and age check kept under your anonymous ID. Apple Health and this phone keep theirs. The next plan sends your history again.")
+                Text("This erases the history, recommendations, answers and age check kept under your anonymous ID. Apple Health and this phone keep theirs. The next plan sends your history again.")
             }
             .task { await load() }
         }
@@ -79,7 +80,7 @@ struct YourDataView: View {
         case .loaded(let info):
             Text(keptLine(info))
                 .foregroundStyle(Theme.textMuted)
-            if info.historyStored || info.recommendations > 0 {
+            if info.historyStored || info.recommendations > 0 || (info.guardrailEvents ?? 0) > 0 {
                 Button("Delete my data from the planner", role: .destructive) { confirmErase = true }
                     .buttonStyle(GhostButtonStyle())
                     .padding(.top, Theme.xs)
@@ -88,10 +89,13 @@ struct YourDataView: View {
     }
 
     private func keptLine(_ info: UserDataClient.Kept) -> String {
-        guard info.historyStored else { return "Nothing kept right now." }
-        var line = "Kept: \(info.workouts) workouts and \(info.days) days"
-        if info.recommendations > 0 { line += ", plus \(info.recommendations) past recommendations" }
-        return line + "."
+        let events = info.guardrailEvents ?? 0
+        guard info.historyStored || events > 0 else { return "Nothing kept right now." }
+        var parts: [String] = []
+        if info.historyStored { parts.append("\(info.workouts) workouts and \(info.days) days") }
+        if info.recommendations > 0 { parts.append("\(info.recommendations) past recommendations") }
+        if events > 0 { parts.append("\(events) answers and choices") }
+        return "Kept: " + parts.joined(separator: "; ") + "."
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
