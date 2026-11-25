@@ -58,6 +58,9 @@ DDL = [
         share_id VARCHAR(36) NOT NULL, user_id VARCHAR(80) NOT NULL, token_hash VARCHAR(64) NOT NULL,
         display_name VARCHAR(40) NOT NULL, include_feelings TINYINT NOT NULL, created_at DATETIME(6) NOT NULL,
         expires_at DATETIME(6) NOT NULL, revoked_at DATETIME(6), PRIMARY KEY (share_id), SHARD KEY (share_id))""",
+    """CREATE TABLE IF NOT EXISTS devices (
+        device_id VARCHAR(36) NOT NULL, user_id VARCHAR(80) NOT NULL, token_hash VARCHAR(64) NOT NULL,
+        created_at DATETIME(6) NOT NULL, PRIMARY KEY (device_id), SHARD KEY (device_id))""",
     """CREATE TABLE IF NOT EXISTS push_tokens (
         user_id VARCHAR(80) NOT NULL, token VARCHAR(200) NOT NULL, environment VARCHAR(16) NOT NULL,
         updated_at DATETIME(6) NOT NULL, PRIMARY KEY (user_id), SHARD KEY (user_id))""",
@@ -374,6 +377,8 @@ def delete_user(user: str) -> dict:
     recommendation records, the age check, guardrail events, and any table added later)."""
     removed = {"history": int(_histories.pop(user, None) is not None), "recommendations": 0,
                "verifications": int(_verifications.pop(user, None) is not None)}
+    from harness import devices
+    devices.forget(user)
     if enabled():
         with _conn().cursor() as cur:
             for table, column in user_tables():

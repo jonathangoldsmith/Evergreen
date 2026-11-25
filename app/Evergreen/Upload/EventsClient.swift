@@ -36,9 +36,11 @@ struct EventsClient: Sendable {
     }
 
     func send(_ events: [UploadEvent]) async throws -> [String] {
-        let answer: (Data, URLResponse)
-        do { answer = try await URLSession.shared.data(for: request(events)) } catch { throw Failure.unreachable }
-        let status = (answer.1 as? HTTPURLResponse)?.statusCode ?? 0
+        let answer: (Data, Int)
+        do {
+            answer = try await HarnessRequest.send(try request(events), baseURL: baseURL, secret: secret, user: user)
+        } catch { throw Failure.unreachable }
+        let status = answer.1
         guard (200..<300).contains(status) else { throw Failure.refused(status) }
         return try JSONDecoder().decode(Answer.self, from: answer.0).stored
     }

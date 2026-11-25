@@ -64,9 +64,11 @@ struct BuddyClient: Sendable {
     }
 
     private func call<T: Decodable>(_ method: String, _ path: String, _ body: [String: String]? = nil) async throws(Failure) -> T {
-        let answer: (Data, URLResponse)
-        do { answer = try await URLSession.shared.data(for: request(method, path, body)) } catch { throw .unreachable }
-        let status = (answer.1 as? HTTPURLResponse)?.statusCode ?? 0
+        let answer: (Data, Int)
+        do {
+            answer = try await HarnessRequest.send(request(method, path, body), baseURL: baseURL, secret: secret, user: user)
+        } catch { throw .unreachable }
+        let status = answer.1
         guard (200..<300).contains(status) else {
             let detail = (try? JSONDecoder().decode([String: String].self, from: answer.0))?["detail"]
             throw .refused(detail ?? "status_\(status)")

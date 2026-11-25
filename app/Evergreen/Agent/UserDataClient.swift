@@ -39,9 +39,11 @@ struct UserDataClient: Sendable {
         var request = URLRequest(url: baseURL.appending(path: "users").appending(path: user), timeoutInterval: Self.timeout)
         request.httpMethod = method
         request.setValue(secret, forHTTPHeaderField: "X-Harness-Secret")
-        let answer: (Data, URLResponse)
-        do { answer = try await URLSession.shared.data(for: request) } catch { throw .unreachable }
-        guard let http = answer.1 as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { throw .refused }
+        let answer: (Data, Int)
+        do {
+            answer = try await HarnessRequest.send(request, baseURL: baseURL, secret: secret, user: user)
+        } catch { throw .unreachable }
+        guard (200..<300).contains(answer.1) else { throw .refused }
         return answer.0
     }
 }
