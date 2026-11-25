@@ -151,7 +151,7 @@ def _swap_line(flag: dict, feelings: bool) -> dict:
     change = f"{_size(flag['planned'], unit)} → {_size(flag['suggested'], unit)}"
     big_jump = kind in ("spike", "returnSpike")
     if feelings:
-        reason = {"spike": "Big jump from the 30-day longest", "returnSpike": "Back from an injury",
+        reason = {"spike": "Big jump", "returnSpike": "Back from an injury",
                   "sore": "Felt sore", "tired": "Felt tired"}[kind]
     else:
         reason = "Shortened: big jump" if big_jump else "Shortened: how you felt"

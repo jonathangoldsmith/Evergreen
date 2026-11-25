@@ -26,6 +26,9 @@ PYTHONPATH=. uv run uvicorn api.index:app --reload --port 8000
 | `POST /shoes/prefetch?persona=jordan` | Researches shoes on the web now (Nimble + SIE, about 30 s) and stores them in SingleStore when configured. Needs the secret. |
 | `GET /audit/recent?persona=jordan&limit=20` | The latest recommendations from SingleStore. Needs the secret; 503 when SingleStore is off. |
 | `GET /audit/{auditId}` | One full audit record. Needs the secret. |
+| `POST /devices` | `{user}` → `{token}`: registers an install once (eng review D7). Needs the shared secret; every `/users/{user}/...` route below needs `Authorization: Bearer <token>` for that user instead. |
+| `POST`, `GET /users/{user}/coach-shares`; `PATCH`, `DELETE /users/{user}/coach-shares/{id}` | Coach links (range plan item 20): make one with `{displayName, includeFeelings}` (the token is in that answer only), list, change the tick or renew, revoke. |
+| `GET /coach/{token}` | The coach's read-only page: the last 4 weeks of swaps and weekly counts. Public, `noindex`, `no-store`; revoked, expired and unknown links read the same. |
 | `POST /users/{user}/events` | The phone's guardrail and push events (range plan item 9): strict typed events, each stored once; `range_week` updates in place. Returns the ids stored and any buddy notes sent. 503 without SingleStore. Needs the secret. |
 | `POST /users/{user}/buddy` | `{displayName}` → `{code, expiresAt}`: an 8-character invite, good once for 48 hours (range plan item 22). |
 | `POST /users/{user}/buddy/redeem` | `{code}` pairs the friend; refusals say why (`own_code`, `used`, `expired`, `already_paired`, `unknown_code`, `too_many_tries`). |
@@ -114,6 +117,16 @@ What gets stored:
 - `recommendations`: one row per pick, holding the request, wear, profile, where the candidates came from, the shortlist, every rejection and its reason, the final `Purchase` with citations, the source (`sie` or `rules`) and latency. The write waits at most 0.4 s, so a slow database never delays the answer. If it finishes, the response carries `auditId`.
 
 Try it for the demo: `curl -s "$URL/audit/recent?persona=jordan&limit=1" -H "X-Harness-Secret: $SECRET"`.
+
+## Try it locally with the simulator
+
+`uv run python scripts/local_sqlite.py --seed` runs the harness on port 8000 with an in-memory SQLite store (nothing persists), and gives each device that registers a sample week, so a coach link has something to show. Point the simulator at it:
+
+```
+xcrun simctl spawn booted defaults write com.evergreentraining.app recommend_url http://127.0.0.1:8000
+```
+
+and `defaults delete com.evergreentraining.app recommend_url` to go back to the deployed harness.
 
 ## Deploy (Vercel)
 
