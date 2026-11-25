@@ -74,7 +74,7 @@ struct StandInAgentTests {
         // 60% of the 25-minute median, at the usual 7 PM.
         #expect(comeback.after == Slot(start: Fixture.at(19), end: Fixture.at(19, 15), activityType: "Walking"))
         #expect(comeback.points == 40)
-        #expect(ActionCopy.comebackKeep(comeback, now: Fixture.at(13, 30)) == "Keep your 40 points: a 15-minute walk tonight.")
+        #expect(ActionCopy.comebackKeep(comeback, now: Fixture.at(13, 30), calendar: Fixture.calendar) == "Keep your 40 points: a 15-minute walk tonight.")
     }
 
     @Test func noMissInsideTheGracePeriod() async throws {

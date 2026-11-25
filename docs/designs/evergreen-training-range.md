@@ -1243,7 +1243,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Section 8
   - Files: to be determined
   - Verify: point the APNs key at an invalid value in a preview deploy and see the alert
-- [ ] **T10 (P2, human: ~1 day / CC: ~1h)**: CI: a GitHub Actions run of the Swift and harness tests before external testers
+- [x] **T10 (P2, human: ~1 day / CC: ~1h)**: CI: a GitHub Actions run of the Swift and harness tests before external testers
   - Surfaced by: Section 9 and the Distribution Plan
   - Files: .github/workflows/ (new)
   - Verify: a PR shows both jobs green
@@ -1829,7 +1829,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Section 3 R2, D3. Outside voice #7 (seams first)
   - Files: app/Evergreen/Agent/UserDataClient.swift, app/Evergreen/Notifications/Notifier.swift, harness/tests/test_people.py
   - Verify: the new tests pass on unchanged behavior before any feature change
-- [ ] **E4 (P1, human: ~half day / CC: ~20min)**: Phone: `HarnessRequest` helper; move 3 clients onto it
+- [x] **E4 (P1, human: ~half day / CC: ~20min)**: Phone: `HarnessRequest` helper; move 3 clients onto it
   - Surfaced by: R1, D2
   - Files: app/Evergreen/Agent/ (UserDataClient, RecommendClient, PlannerClient, new HarnessRequest.swift)
   - Verify: HarnessRequestTests plus a request-path test; PlannerClientTests and RecommendClientTests green
@@ -1849,7 +1849,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Section 1 red flag #8 (store.py:333–335)
   - Files: harness/harness/store.py, harness/tests/test_people.py
   - Verify: the DDL-walk test fails if a new user table isn't erased
-- [ ] **E9 (P1, human: ~1 week / CC: ~1 day)**: Per-device auth: registration, `devices` table, token-bound user routes
+- [x] **E9 (P1, human: ~1 week / CC: ~1 day)**: Per-device auth: registration, `devices` table, token-bound user routes
   - Surfaced by: R6, D7
   - Files: harness/api/index.py, harness/harness/store.py, app/Evergreen/Agent/DeviceIdentity.swift
   - Verify: a token can't read another user's data; DELETE removes the device row
@@ -1865,7 +1865,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: R5, D6
   - Files: harness/ (APNs sender), harness/tests/test_push.py
   - Verify: a timed-out send is delivered on the next events call
-- [ ] **E13 (P2, human: ~2h / CC: ~10min)**: Coach page: register before the catch-all; escape every field
+- [x] **E13 (P2, human: ~2h / CC: ~10min)**: Coach page: register before the catch-all; escape every field
   - Surfaced by: Section 1 #3 and #4
   - Files: harness/api/index.py, harness/tests/test_coach.py
   - Verify: `<script>` renders escaped; `GET /coach/{token}` isn't "no route"
@@ -2108,11 +2108,11 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decision 12
   - Files: app/Evergreen/Model/, app/Evergreen/Views/Today/AgentCard.swift
   - Verify: the line shows only when a past "Yes" day had a jump this size or smaller.
-- [ ] **G9 (P2, human: ~1 day / CC: ~30min)**: People section: coach links and buddy, display name on share, the friend's side and code states
+- [x] **G9 (P2, human: ~1 day / CC: ~30min)**: People section: coach links and buddy, display name on share, the friend's side and code states
   - Surfaced by: decisions 4, 8 and 9
   - Files: app/Evergreen/Views/Today/YourDataView.swift
   - Verify: share asks for the display name. Expired, used and already-paired code messages appear.
-- [ ] **G10 (P2, human: ~1 day / CC: ~30min)**: Coach page styling and accessibility per DESIGN.md's new section
+- [x] **G10 (P2, human: ~1 day / CC: ~30min)**: Coach page styling and accessibility per DESIGN.md's new section
   - Surfaced by: decisions 9, 15 and 17
   - Files: harness/ (coach page)
   - Verify: the page has no horizontal scroll at 375 px, passes 4.5:1 contrast, works without JavaScript, and shows the empty state.

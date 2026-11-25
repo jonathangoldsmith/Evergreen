@@ -20,7 +20,7 @@ struct GuardrailCopyTests {
 
     @Test func theSpikeCardCitesTheJumpAndTheLongestRun() {
         let flag = Self.flags[0]
-        #expect(GuardrailCopy.question(Self.run, flag, now: Self.now) == "Make tomorrow’s run 13 km?")
+        #expect(GuardrailCopy.question(Self.run, flag, now: Self.now, calendar: Fixture.calendar) == "Make tomorrow’s run 13 km?")
         #expect(GuardrailCopy.reason(flag) == "18 km is 38% past your longest run this month (13 km).")
         #expect(GuardrailCopy.accept(flag) == "Make it 13 km")
         #expect(GuardrailCopy.keep(flag) == "Keep 18 km")
@@ -28,13 +28,13 @@ struct GuardrailCopyTests {
     }
 
     @Test func theEveningNoteMatchesDesignDecisionTen() {
-        let note = GuardrailCopy.spikeNote(Self.run, Self.flags[0], now: Self.now)
+        let note = GuardrailCopy.spikeNote(Self.run, Self.flags[0], now: Self.now, calendar: Fixture.calendar)
         #expect(note.body == "Tomorrow’s 18 km is a big jump from your longest run (13 km). Make it 13?")
     }
 
     @Test func aSmallCutAsksToRunItEasy() {
         let flag = Self.flags[3]
-        #expect(GuardrailCopy.question(Self.run, flag, now: Self.now) == "Run tomorrow’s 22 min easy?")
+        #expect(GuardrailCopy.question(Self.run, flag, now: Self.now, calendar: Fixture.calendar) == "Run tomorrow’s 22 min easy?")
         #expect(GuardrailCopy.accept(flag) == "Run it easy")
     }
 

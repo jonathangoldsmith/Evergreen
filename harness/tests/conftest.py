@@ -38,3 +38,12 @@ def _no_real_persona(monkeypatch):
     monkeypatch.delenv("PERSONA_API_KEY", raising=False)
     from harness import store
     store._verifications.clear()
+
+
+@pytest.fixture(autouse=True)
+def _any_device(monkeypatch, request):
+    """Route tests act as the user's own device; test_devices.py checks the real tokens."""
+    from harness import devices
+    devices._memory.clear()
+    if request.node.fspath.basename != "test_devices.py":
+        monkeypatch.setattr(devices, "verify", lambda user, token: True)

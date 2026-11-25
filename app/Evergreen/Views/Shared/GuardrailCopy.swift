@@ -15,8 +15,8 @@ enum GuardrailCopy {
     }
 
     /// "Make today’s run 12 km?" or, for a small cut, "Run today’s 18 km easy?"
-    static func question(_ run: PlannedRun, _ flag: GuardrailFlag, now: Date) -> String {
-        let day = dayPossessive(run.start, now: now)
+    static func question(_ run: PlannedRun, _ flag: GuardrailFlag, now: Date, calendar: Calendar = .current) -> String {
+        let day = dayPossessive(run.start, now: now, calendar: calendar)
         return flag.keepEasy
             ? "Run \(day) \(flag.planned.label) easy?"
             : "Make \(day) run \(flag.suggested.label)?"
@@ -66,15 +66,16 @@ enum GuardrailCopy {
     }
 
     /// The whole card as one sentence for VoiceOver (design decision 16).
-    static func spoken(_ run: PlannedRun, _ flag: GuardrailFlag, now: Date) -> String {
-        "\(question(run, flag, now: now)) \(reason(flag))"
+    static func spoken(_ run: PlannedRun, _ flag: GuardrailFlag, now: Date, calendar: Calendar = .current) -> String {
+        "\(question(run, flag, now: now, calendar: calendar)) \(reason(flag))"
     }
 
     // MARK: Notifications (design decision 10)
 
     /// "Tomorrow’s 18 km is a big jump from your longest run (13 km). Make it 12?"
-    static func spikeNote(_ run: PlannedRun, _ flag: GuardrailFlag, now: Date) -> (title: String, body: String) {
-        let day = dayPossessive(run.start, now: now).capitalized(with: nil)
+    static func spikeNote(_ run: PlannedRun, _ flag: GuardrailFlag, now: Date,
+                          calendar: Calendar = .current) -> (title: String, body: String) {
+        let day = dayPossessive(run.start, now: now, calendar: calendar).capitalized(with: nil)
         let body: String = switch flag.kind {
         case .spike:
             "\(day) \(flag.planned.label) is a big jump from your longest run (\(flag.longest30?.label ?? "this month")). Make it \(Self.number(flag.suggested))?"

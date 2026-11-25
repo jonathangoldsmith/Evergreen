@@ -7,8 +7,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import HTMLResponse
 
-from harness import buddy, config, events, store
+from harness import buddy, coach, config, devices, events, store
 from harness.clients import sie
 from harness.evidence import senso
 from harness.models import USER_ID, EvidenceRequest, EvidenceResponse, ShoesRequest, ShoesResponse
@@ -21,6 +22,28 @@ def require_secret(x_harness_secret: str = Header(default="")) -> None:
     """Only enforced when HARNESS_SECRET is set. /evidence stays open: EvidenceClient sends no header."""
     if config.HARNESS_SECRET and not hmac.compare_digest(x_harness_secret, config.HARNESS_SECRET):
         raise HTTPException(status_code=401, detail="bad secret")
+
+
+def require_device(user: str, authorization: str = Header(default="")) -> None:
+    """Every /users/{user}/... route: the caller's device token must belong to this user (E9)."""
+    if not re.fullmatch(USER_ID, user):
+        raise HTTPException(status_code=422, detail="not an anonymous user id")
+    token = authorization.removeprefix("Bearer ").strip() if authorization.startswith("Bearer ") else ""
+    if not devices.verify(user, token):
+        raise HTTPException(status_code=401, detail="unknown device")
+
+
+class DeviceRequest(BaseModel):
+    user: str = Field(pattern=USER_ID)
+
+
+@app.post("/devices", dependencies=[Depends(require_secret)])
+def device_register(req: DeviceRequest) -> dict:
+    """Registers this install and returns its own token, once per user (eng review D7)."""
+    try:
+        return {"token": devices.register(req.user)}
+    except devices.AlreadyRegistered:
+        raise HTTPException(status_code=409, detail="already_registered")
 
 
 @app.get("/health")
@@ -42,13 +65,13 @@ def _user(user: str) -> str:
     return user
 
 
-@app.get("/users/{user}", dependencies=[Depends(require_secret)])
+@app.get("/users/{user}", dependencies=[Depends(require_device)])
 def user_get(user: str) -> dict:
     """What the harness keeps for this anonymous id: history size and age, recommendation count, age check."""
     return store.user_summary(_user(user))
 
 
-@app.delete("/users/{user}", dependencies=[Depends(require_secret)])
+@app.delete("/users/{user}", dependencies=[Depends(require_device)])
 def user_delete(user: str) -> dict:
     """Erases everything kept for this id: Apple Health history, recommendation records, age check."""
     try:
@@ -57,7 +80,7 @@ def user_delete(user: str) -> dict:
         raise HTTPException(status_code=502, detail=f"singlestore: {type(exc).__name__}")
 
 
-@app.post("/users/{user}/events", dependencies=[Depends(require_secret)])
+@app.post("/users/{user}/events", dependencies=[Depends(require_device)])
 def user_events(user: str, req: events.EventsRequest) -> dict:
     """The phone's guardrail events (plan item 9, eng review D1). Fails closed: 503 without a
     persistent store and 502 on a write failure, so the phone's outbox keeps them; on success,
@@ -102,33 +125,33 @@ def _buddy(call):
         raise HTTPException(status_code=err.status, detail=err.code)
 
 
-@app.post("/users/{user}/buddy", dependencies=[Depends(require_secret)])
+@app.post("/users/{user}/buddy", dependencies=[Depends(require_device)])
 def buddy_invite(user: str, req: BuddyName) -> dict:
     """A new 8-character invite code, good for 48 hours and one friend."""
     return _buddy(lambda: buddy.create_invite(_user(user), req.displayName))
 
 
-@app.post("/users/{user}/buddy/redeem", dependencies=[Depends(require_secret)])
+@app.post("/users/{user}/buddy/redeem", dependencies=[Depends(require_device)])
 def buddy_redeem(user: str, req: BuddyCode) -> dict:
     return _buddy(lambda: buddy.redeem(_user(user), req.code))
 
 
-@app.get("/users/{user}/buddy", dependencies=[Depends(require_secret)])
+@app.get("/users/{user}/buddy", dependencies=[Depends(require_device)])
 def buddy_status(user: str) -> dict:
     return _buddy(lambda: buddy.status(_user(user)))
 
 
-@app.patch("/users/{user}/buddy", dependencies=[Depends(require_secret)])
+@app.patch("/users/{user}/buddy", dependencies=[Depends(require_device)])
 def buddy_rename(user: str, req: BuddyName) -> dict:
     return _buddy(lambda: buddy.rename(_user(user), req.displayName))
 
 
-@app.delete("/users/{user}/buddy", dependencies=[Depends(require_secret)])
+@app.delete("/users/{user}/buddy", dependencies=[Depends(require_device)])
 def buddy_unpair(user: str) -> dict:
     return _buddy(lambda: buddy.unpair(_user(user)))
 
 
-@app.put("/users/{user}/push-token", dependencies=[Depends(require_secret)])
+@app.put("/users/{user}/push-token", dependencies=[Depends(require_device)])
 def push_token(user: str, req: PushToken) -> dict:
     """This device's APNs token and its environment, for buddy notes only."""
     _buddy(lambda: buddy.save_token(_user(user), req.token, req.environment))
@@ -225,6 +248,53 @@ def shoes_recommend(req: ShoesRequest) -> ShoesResponse:
         return shoes.recommend(req)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"unknown persona {req.persona}")
+
+
+# --- the coach view (range plan item 20) ---
+
+class CoachShareRequest(BaseModel):
+    displayName: str
+    includeFeelings: bool = False
+
+
+class CoachShareEdit(BaseModel):
+    displayName: str | None = None
+    includeFeelings: bool | None = None
+    renew: bool = False
+
+
+@app.post("/users/{user}/coach-shares", dependencies=[Depends(require_device)])
+def coach_share_create(user: str, req: CoachShareRequest) -> dict:
+    """A private read-only link for the runner's coach: the token appears only in this answer."""
+    return _buddy(lambda: coach.create(_user(user), req.displayName, req.includeFeelings))
+
+
+@app.get("/users/{user}/coach-shares", dependencies=[Depends(require_device)])
+def coach_share_list(user: str) -> dict:
+    return {"shares": _buddy(lambda: coach.list_shares(_user(user)))}
+
+
+@app.patch("/users/{user}/coach-shares/{share_id}", dependencies=[Depends(require_device)])
+def coach_share_edit(user: str, share_id: str, req: CoachShareEdit) -> dict:
+    return _buddy(lambda: coach.update(_user(user), share_id, req.includeFeelings, req.displayName, req.renew))
+
+
+@app.delete("/users/{user}/coach-shares/{share_id}", dependencies=[Depends(require_device)])
+def coach_share_revoke(user: str, share_id: str) -> dict:
+    _buddy(lambda: coach.revoke(_user(user), share_id))
+    return {"revoked": True}
+
+
+@app.get("/coach/{token}", include_in_schema=False)
+def coach_page(token: str) -> HTMLResponse:
+    """Public and token-scoped (E13): registered before the catch-all, escaped, never indexed or
+    cached. Revoked, expired and unknown links get the same page, so the token isn't an oracle."""
+    try:
+        page = coach.page_for(token) if len(token) <= 64 else coach.render_inactive()
+    except Exception:
+        page = coach.render_inactive()
+    return HTMLResponse(page, headers={"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store",
+                                       "Referrer-Policy": "no-referrer"})
 
 
 @app.api_route("/{rest:path}", methods=["GET", "POST"], include_in_schema=False)

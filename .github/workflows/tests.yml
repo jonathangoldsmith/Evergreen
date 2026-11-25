@@ -1,0 +1,61 @@
+# Tests on every pull request and on main (range plan task T10).
+# The harness's pytest suite and the app's Swift tests, which share
+# contract/fixtures/guardrail.json so the brake's rule can't drift.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harness:
+    name: Harness (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: harness
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv run --frozen pytest -q
+
+  app:
+    name: App (Swift tests)
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the newest Xcode on the runner
+        run: |
+          xcode="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          udid="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          phones = [d for runtime, ds in sorted(devices.items()) if "iOS" in runtime for d in ds if d["name"].startswith("iPhone")]
+          print(phones[-1]["udid"])')"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+      # No Secrets.xcconfig in CI: the app builds without Amplitude or the harness secret.
+      # The runner is in UTC; tests that depend on the day pass their own calendar.
+      - name: Test
+        run: |
+          set +e
+          xcodebuild test -project app/Evergreen.xcodeproj -scheme Evergreen \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build > xcodebuild.log 2>&1
+          status=$?
+          # Each failing expectation and the summary, not just the last lines of the log.
+          grep -E "error:|recorded an issue|Test run with|TEST (SUCCEEDED|FAILED)" xcodebuild.log | grep -v CoreData
+          exit $status

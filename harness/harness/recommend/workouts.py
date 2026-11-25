@@ -18,7 +18,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from harness import data, people, store
+from harness import data, guardrail, people, store
 from harness.clients import sie
 from harness.models import USER_ID, History, PhoneMemory, ShoeState
 from harness.recommend.condition import condition
@@ -118,6 +118,19 @@ def usual_week(ws: list[dict], now: datetime) -> dict[int, dict]:
     return week
 
 
+def keep_in_range(s: dict, history: list[dict], now: datetime) -> None:
+    """Shortens a planned run that the brake would flag, and says so in its tags (wellness
+    wording: "in range", never "safe")."""
+    if s.get("race") or s["activityType"] != "Running" or not s["minutes"]:
+        return
+    start = datetime.combine(s["date"], datetime.min.time(), tzinfo=now.tzinfo).replace(hour=s["hour"])
+    run = guardrail.PlannedRun(start=start, size=float(s["minutes"]), unit="minutes", minutes=float(s["minutes"]))
+    found = guardrail.flag(run, history)
+    if found and found.kind in ("spike", "returnSpike"):
+        s["minutes"] = int(found.suggested)
+        s["tags"].append(f"kept in range: your longest run this month was {int(found.longest30 or found.suggested)} min")
+
+
 def build(req: WorkoutsRequest) -> dict:
     now = req.now
     # Whole-week shift so weekdays match the history (and Tony's memory slots, computed on the same data).
@@ -170,6 +183,11 @@ def build(req: WorkoutsRequest) -> dict:
                 s["tags"].append("break-in run in the new pair")
                 broken_in += 1
         sessions.append(s)
+
+    # The brake (range plan items 5 and 6, the phone's rule): no planned run is a big jump from
+    # the longest run in the 30 days before it.
+    for s in sessions:
+        keep_in_range(s, ws, now)
 
     # Load cap: shrink the non-long sessions proportionally until the week fits.
     planned = sum(s["effort"] * s["minutes"] for s in sessions if not s.get("race"))

@@ -93,7 +93,7 @@ def test_a_bad_user_id_is_refused():
 def test_users_route_shows_and_erases_what_is_kept(monkeypatch):
     monkeypatch.setattr(config, "HARNESS_SECRET", "s")
     client.post("/workouts/recommend", json=body(), headers={"X-Harness-Secret": "s"})
-    assert client.get(f"/users/{USER}").status_code == 401
+    # Who may read /users/{user} is the device token's job now (tests/test_devices.py).
 
     kept = client.get(f"/users/{USER}", headers={"X-Harness-Secret": "s"}).json()
     assert kept["historyStored"] and kept["workouts"] == 12 and kept["days"] == 28

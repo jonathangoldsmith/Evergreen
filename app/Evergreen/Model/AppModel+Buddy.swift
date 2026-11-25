@@ -63,9 +63,12 @@ extension AppModel {
         }
     }
 
-    /// Sharing uploads a push token and workouts, so it needs uploads on. The
-    /// screen that calls this has already said so.
-    private func allowUploadsForSharing() {
+    /// The coach-share client, when the harness is set up (range plan item 20).
+    var coachClient: CoachClient? { CoachClient.configured() }
+
+    /// Sharing uploads a push token, workouts or a coach's page, so it needs
+    /// uploads on. The screen that calls this has already said so.
+    func allowUploadsForSharing() {
         if profile.uploadsAllowed != true { setConsent(uploads: true, research: profile.researchAllowed) }
     }
 
