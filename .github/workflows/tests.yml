@@ -48,9 +48,14 @@ jobs:
           print(phones[-1]["udid"])')"
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
       # No Secrets.xcconfig in CI: the app builds without Amplitude or the harness secret.
+      # The runner is in UTC; tests that depend on the day pass their own calendar.
       - name: Test
         run: |
+          set +e
           xcodebuild test -project app/Evergreen.xcodeproj -scheme Evergreen \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
-            -derivedDataPath build | tail -40
-          exit "${PIPESTATUS[0]}"
+            -derivedDataPath build > xcodebuild.log 2>&1
+          status=$?
+          # Each failing expectation and the summary, not just the last lines of the log.
+          grep -E "error:|recorded an issue|Test run with|TEST (SUCCEEDED|FAILED)" xcodebuild.log | grep -v CoreData
+          exit $status

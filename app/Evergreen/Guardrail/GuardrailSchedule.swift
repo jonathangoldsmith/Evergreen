@@ -31,7 +31,7 @@ enum GuardrailSchedule {
             if let flag = state.flag {
                 let at = swapTime(for: state.run, calendar: calendar)
                 if at > now {
-                    let copy = GuardrailCopy.spikeNote(state.run, flag, now: at)
+                    let copy = GuardrailCopy.spikeNote(state.run, flag, now: at, calendar: calendar)
                     notes.append(GuardrailNote(kind: .swap, fireAt: at, title: copy.title, body: copy.body,
                                                run: state.run, flag: flag))
                 }

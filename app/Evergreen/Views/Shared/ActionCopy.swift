@@ -60,13 +60,12 @@ enum ActionCopy {
 
     /// "Keep your 40 points: a 15-minute walk tonight." Points are framed as
     /// something to keep, never a loss (range plan item 13).
-    static func comebackKeep(_ action: AgentAction, now: Date) -> String? {
+    static func comebackKeep(_ action: AgentAction, now: Date, calendar: Calendar = .current) -> String? {
         guard action.kind == .bookComeback, let points = action.points, let after = action.after else { return nil }
-        return "Keep your \(points) points: a \(after.minutes)-minute \(Activity.noun(after.activityType)) \(when(after.start, now: now))."
+        return "Keep your \(points) points: a \(after.minutes)-minute \(Activity.noun(after.activityType)) \(when(after.start, now: now, calendar: calendar))."
     }
 
-    static func when(_ date: Date, now: Date) -> String {
-        let calendar = Calendar.current
+    static func when(_ date: Date, now: Date, calendar: Calendar = .current) -> String {
         if calendar.isDate(date, inSameDayAs: now) {
             return calendar.component(.hour, from: date) >= 17 ? "tonight" : "today"
         }
