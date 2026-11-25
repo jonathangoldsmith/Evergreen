@@ -69,6 +69,12 @@ struct TodayView: View {
         .background(Theme.surface)
         .sheet(isPresented: $showYourData) { YourDataView() }
         .sheet(item: ostrcBinding) { week in OSTRCSheet(week: week.date) }
+        .sheet(item: celebrationBinding) { completion in DoneSheet(completion: completion) }
+    }
+
+    /// The Done sheet shows once per finished plan item (range plan item 14).
+    private var celebrationBinding: Binding<Completion?> {
+        Binding(get: { model.celebration }, set: { model.celebration = $0 })
     }
 
     /// The OSTRC sheet shows while a week's questions are waiting.

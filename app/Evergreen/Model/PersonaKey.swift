@@ -4,6 +4,8 @@ import Foundation
 /// runner whose week drives every demo beat.
 enum PersonaKey: String, Codable, CaseIterable, Identifiable {
     case jordan
+    /// The newcomer: 2 workouts a week or fewer, so the push applies (plan item 10).
+    case sam
     case me
 
     var id: String { rawValue }

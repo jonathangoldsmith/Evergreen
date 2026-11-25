@@ -87,8 +87,25 @@ class WorkoutCompletedEvent(_Event):
     minutes: int = Field(ge=0, le=1440)
 
 
+class MissEvent(_Event):
+    """A planned workout with no matching workout by 30 minutes after it ended (range plan item 12)."""
+    type: Literal["miss"]
+    activityType: str = Field(max_length=40)
+    minutes: int = Field(ge=0, le=1440)
+
+
+class ComebackEvent(_Event):
+    """The push's comeback (item 16): offered, undone or completed. Kind, length and points only."""
+    type: Literal["comeback"]
+    action: Literal["offered", "undone", "completed"]
+    activityType: str = Field(max_length=40)
+    minutes: int = Field(ge=0, le=1440)
+    points: Optional[int] = Field(default=None, ge=0, le=1000)
+
+
 Event = Annotated[Union[FlagEvent, ChoiceEvent, CheckInEvent, PainEvent, InjuryEvent, BacktestAnswerEvent,
-                        RangeWeekEvent, ConsentEvent, WorkoutCompletedEvent], Field(discriminator="type")]
+                        RangeWeekEvent, ConsentEvent, WorkoutCompletedEvent, MissEvent, ComebackEvent],
+                  Field(discriminator="type")]
 
 # The one type that updates in place (eng re-run outside voice #2): a week's counts
 # change until Tuesday night, so the newest upload wins.

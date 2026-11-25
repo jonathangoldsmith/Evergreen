@@ -78,6 +78,8 @@ final class AppModel {
     @ObservationIgnored var flagsShown: Set<String> = []
     /// The last week counts queued, so a tick only uploads a change.
     @ObservationIgnored var lastRangeUpload: UploadEvent?
+    /// Set when a workout finishes a plan item; shows the Done sheet (range plan item 14).
+    var celebration: Completion?
 
     init(context: ModelContext, amplitude: Amplitude? = nil) {
         self.context = context
@@ -307,6 +309,15 @@ final class AppModel {
         for action in response.actions where !known.contains(action.id) {
             record(action)
             announceMove(action)
+            notePush(action)
+        }
+        // A workout that finished a plan item gets its Done sheet once.
+        let seen = Set(run.seenCompletions)
+        let fresh = response.completions.filter { !seen.contains($0.planItemId) }
+        if !fresh.isEmpty {
+            run.seenCompletions += fresh.map(\.planItemId)
+            celebration = fresh.last
+            for completion in fresh where completion.comeback { noteComebackDone(completion) }
         }
         self.response = response
         run.lastResponse = try? JSONEncoder.contract.encode(response)
@@ -318,6 +329,9 @@ final class AppModel {
     func undo(_ action: AgentAction) {
         guard let record = run.actions.first(where: { $0.actionId == action.id }), !record.undone else { return }
         record.undone = true
+        if action.kind == .bookComeback, let after = action.after {
+            upload(.comeback("undone", item: after, points: action.points, comebackId: action.id, at: Date(), calendar: calendar))
+        }
         save()
         Task { await tick() }
     }
@@ -562,6 +576,10 @@ final class AppModel {
     }
 
     // MARK: Storage
+
+    /// For extensions: the run's logged workouts and demo clock are private.
+    func runWorkoutsAppend(_ record: LoggedWorkout) { run.workouts.append(record) }
+    func setClockMinutes(_ minutes: Int?) { run.clockMinutes = minutes }
 
     /// Appends an action to the log, after everything already applied.
     private func record(_ action: AgentAction) {

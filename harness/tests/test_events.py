@@ -169,3 +169,14 @@ def test_every_table_with_a_user_column_is_in_the_delete():
                  if re.search(r"\b(user_id|persona)\b\s+VARCHAR", next(s for s in store.DDL if f"EXISTS {t} " in s))}
     assert tables == with_user
     assert "guardrail_events" in tables
+
+
+def test_misses_and_comebacks_are_stored(db):
+    """The push's logging (range plan item 16)."""
+    miss = {"id": "miss-0123456789abcdef", "type": "miss", "at": "2026-11-19T13:30:00-08:00",
+            "activityType": "Walking", "minutes": 30}
+    offered = {"id": "comeback-offered-0123456789ab", "type": "comeback", "at": "2026-11-19T13:30:00-08:00",
+               "action": "offered", "activityType": "Walking", "minutes": 15, "points": 40}
+    assert post([miss, offered]).status_code == 200
+    assert post([{**offered, "id": "comeback-x-00000001", "action": "accepted"}]).status_code == 422
+    assert len(db["events"]) == 2

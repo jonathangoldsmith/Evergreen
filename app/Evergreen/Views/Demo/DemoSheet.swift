@@ -18,6 +18,13 @@ struct DemoSheet: View {
                         model.showMovedDemo()
                     }
                     .disabled(model.calendarAccess != .on)
+                    beat("A missed walk books a comeback", detail: "Sam, 1:30 PM: today's noon walk was missed, so Evergreen books a 15-minute walk tonight for double points.") {
+                        model.showComebackDemo()
+                    }
+                    beat("Finish the comeback", detail: "Logs Sam's comeback walk at its time: the Done sheet shows 2× points and the buddy celebrates.") {
+                        model.finishComebackDemo()
+                    }
+                    .disabled(!model.plan.contains { $0.source == .comeback })
                     beat("A big jump on tomorrow's long run", detail: "A Runna-style calendar plans 2½ hours; Jordan's longest this month was under 2. Evergreen asks to shorten it and leaves Runna's event alone.") {
                         model.showBrakeDemo()
                     }
