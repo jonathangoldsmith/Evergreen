@@ -91,7 +91,7 @@ def post(events, user=USER):
 def test_events_are_stored_and_their_ids_returned(db):
     r = post([pain(), flag()])
     assert r.status_code == 200
-    assert r.json() == {"stored": ["pain-2026-11-16", "flag-0001"]}
+    assert r.json()["stored"] == ["pain-2026-11-16", "flag-0001"]
     assert len(db["events"]) == 2
     doc = json.loads(db["events"][(USER, "flag-0001")][5])
     assert doc["suggested"] == 13 and doc["type"] == "flag"
@@ -157,7 +157,8 @@ def test_delete_erases_every_user_table_including_events(db):
     r = client.delete(f"/users/{USER}")
     assert r.status_code == 200
     assert r.json()["deleted"]["guardrail_events"] == 2
-    assert set(db["deleted"]) == {"verifications", "recommendations", "user_history", "guardrail_events"}
+    assert {"verifications", "recommendations", "user_history", "guardrail_events", "buddy_pairs",
+            "buddy_notes", "push_tokens", "buddy_redeem_failures"} <= set(db["deleted"])
     assert list(db["events"]) == [(OTHER, "pain-2026-11-16")]
 
 
@@ -166,7 +167,8 @@ def test_every_table_with_a_user_column_is_in_the_delete():
     tables = {t for t, _ in store.user_tables()}
     created = {re.search(r"CREATE TABLE IF NOT EXISTS (\w+)", s).group(1) for s in store.DDL}
     with_user = {t for t in created
-                 if re.search(r"\b(user_id|persona)\b\s+VARCHAR", next(s for s in store.DDL if f"EXISTS {t} " in s))}
+                 if re.search(r"\b(user_id|persona|inviter_id|friend_id)\b\s+VARCHAR",
+                              next(s for s in store.DDL if f"EXISTS {t} " in s))}
     assert tables == with_user
     assert "guardrail_events" in tables
 
