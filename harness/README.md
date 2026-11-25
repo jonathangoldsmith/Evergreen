@@ -26,6 +26,11 @@ PYTHONPATH=. uv run uvicorn api.index:app --reload --port 8000
 | `POST /shoes/prefetch?persona=jordan` | Researches shoes on the web now (Nimble + SIE, about 30 s) and stores them in SingleStore when configured. Needs the secret. |
 | `GET /audit/recent?persona=jordan&limit=20` | The latest recommendations from SingleStore. Needs the secret; 503 when SingleStore is off. |
 | `GET /audit/{auditId}` | One full audit record. Needs the secret. |
+| `POST /users/{user}/events` | The phone's guardrail and push events (range plan item 9): strict typed events, each stored once; `range_week` updates in place. Returns the ids stored and any buddy notes sent. 503 without SingleStore. Needs the secret. |
+| `POST /users/{user}/buddy` | `{displayName}` → `{code, expiresAt}`: an 8-character invite, good once for 48 hours (range plan item 22). |
+| `POST /users/{user}/buddy/redeem` | `{code}` pairs the friend; refusals say why (`own_code`, `used`, `expired`, `already_paired`, `unknown_code`, `too_many_tries`). |
+| `GET`, `PATCH`, `DELETE /users/{user}/buddy` | The pair's status and the friend's last notes (never another person's id); rename the inviter's display name; unpair. |
+| `PUT /users/{user}/push-token` | `{token, environment}` (production or sandbox), for buddy notes only. |
 | `POST /shoes/recommend` | `{persona, now, shoes:{boughtOn,startMiles}, raceDate, mandate}` → `{condition, profile, purchase?, live, source}`. `purchase` uses the Swift `Purchase` shape. |
 
 ```sh
@@ -116,6 +121,6 @@ Live at **https://trackerplusplus-harness.vercel.app** (personal Vercel project 
 
 - Entry point: `main.py` exposes the FastAPI `app` (Vercel's zero-config FastAPI support); `vercel.json` stays empty. A rewrite to `api/index.py` dropped the request path.
 - Dependencies come from `requirements.txt`. `.vercelignore` keeps `.env`, tests and scripts out of the upload.
-- Environment variables (production): `SUPERLINKED_API_KEY`, `SENSO_API_KEY`, `NIMBLE_API_KEY`, `HARNESS_SECRET`.
+- Environment variables (production): `SUPERLINKED_API_KEY`, `SENSO_API_KEY`, `NIMBLE_API_KEY`, `HARNESS_SECRET`. For guardrail events and the buddy: `SINGLESTORE_URL` (they refuse with 503 without it). For buddy notes: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (the .p8 file's contents) and `APNS_TOPIC` (`com.evergreentraining.app`); without them notes stay pending and drop after 24 hours.
 - `HARNESS_SECRET` is on: `/shoes/recommend` and `/warm` need `X-Harness-Secret: <value from harness/.env>`; `/health` and `/evidence` stay open.
 - Redeploy: `cd harness && npx vercel deploy --prod --yes`. Before the demo: `POST /warm` with the header.
