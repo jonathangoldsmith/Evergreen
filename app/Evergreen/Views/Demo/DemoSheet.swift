@@ -25,6 +25,9 @@ struct DemoSheet: View {
                         model.finishComebackDemo()
                     }
                     .disabled(!model.plan.contains { $0.source == .comeback })
+                    beat("Coming back from an injury", detail: "An injury last month: Today offers a 4-week walk-run plan on your usual days, and pauses Runna's runs while it lasts.") {
+                        model.showReturnDemo()
+                    }
                     beat("A big jump on tomorrow's long run", detail: "A Runna-style calendar plans 2½ hours; Jordan's longest this month was under 2. Evergreen asks to shorten it and leaves Runna's event alone.") {
                         model.showBrakeDemo()
                     }

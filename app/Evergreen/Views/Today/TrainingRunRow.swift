@@ -32,8 +32,10 @@ struct TrainingRunRow: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// "Long run 18 km · Runna"
+    /// "Long run 18 km · Runna", or, during a return plan,
+    /// "Paused for your return plan (Runna says Long run 18 km)" (item 21).
     private var detail: String {
-        [run.title, run.calendarTitle].joined(separator: " · ")
+        if model.isPausedForReturn(run) { return "Paused for your return plan (\(run.calendarTitle) says \(run.title))" }
+        return [run.title, run.calendarTitle].joined(separator: " · ")
     }
 }

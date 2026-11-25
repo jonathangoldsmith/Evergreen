@@ -26,11 +26,14 @@ struct TodayView: View {
                 if let week = model.pendingPainWeek {
                     PainCheckInCard(week: week)
                 }
+                if ReturnPlanCard.shows(model) {
+                    ReturnPlanCard()
+                }
                 if let action = model.latestAction, let purchaseId = action.purchaseId {
                     PurchaseCard(purchaseId: purchaseId)
                 } else if let action = model.latestAction {
                     AgentCard(action: action)
-                } else if model.guardrailRuns.isEmpty && model.pendingPainWeek == nil {
+                } else if model.guardrailRuns.isEmpty && model.pendingPainWeek == nil && !ReturnPlanCard.shows(model) {
                     QuietState()
                 }
                 TodayPlanSection()

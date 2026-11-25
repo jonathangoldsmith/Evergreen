@@ -38,7 +38,7 @@ extension AppModel {
     var guardrailRuns: [PlannedRun] {
         let horizon = Date(timeInterval: 36 * 3600, since: now)
         return trainingRuns.filter { run in
-            guard run.start > now, run.start < horizon else { return false }
+            guard run.start > now, run.start < horizon, !isPausedForReturn(run) else { return false }
             return decision(for: run) != nil || flag(for: run) != nil || needsMorningCheck(run)
         }
     }
@@ -164,7 +164,9 @@ extension AppModel {
     var weekTrainingRuns: [PlannedRun] {
         let swapped = Set(swapItems.map(\.id))
         let end = calendar.date(byAdding: .day, value: 7, to: storyDay) ?? storyDay
-        return trainingRuns.filter { $0.start >= storyDay && $0.start < end && !swapped.contains($0.swapItemId) }
+        return trainingRuns.filter {
+            $0.start >= storyDay && $0.start < end && !swapped.contains($0.swapItemId) && !isPausedForReturn($0)
+        }
     }
 
     /// Every workout this week, counted once: Evergreen's plan (swaps included)

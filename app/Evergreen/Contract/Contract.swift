@@ -31,9 +31,10 @@ struct Busy: Codable, Hashable {
 }
 
 /// One planned workout: from the week plan, a comeback, a routine, or a
-/// guardrail swap that replaces a run on a training calendar (plan item 8).
+/// guardrail swap that replaces a run on a training calendar (plan item 8), or a
+/// return-to-running session (item 21).
 struct PlanItem: Codable, Hashable, Identifiable {
-    enum Source: String, Codable { case plan, comeback, routine, swap }
+    enum Source: String, Codable { case plan, comeback, routine, swap, returnSession }
 
     var id: String
     var slot: Slot

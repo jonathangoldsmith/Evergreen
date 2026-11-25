@@ -68,6 +68,7 @@ final class AppModel {
     private(set) var decisions: [GuardrailDecision] = []
     private(set) var checkIns: [CheckInRecord] = []
     private(set) var painRecords: [PainRecord] = []
+    private(set) var returnPlans: [ReturnPlanState] = []
     /// "Not now" on the catch-up setup hides it until the next launch.
     var rangeSetupDeferredThisLaunch = false
     /// The week whose OSTRC questions are waiting, after "A little" or "Yes" (BN1).
@@ -134,9 +135,14 @@ final class AppModel {
             ? HistoryPlan.items(health.workouts, storyDay: storyDay, calendar: calendar, madeAt: run.planMadeAt)
             : PinnedPlan.items(for: persona.key, storyDay: storyDay)
         // One plan per day (item 1): a training calendar's run wins over
-        // Evergreen's own workout that day.
-        let runDays = Set(trainingRuns.map { calendar.startOfDay(for: $0.start) })
-        return items.filter { !runDays.contains(calendar.startOfDay(for: $0.slot.start)) }
+        // Evergreen's own workout that day, and a return-plan session wins over both (item 21).
+        let runDays = Set((trainingRuns.map(\.start) + returnSessions.map(\.start)).map { calendar.startOfDay(for: $0) })
+        // During a return plan, Evergreen's own runs pause too, so no one runs twice (item 21).
+        let returning = returnPlan.map { $0.status == .active || $0.status == .paused } ?? false
+        return items.filter {
+            !runDays.contains(calendar.startOfDay(for: $0.slot.start))
+                && !(returning && $0.slot.activityType == "Running" && $0.slot.end > (returnPlan?.start ?? .distantFuture))
+        }
     }
 
     /// Where the person's history begins: Apple Health's first workout, or Jordan's mock history.
@@ -168,7 +174,7 @@ final class AppModel {
                 break
             }
         }
-        return (items + swapItems).sorted { $0.slot.start < $1.slot.start }
+        return (items + swapItems + returnItems).sorted { $0.slot.start < $1.slot.start }
     }
 
     var todayPlan: [PlanItem] { plan.filter { calendar.isDate($0.slot.start, inSameDayAs: storyDay) } }
@@ -622,6 +628,8 @@ final class AppModel {
         decisions = (try? context.fetch(FetchDescriptor<GuardrailDecision>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
         checkIns = (try? context.fetch(FetchDescriptor<CheckInRecord>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
         painRecords = (try? context.fetch(FetchDescriptor<PainRecord>(sortBy: [SortDescriptor(\.weekStart)]))) ?? []
+        returnPlans = (try? context.fetch(FetchDescriptor<ReturnPlanState>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
+        finishReturnPlanIfDone()
     }
 
     /// Reads the picked training calendars again (plan item 1), and withdraws
@@ -644,7 +652,7 @@ final class AppModel {
         for action in appliedActions where !isUndone(action) {
             if let id = action.planItemId { reasons[id] = action.reason }
         }
-        let entries = CalendarEntry.entries(for: plan, reasons: reasons, titles: swapTitles,
+        let entries = CalendarEntry.entries(for: plan, reasons: reasons, titles: swapTitles.merging(returnTitles) { $1 },
                                             storyDay: storyDay, calendar: calendar)
         calendarSync.sync(entries, from: storyDay)
     }
