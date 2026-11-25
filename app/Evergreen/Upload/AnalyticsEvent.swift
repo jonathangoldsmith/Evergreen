@@ -12,6 +12,8 @@ enum AnalyticsEvent: Hashable, Sendable {
     /// The push (range plan item 16): no durations or health values.
     case comebackBooked
     case comebackDone
+    /// paired or unpaired (item 9's list).
+    case buddy(String)
 
     var name: String {
         switch self {
@@ -22,6 +24,7 @@ enum AnalyticsEvent: Hashable, Sendable {
         case .rangeReportViewed: "range_report_viewed"
         case .comebackBooked: "comeback_booked"
         case .comebackDone: "comeback_done"
+        case .buddy: "buddy"
         }
     }
 
@@ -36,6 +39,8 @@ enum AnalyticsEvent: Hashable, Sendable {
             ["answered": answered ? "true" : "false"]
         case .backtestCompleted(let answered):
             ["answered": String(answered)]
+        case .buddy(let action):
+            ["action": action == "paired" ? "paired" : "unpaired"]
         case .rangeReportViewed, .comebackBooked, .comebackDone:
             [:]
         }

@@ -54,6 +54,20 @@ struct TodayView: View {
                 .frame(minHeight: 44)
                 .padding(.top, Theme.sm)
                 .accessibilityElement(children: .combine)
+                // One quiet, dismissible line for the push side (design decision 4).
+                if model.showsBuddyInvite {
+                    HStack {
+                        Button(BuddyCopy.invitePrompt) { showYourData = true }
+                            .font(.footnote)
+                            .foregroundStyle(Theme.text)
+                        Spacer()
+                        Button("Dismiss", systemImage: "xmark") { model.dismissBuddyInvite() }
+                            .labelStyle(.iconOnly)
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textMuted)
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                }
                 // For everyone: the brake's settings (calendars, injury, uploads) live here.
                 Button("Your data") { showYourData = true }
                     .font(.footnote)

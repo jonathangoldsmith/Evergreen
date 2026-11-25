@@ -80,6 +80,8 @@ final class AppModel {
     @ObservationIgnored var lastRangeUpload: UploadEvent?
     /// Set when a workout finishes a plan item; shows the Done sheet (range plan item 14).
     var celebration: Completion?
+    /// The accountability buddy as the harness last said (range plan item 22).
+    var buddyStatus: BuddyClient.Status?
 
     init(context: ModelContext, amplitude: Amplitude? = nil) {
         self.context = context
@@ -441,6 +443,7 @@ final class AppModel {
         let changed = read.workouts != health.workouts || read.days != health.days
         health = read
         read.saveToCache()
+        shareFinishedWorkouts()
         if changed, persona.key.isReal { await tick() }
     }
 

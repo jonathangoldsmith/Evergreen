@@ -3,6 +3,8 @@ import SwiftUI
 /// Onboarding screen 1: the mark, the buddy waving hi, Evergreen's promise, Let's go.
 struct WelcomeView: View {
     let onStart: () -> Void
+    /// A friend's buddy invite: the short path (range plan item 22).
+    var onFriendCode: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -23,6 +25,13 @@ struct WelcomeView: View {
             Button("Let’s go", action: onStart)
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.top, 40)
+            if let onFriendCode {
+                Button("Have a code from a friend?", action: onFriendCode)
+                    .font(.body)
+                    .foregroundStyle(Theme.text)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .padding(.top, Theme.xs)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.lg)
