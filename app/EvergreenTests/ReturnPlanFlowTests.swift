@@ -13,6 +13,9 @@ struct ReturnPlanFlowTests {
     }
 
     @Test func aRecentInjuryOffersThePlanAndAnOldOneDoesnt() throws {
+        // "Not now" is remembered per install; earlier runs mustn't leak in.
+        UserDefaults.standard.removeObject(forKey: AppModel.offerDismissedKey)
+        defer { UserDefaults.standard.removeObject(forKey: AppModel.offerDismissedKey) }
         let model = try NotifierActionTests.model()
         #expect(!model.offersReturnPlan)
         Self.injured(model, monthsAgo: 5)

@@ -8,7 +8,7 @@ import SwiftData
 extension AppModel {
     /// An injury this recent brings the offer (item 21).
     static let returnOfferMonths = 3
-    private static let offerDismissedKey = "return_offer_dismissed_for"
+    static let offerDismissedKey = "return_offer_dismissed_for"
 
     /// The newest plan, whatever its state.
     var returnPlan: ReturnPlanState? { returnPlans.last }

@@ -73,6 +73,8 @@ final class AppModel {
     var rangeSetupDeferredThisLaunch = false
     /// The week whose OSTRC questions are waiting, after "A little" or "Yes" (BN1).
     var ostrcWeek: Date?
+    /// The watch's WatchConnectivity link (range plan item 19).
+    @ObservationIgnored let watchLink = PhoneWatchLink()
     /// Guardrail events waiting for the harness (eng review D1).
     @ObservationIgnored let outbox: EventOutbox
     /// Flags already counted as shown this launch, for Amplitude.
@@ -111,6 +113,8 @@ final class AppModel {
         calendarSync.onChange = { [weak self] in self?.calendarChanged() }
         notifier.onOpen = { [weak self] in Task { await self?.tick() } }
         notifier.onAction = { [weak self] action, payload in await self?.handleNotificationAction(action, payload) }
+        watchLink.onAnswer = { [weak self] answer in self?.handleWatchAnswer(answer) }
+        watchLink.start()
         Task { await refreshNotifications() }
         if persona.key.isReal { Task { await refreshHealth() } }
     }
@@ -616,6 +620,7 @@ final class AppModel {
         }
         refreshTrainingRuns()
         refreshFromStore()
+        pushWatchState()
         syncCalendar()
         Task { await scheduleNotifications() }
     }
