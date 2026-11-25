@@ -28,6 +28,8 @@ class FlagEvent(_Event):
     longest30: Optional[float] = Field(default=None, ge=0, le=1000)
     injuryAdjusted: bool = False
     runDay: date
+    # The run's hashed key, matching its choice events (the coach page joins them).
+    run: Optional[str] = Field(default=None, pattern=r"^swap-[0-9a-f]{12}$")
 
 
 class ChoiceEvent(_Event):

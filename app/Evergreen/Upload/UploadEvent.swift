@@ -63,6 +63,7 @@ struct UploadEvent: Codable, Hashable, Sendable {
         e.longest30 = flag.longest30?.rounded.value
         e.injuryAdjusted = flag.injuryAdjusted
         e.runDay = day(run.start, calendar: calendar)
+        e.run = run.swapItemId     // the coach page joins a flag to its choice by this
         return e
     }
 

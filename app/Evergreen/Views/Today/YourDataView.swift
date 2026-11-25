@@ -34,6 +34,7 @@ struct YourDataView: View {
                             .font(.headline)
                             .foregroundStyle(Theme.text)
                             .accessibilityAddTraits(.isHeader)
+                        CoachSection()
                         BuddySection()
                     }
                     section("On Evergreen's planner") {

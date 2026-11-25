@@ -7,8 +7,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import HTMLResponse
 
-from harness import buddy, config, events, store
+from harness import buddy, coach, config, events, store
 from harness.clients import sie
 from harness.evidence import senso
 from harness.models import USER_ID, EvidenceRequest, EvidenceResponse, ShoesRequest, ShoesResponse
@@ -225,6 +226,53 @@ def shoes_recommend(req: ShoesRequest) -> ShoesResponse:
         return shoes.recommend(req)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"unknown persona {req.persona}")
+
+
+# --- the coach view (range plan item 20) ---
+
+class CoachShareRequest(BaseModel):
+    displayName: str
+    includeFeelings: bool = False
+
+
+class CoachShareEdit(BaseModel):
+    displayName: str | None = None
+    includeFeelings: bool | None = None
+    renew: bool = False
+
+
+@app.post("/users/{user}/coach-shares", dependencies=[Depends(require_secret)])
+def coach_share_create(user: str, req: CoachShareRequest) -> dict:
+    """A private read-only link for the runner's coach: the token appears only in this answer."""
+    return _buddy(lambda: coach.create(_user(user), req.displayName, req.includeFeelings))
+
+
+@app.get("/users/{user}/coach-shares", dependencies=[Depends(require_secret)])
+def coach_share_list(user: str) -> dict:
+    return {"shares": _buddy(lambda: coach.list_shares(_user(user)))}
+
+
+@app.patch("/users/{user}/coach-shares/{share_id}", dependencies=[Depends(require_secret)])
+def coach_share_edit(user: str, share_id: str, req: CoachShareEdit) -> dict:
+    return _buddy(lambda: coach.update(_user(user), share_id, req.includeFeelings, req.displayName, req.renew))
+
+
+@app.delete("/users/{user}/coach-shares/{share_id}", dependencies=[Depends(require_secret)])
+def coach_share_revoke(user: str, share_id: str) -> dict:
+    _buddy(lambda: coach.revoke(_user(user), share_id))
+    return {"revoked": True}
+
+
+@app.get("/coach/{token}", include_in_schema=False)
+def coach_page(token: str) -> HTMLResponse:
+    """Public and token-scoped (E13): registered before the catch-all, escaped, never indexed or
+    cached. Revoked, expired and unknown links get the same page, so the token isn't an oracle."""
+    try:
+        page = coach.page_for(token) if len(token) <= 64 else coach.render_inactive()
+    except Exception:
+        page = coach.render_inactive()
+    return HTMLResponse(page, headers={"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store",
+                                       "Referrer-Policy": "no-referrer"})
 
 
 @app.api_route("/{rest:path}", methods=["GET", "POST"], include_in_schema=False)

@@ -54,6 +54,10 @@ DDL = [
         PRIMARY KEY (pair_id, note_id), SHARD KEY (pair_id))""",
     """CREATE TABLE IF NOT EXISTS buddy_redeem_failures (
         user_id VARCHAR(80) NOT NULL, at DATETIME(6) NOT NULL, SHARD KEY (user_id))""",
+    """CREATE TABLE IF NOT EXISTS coach_shares (
+        share_id VARCHAR(36) NOT NULL, user_id VARCHAR(80) NOT NULL, token_hash VARCHAR(64) NOT NULL,
+        display_name VARCHAR(40) NOT NULL, include_feelings TINYINT NOT NULL, created_at DATETIME(6) NOT NULL,
+        expires_at DATETIME(6) NOT NULL, revoked_at DATETIME(6), PRIMARY KEY (share_id), SHARD KEY (share_id))""",
     """CREATE TABLE IF NOT EXISTS push_tokens (
         user_id VARCHAR(80) NOT NULL, token VARCHAR(200) NOT NULL, environment VARCHAR(16) NOT NULL,
         updated_at DATETIME(6) NOT NULL, PRIMARY KEY (user_id), SHARD KEY (user_id))""",
