@@ -102,3 +102,44 @@ def test_users_route_shows_and_erases_what_is_kept(monkeypatch):
     assert gone.status_code == 200 and gone.json()["deleted"]["history"] == 1
     assert client.get(f"/users/{USER}", headers={"X-Harness-Secret": "s"}).json()["historyStored"] is False
     assert client.post("/workouts/recommend", json=body(history=None), headers={"X-Harness-Secret": "s"}).status_code == 404
+
+
+# --- delete_user's original three tables (eng review D3, task E3): characterization ---
+
+OTHER = "usr_fedcba9876543210"
+
+
+def _rows(conn, table, column, user):
+    cur = conn.db.execute(f"SELECT COUNT(*) FROM {table} WHERE {column} = ?", (user,))
+    return cur.fetchone()[0]
+
+
+def test_delete_still_erases_the_original_three_tables(monkeypatch):
+    """History, recommendation records and the age check: gone for this person, kept for
+    everyone else, and counted under the keys Your data already shows."""
+    from tests.sqlite_store import Conn
+    conn = Conn()
+    monkeypatch.setenv("SINGLESTORE_URL", "user:pw@fake:3306/db")
+    monkeypatch.setattr(store, "_conn", lambda: conn)
+    for who in (USER, OTHER):
+        store.save_history(who, {"workouts": [], "days": []})
+        store.save_verification(who, {"relay_token": "t", "relay_secret": "s", "status": "passed"})
+        for n in range(2):
+            conn.db.execute("INSERT INTO recommendations (id, created_at, persona, source, item, latency_ms, doc) "
+                            "VALUES (?, '2026-11-20 10:00:00', ?, 'rules', 'Pacer 9', 10, '{}')", (f"{who}-{n}", who))
+
+    removed = store.delete_user(USER)
+
+    assert removed["history"] == 1 and removed["recommendations"] == 2 and removed["verifications"] == 1
+    for table, column in (("user_history", "user_id"), ("recommendations", "persona"), ("verifications", "persona")):
+        assert _rows(conn, table, column, USER) == 0, table
+        assert _rows(conn, table, column, OTHER) >= 1, table
+    assert store.get_history(OTHER) is not None and USER not in store._histories
+
+
+def test_without_a_store_delete_still_clears_the_memory_copies(monkeypatch):
+    monkeypatch.delenv("SINGLESTORE_URL", raising=False)
+    store.save_history(USER, {"workouts": []})
+    store.save_verification(USER, {"relay_token": "t", "relay_secret": "s", "status": "passed"})
+    assert store.delete_user(USER) == {"history": 1, "recommendations": 0, "verifications": 1}
+    assert USER not in store._histories and USER not in store._verifications

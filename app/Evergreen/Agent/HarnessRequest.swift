@@ -5,20 +5,28 @@ import Foundation
 /// shared secret for harnesses deployed before per-device auth. On a 401 it
 /// registers again once and retries.
 enum HarnessRequest {
-    static func send(_ request: URLRequest, baseURL: URL, secret: String, user: String) async throws -> (Data, Int) {
-        let (data, status) = try await attempt(request, baseURL: baseURL, secret: secret, user: user)
+    /// How a request reaches the network; tests pass a fake (eng review D3, task E3).
+    typealias Transport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+
+    static let urlSession: Transport = { try await URLSession.shared.data(for: $0) }
+
+    static func send(_ request: URLRequest, baseURL: URL, secret: String, user: String,
+                     transport: Transport = urlSession, auth: DeviceAuth = .shared) async throws -> (Data, Int) {
+        let (data, status) = try await attempt(request, baseURL: baseURL, secret: secret, user: user,
+                                               transport: transport, auth: auth)
         guard status == 401 else { return (data, status) }
-        await DeviceAuth.shared.forget()
-        return try await attempt(request, baseURL: baseURL, secret: secret, user: user)
+        await auth.forget()
+        return try await attempt(request, baseURL: baseURL, secret: secret, user: user, transport: transport, auth: auth)
     }
 
-    private static func attempt(_ request: URLRequest, baseURL: URL, secret: String, user: String) async throws -> (Data, Int) {
+    private static func attempt(_ request: URLRequest, baseURL: URL, secret: String, user: String,
+                                transport: Transport, auth: DeviceAuth) async throws -> (Data, Int) {
         var request = request
         request.setValue(secret, forHTTPHeaderField: "X-Harness-Secret")
-        if let token = await DeviceAuth.shared.token(baseURL: baseURL, secret: secret, user: user) {
+        if let token = await auth.token(baseURL: baseURL, secret: secret, user: user) {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await transport(request)
         return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
     }
 }
