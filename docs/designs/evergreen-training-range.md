@@ -2124,7 +2124,7 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decision 19
   - Files: app/Evergreen/Views/Today/
   - Verify: 3 prefilled toggles, the button text updates, and the hint shows outside 2–4 days.
-- [ ] **G13 (P2, human: ~1h / CC: n/a)**: Run /design-review on the built screens for visual QA
+- [x] **G13 (P2, human: ~1h / CC: n/a)**: Run /design-review on the built screens for visual QA
   - Surfaced by: no mockups this review
   - Files: none
   - Verify: a /design-review report exists for milestone 1's screens.

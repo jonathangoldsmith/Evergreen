@@ -75,6 +75,12 @@ struct InjuryStep: View {
             Label(title, systemImage: selected ? "checkmark.circle.fill" : "circle")
         }
         .buttonStyle(GhostButtonStyle())
+        // The picked answer gets a heavier edge, not just a filled icon.
+        .overlay {
+            if selected {
+                RoundedRectangle(cornerRadius: Theme.radiusButton).strokeBorder(Theme.text, lineWidth: 2)
+            }
+        }
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

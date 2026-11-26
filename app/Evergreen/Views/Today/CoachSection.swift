@@ -13,34 +13,24 @@ struct CoachSection: View {
     @State private var busy = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.sm) {
-            Text("Coach links")
-                .font(.footnote)
-                .foregroundStyle(Theme.textMuted)
-                .accessibilityAddTraits(.isHeader)
-            Text("Your coach sees the runs Evergreen changed and why, and your weeks in range. Never your Apple Health data, calendar titles or injuries.")
+        Section {
             TextField("The name your coach sees", text: $name)
                 .textContentType(.givenName)
-                .padding(.horizontal, Theme.sm)
-                .frame(minHeight: 44)
-                .overlay { RoundedRectangle(cornerRadius: Theme.radiusButton).strokeBorder(Theme.rule) }
+                // On one row: a modifier on the Section would run once per row.
+                .task { await load() }
             Toggle(isOn: $includeFeelings) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Include how I've felt")
+                    Text("Include how I've felt").foregroundStyle(Theme.text)
                     Text("Weekly pain answers and sore or tired days.")
                         .font(.footnote).foregroundStyle(Theme.textMuted)
                 }
             }
-            .tint(Theme.accent)
-            .padding(.trailing, Theme.xs)
             Button("Make a link for my coach", action: create)
-                .buttonStyle(GhostButtonStyle())
                 .disabled(busy || name.trimmingCharacters(in: .whitespaces).isEmpty)
             if let newLink {
                 ShareLink(item: newLink, message: Text("My training from Evergreen, read-only.")) {
                     Label("Send the link", systemImage: "square.and.arrow.up")
                 }
-                .buttonStyle(GhostButtonStyle())
             }
             ForEach(shares.filter { $0.state != "revoked" }) { share in
                 row(share)
@@ -48,29 +38,31 @@ struct CoachSection: View {
             if let message {
                 Text(message).font(.footnote).foregroundStyle(Theme.textMuted)
             }
+        } header: {
+            Text("Coach links")
+        } footer: {
+            Text("Your coach sees the runs Evergreen changed and why, and your weeks in range. Never your Apple Health data, calendar titles or injuries.")
         }
-        .task { await load() }
+        .listRowBackground(Theme.card)
     }
 
+    /// One shared link: who, until when, what it includes, and Renew or Revoke.
     private func row(_ share: CoachClient.Share) -> some View {
         VStack(alignment: .leading, spacing: Theme.xs) {
             Text(share.state == "expired" ? "\(share.displayName) · expired" : "\(share.displayName) · until \(expiry(share))")
-                .font(.body)
+                .foregroundStyle(Theme.text)
             Toggle("Include how I've felt", isOn: Binding(get: { share.includeFeelings }, set: { on in
                 run { _ = try await model.coachClient?.update(share.id, includeFeelings: on) }
             }))
-            .tint(Theme.accent)
             .font(.footnote)
-            .padding(.trailing, Theme.xs)
-            HStack(spacing: Theme.sm) {
+            // Two buttons in one Form row: borderless, so each takes its own tap.
+            HStack(spacing: Theme.lg) {
                 Button("Renew 90 days") { run { _ = try await model.coachClient?.update(share.id, renew: true) } }
-                    .buttonStyle(GhostButtonStyle())
-                Button("Revoke") { run { try await model.coachClient?.revoke(share.id) } }
-                    .buttonStyle(GhostButtonStyle())
+                Button("Revoke", role: .destructive) { run { try await model.coachClient?.revoke(share.id) } }
             }
+            .buttonStyle(.borderless)
+            .frame(minHeight: 44)
         }
-        .padding(.vertical, Theme.xs)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.rule).frame(height: 1) }
     }
 
     private func expiry(_ share: CoachClient.Share) -> String {

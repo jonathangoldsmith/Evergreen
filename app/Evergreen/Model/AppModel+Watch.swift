@@ -28,7 +28,7 @@ extension AppModel {
         return state
     }
 
-    /// "Sun · 12 km (was 18)", today's planned workout, or "Rest day".
+    /// "Sun · 12 km (was 18)", today's next workout, "Nothing else today" or "Rest day".
     private func watchTodayLine() -> String {
         if let item = todayPlan.first(where: { completion(for: $0) == nil && $0.slot.end > now }) {
             if item.source == .swap, let title = swapTitles[item.id] { return title }
@@ -37,7 +37,8 @@ extension AppModel {
         if let run = trainingRuns.first(where: { calendar.isDate($0.start, inSameDayAs: now) && !isPausedForReturn($0) }) {
             return run.title
         }
-        return "Rest day"
+        // A day whose workouts are behind it (done or missed) isn't a rest day.
+        return todayPlan.isEmpty ? "Rest day" : "Nothing else today"
     }
 
     /// Tomorrow's first workout for the complication after midnight.

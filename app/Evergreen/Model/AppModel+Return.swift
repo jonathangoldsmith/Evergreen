@@ -127,7 +127,6 @@ extension AppModel {
     /// Demo control: an injury last month, so Today offers the return plan.
     func showReturnDemo() {
         resetDemo()
-        returnPlans.forEach(context.delete)
         UserDefaults.standard.removeObject(forKey: Self.offerDismissedKey)
         let lastMonth = calendar.date(byAdding: .month, value: -1, to: now) ?? now
         profile.injuryMonth = calendar.dateInterval(of: .month, for: lastMonth)?.start

@@ -10,6 +10,7 @@ struct DemoButton: View {
             .labelStyle(.iconOnly)
             .font(.body.weight(.semibold))
             .foregroundStyle(Theme.text)
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             .frame(width: 44, height: 44)
             .background(Theme.card, in: .circle)
             .overlay {

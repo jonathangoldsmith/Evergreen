@@ -6,11 +6,20 @@ struct TrainingRunRow: View {
     let run: PlannedRun
 
     @Environment(AppModel.self) private var model
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .top, spacing: Theme.md) {
+        // At accessibility sizes the time drops under the day (design G6).
+        let stacked = typeSize.isAccessibilitySize
+        let layout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.xs))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: Theme.md))
+        let dayLayout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.xs))
+            : AnyLayout(HStackLayout(spacing: Theme.sm))
+        return layout {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: Theme.sm) {
+                dayLayout {
                     Text(run.start.formatted(.dateTime.weekday(.wide)))
                         .font(.body.weight(.medium))
                         .foregroundStyle(Theme.text)
@@ -22,7 +31,7 @@ struct TrainingRunRow: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.textMuted)
             }
-            Spacer(minLength: Theme.sm)
+            if !stacked { Spacer(minLength: Theme.sm) }
             Text(run.isAllDay && run.size == nil ? "All day" : run.start.clock)
                 .font(.body.monospacedDigit())
                 .foregroundStyle(Theme.text)

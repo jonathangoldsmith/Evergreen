@@ -87,6 +87,9 @@ struct ReturnPlanCard: View {
 
     // MARK: States (design decision 7)
 
+    /// Without a training calendar there's no "training plan" to name.
+    private var hasTrainingPlan: Bool { !model.profile.trainingCalendarIds.isEmpty }
+
     private var active: some View {
         VStack(alignment: .leading, spacing: Theme.sm) {
             Text("Return plan · Week \((model.returnWeek ?? 0) + 1) of \(ReturnPlan.weeks)")
@@ -97,7 +100,7 @@ struct ReturnPlanCard: View {
                     .font(.body)
                     .foregroundStyle(Theme.text)
             }
-            Text("Your training plan's runs are paused until it's done. A missed session isn't chased.")
+            Text("\(hasTrainingPlan ? "Your training plan's runs are" : "Your other runs are") paused until it's done. A missed session isn't chased.")
                 .font(.footnote)
                 .foregroundStyle(Theme.textMuted)
             Button("End return plan") { model.endReturnPlan() }
@@ -111,7 +114,7 @@ struct ReturnPlanCard: View {
             Text("Your return plan is paused")
                 .font(.headline)
                 .foregroundStyle(Theme.text)
-            Text("You said it hurts this week. A physio can tell you when to pick it up again. Your training plan's runs stay paused meanwhile.")
+            Text("You said it hurts this week. A physio can tell you when to pick it up again. \(hasTrainingPlan ? "Your training plan's runs stay" : "Your other runs stay") paused meanwhile.")
                 .font(.body)
                 .foregroundStyle(Theme.text)
             ViewThatFits(in: .horizontal) {
@@ -135,7 +138,7 @@ struct ReturnPlanCard: View {
             Text("Return plan ended")
                 .agentFont(24, relativeTo: .title2)
                 .foregroundStyle(Theme.accent)
-            Text("Your training plan is back, and its first run gets the usual check.")
+            Text(hasTrainingPlan ? "Your training plan is back, and its first run gets the usual check." : "Your usual runs are back, and the first one gets the usual check.")
                 .font(.body)
                 .foregroundStyle(Theme.text)
             Button("Undo") { model.undoEndReturnPlan() }
