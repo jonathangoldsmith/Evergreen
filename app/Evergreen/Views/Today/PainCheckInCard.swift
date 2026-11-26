@@ -11,6 +11,22 @@ struct PainCheckInCard: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        Group {
+            if model.painRecord(for: week) != nil {
+                // After the answer (design decision 7): one line until the day ends.
+                Text("Thanks. See you next week.")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+            } else {
+                question
+            }
+        }
+        .padding(model.painRecord(for: week) != nil ? Theme.md : 20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .agentCardBackground(colorScheme)
+    }
+
+    private var question: some View {
         VStack(alignment: .leading, spacing: Theme.sm) {
             Text("How was your week? Any pain?")
                 .font(.headline)
@@ -25,9 +41,6 @@ struct PainCheckInCard: View {
             }
             .padding(.top, Theme.sm)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .agentCardBackground(colorScheme)
     }
 
     private var answers: some View {

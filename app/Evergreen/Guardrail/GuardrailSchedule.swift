@@ -8,8 +8,8 @@ import Foundation
 /// - The morning check fires per `MorningCheckTiming`; none once a run is decided.
 /// - At most 2 a day, counted by the day a note fires. Sunday's pain note is
 ///   never dropped: an evening swap note competing with it is folded into its
-///   text, and otherwise the lowest-priority note is dropped (morning checks
-///   before swap notes, later before earlier). Dropped notes still show as
+///   text, and otherwise the least urgent note by `TodayUrgency` is dropped
+///   (morning checks before swap notes, later before earlier). Dropped notes still show as
 ///   Today cards.
 enum GuardrailSchedule {
     static let perDay = 2
@@ -36,7 +36,8 @@ enum GuardrailSchedule {
                                                run: state.run, flag: flag))
                 }
             }
-            if state.run.size != nil, !state.checkedIn {
+            // One morning check a day, for the day's first run (design decision 7).
+            if state.run.size != nil, !state.checkedIn, isFirstSizedRun(state.run, in: runs, calendar: calendar) {
                 let at = MorningCheckTiming.asks(for: state.run, calendar: calendar)
                 if at > now {
                     notes.append(GuardrailNote(kind: .morningCheck, fireAt: at, title: GuardrailCopy.morningCheck.title,
@@ -89,8 +90,14 @@ enum GuardrailSchedule {
         }
     }
 
-    /// Higher drops first: morning checks before swap notes, later before earlier.
-    private static func rank(_ note: GuardrailNote) -> (Int, Date) {
-        (note.kind == .morningCheck ? 1 : 0, note.fireAt)
+    /// Higher drops first, by the shared urgency order (morning checks before
+    /// swap notes), later before earlier.
+    private static func rank(_ note: GuardrailNote) -> (TodayUrgency, Date) {
+        (note.kind.urgency, note.fireAt)
+    }
+
+    static func isFirstSizedRun(_ run: PlannedRun, in runs: [RunState], calendar: Calendar) -> Bool {
+        let sameDay = runs.map(\.run).filter { $0.size != nil && calendar.isDate($0.start, inSameDayAs: run.start) }
+        return sameDay.min { $0.start < $1.start }?.key == run.key
     }
 }

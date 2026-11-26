@@ -18,22 +18,23 @@ struct TodayView: View {
                         .font(.footnote)
                         .foregroundStyle(Theme.warning)
                 }
-                // Cards stack in urgency order (design decisions 1 and 13):
-                // run decisions first, then the agent's latest action.
-                ForEach(model.guardrailRuns) { run in
-                    GuardrailCard(run: run)
+                // Cards stack in the model's urgency order (design decisions 1
+                // and 13); a past action is a badged row in the plan below.
+                let cards = model.todayCards
+                ForEach(cards) { card in
+                    switch card {
+                    case .run(let run): GuardrailCard(run: run)
+                    case .pain(let week): PainCheckInCard(week: week)
+                    case .returnPlan: ReturnPlanCard()
+                    case .action(let action):
+                        if let purchaseId = action.purchaseId {
+                            PurchaseCard(purchaseId: purchaseId)
+                        } else {
+                            AgentCard(action: action)
+                        }
+                    }
                 }
-                if let week = model.pendingPainWeek {
-                    PainCheckInCard(week: week)
-                }
-                if ReturnPlanCard.shows(model) {
-                    ReturnPlanCard()
-                }
-                if let action = model.latestAction, let purchaseId = action.purchaseId {
-                    PurchaseCard(purchaseId: purchaseId)
-                } else if let action = model.latestAction {
-                    AgentCard(action: action)
-                } else if model.guardrailRuns.isEmpty && model.pendingPainWeek == nil && !ReturnPlanCard.shows(model) {
+                if cards.isEmpty {
                     QuietState()
                 }
                 TodayPlanSection()
