@@ -3,13 +3,13 @@ import Foundation
 /// The watch (range plan item 19): what the phone sends it, and what a watch
 /// tap does. The rule runs on the phone only.
 extension AppModel {
-    /// Today's state for the watch: the next run that needs something, and the week in range.
+    /// Today's state for the watch: the most urgent run on Today (one order for both), and the week in range.
     var watchState: WatchState {
         let report = rangeReport(for: PainWeek.monday(of: now, calendar: calendar))
         let inRange = report.daysCounted > 0 ? "\(report.daysInRange)/\(report.daysCounted)" : "—"
         let spoken = report.daysCounted > 0 ? "\(report.daysInRange) of \(report.daysCounted) days in range"
                                             : "No days counted yet"
-        let run = guardrailRuns.first.map(watchRun)
+        let run = mostUrgentRun.map(watchRun)
         let today = run.map { $0.decided.map { _ in watchTodayLine() } ?? $0.line } ?? watchTodayLine()
         return WatchState(run: run, inRange: inRange, inRangeSpoken: spoken, today: today, tomorrow: watchTomorrowLine(),
                           sentAt: Date())

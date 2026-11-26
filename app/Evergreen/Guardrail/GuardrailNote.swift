@@ -9,6 +9,15 @@ struct GuardrailNote: Hashable, Sendable {
         case morningCheck
         /// Sunday 6 PM: "How was your week? Any pain?" No / A little / Yes. Never dropped.
         case pain
+
+        /// Its place in the one urgency order Today and the watch use too.
+        var urgency: TodayUrgency {
+            switch self {
+            case .swap: .swap
+            case .morningCheck: .morningCheck
+            case .pain: .pain
+            }
+        }
     }
 
     var kind: Kind

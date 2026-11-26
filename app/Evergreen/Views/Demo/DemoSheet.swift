@@ -32,6 +32,14 @@ struct DemoSheet: View {
                         model.showBrakeDemo()
                     }
                     .disabled(model.calendarAccess != .on)
+                    beat("The morning of a run", detail: "8 AM before an easy 40-minute evening run: Today asks how your legs feel, then shrinks to one line after the answer.") {
+                        model.showMorningCheckDemo()
+                    }
+                    .disabled(model.calendarAccess != .on)
+                    beat("Sunday evening", detail: "This Sunday at 6:30 PM: tomorrow's long run is a big jump and the week's pain question is open, so both cards stack in order. Shows nothing new if this week is already answered.") {
+                        model.showSundayDemo()
+                    }
+                    .disabled(model.calendarAccess != .on)
                     beat("Rain: suggest a gym day pass", detail: "Rain on Saturday's 8:30 AM long run; Evergreen suggests a $15 pass at 24 Hour Fitness in San Francisco and books it only if you say yes.") {
                         model.showRainDemo()
                     }

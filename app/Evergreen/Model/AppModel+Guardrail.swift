@@ -33,21 +33,32 @@ extension AppModel {
     }
 
     /// Runs that need something on Today, soonest first: a flag to decide or
-    /// a decision still undoable, or today's morning check. Only runs that
-    /// haven't started (eng re-run: Undo stays live until the run starts).
+    /// a decision still undoable, today's morning check, or its answer (design
+    /// decision 7). Only runs that haven't started (eng re-run: Undo stays
+    /// live until the run starts).
     var guardrailRuns: [PlannedRun] {
         let horizon = Date(timeInterval: 36 * 3600, since: now)
         return trainingRuns.filter { run in
             guard run.start > now, run.start < horizon, !isPausedForReturn(run) else { return false }
-            return decision(for: run) != nil || flag(for: run) != nil || needsMorningCheck(run)
+            return decision(for: run) != nil || flag(for: run) != nil || needsMorningCheck(run) || checkIn(for: run) != nil
         }
     }
 
     /// Run days get "How do your legs feel?" until the run starts (plan item 7):
-    /// from 5 AM, or from 8 PM the evening before for a run before 6 AM.
+    /// from 5 AM, or from 8 PM the evening before for a run before 6 AM. Two
+    /// runs in one day are asked about once, for the first (design decision 7).
     func needsMorningCheck(_ run: PlannedRun) -> Bool {
-        guard run.size != nil, checkIn(for: run) == nil, decision(for: run) == nil, run.start > now else { return false }
+        guard run.size != nil, checkIn(for: run) == nil, decision(for: run) == nil, run.start > now,
+              firstSizedRun(onDayOf: run)?.key == run.key
+        else { return false }
         return now >= MorningCheckTiming.opens(for: run, calendar: .current)
+    }
+
+    /// The day's first run with a size, so a day is asked about once.
+    func firstSizedRun(onDayOf run: PlannedRun) -> PlannedRun? {
+        trainingRuns
+            .filter { $0.size != nil && !isPausedForReturn($0) && calendar.isDate($0.start, inSameDayAs: run.start) }
+            .min { $0.start < $1.start }
     }
 
     // MARK: Choices

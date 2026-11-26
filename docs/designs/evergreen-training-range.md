@@ -2080,7 +2080,7 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decisions 1, 13, 14, 15 and 20, and BN3
   - Files: DESIGN.md
   - Verify: DESIGN.md states each rule. Its decision log has rows dated 2026-11-22.
-- [ ] **G2 (P1, human: ~1 day / CC: ~30min)**: Today: the card stack in urgency order, cards only for decisions, past actions become badged rows
+- [x] **G2 (P1, human: ~1 day / CC: ~30min)**: Today: the card stack in urgency order, cards only for decisions, past actions become badged rows
   - Surfaced by: decisions 1, 13 and 14 (TodayView.swift:21–25 has one slot)
   - Files: app/Evergreen/Views/Today/TodayView.swift, AgentCard.swift, PlanRow.swift
   - Verify: a Sunday long-run fixture shows run, pain and return cards in order. A past swap shows as a badged row.
@@ -2088,7 +2088,7 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decisions 3, 5 and 6
   - Files: app/Evergreen/Views/Onboarding/
   - Verify: the flow runs Welcome → … → reveal. There are at most 8 questions and none shows a percentage. The zero-flag state appears.
-- [ ] **G4 (P1, human: ~1 day / CC: ~30min)**: After-answer and edge states for the morning check, swap, pain check-in and return plan
+- [x] **G4 (P1, human: ~1 day / CC: ~30min)**: After-answer and edge states for the morning check, swap, pain check-in and return plan
   - Surfaced by: decision 7
   - Files: app/Evergreen/Views/Today/
   - Verify: each state in decision 7's table renders in a SwiftUI preview or UI test.
@@ -2351,7 +2351,7 @@ The outside voice's 8 other findings are required proof or plumbing for approved
   - Surfaced by: R8 (re-run D2), RootView.swift:14
   - Files: app/Evergreen/App/RootView.swift, app/Evergreen/Model/
   - Verify: an install with the old flag lands in the catch-up flow once
-- [ ] **E17 (P1, human: ~1 day / CC: ~30min)**: `todayCards` and one urgency enum shared by cards, notifications and watch; a decided run is one action card; the Undo window ends at the session start
+- [x] **E17 (P1, human: ~1 day / CC: ~30min)**: `todayCards` and one urgency enum shared by cards, notifications and watch; a decided run is one action card; the Undo window ends at the session start
   - Surfaced by: re-run Section 1 #1–2, Section 2 #1, outside voice #5
   - Files: app/Evergreen/Model/AppModel+Today.swift, app/Evergreen/Views/Today/TodayView.swift
   - Verify: table test of card order; no duplicate swap card

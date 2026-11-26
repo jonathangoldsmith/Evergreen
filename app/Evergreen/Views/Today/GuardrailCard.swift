@@ -17,9 +17,11 @@ struct GuardrailCard: View {
                 question(flag)
             } else if model.needsMorningCheck(run) {
                 morningCheck
+            } else if let check = model.checkIn(for: run) {
+                checked(check)
             }
         }
-        .padding(20)
+        .padding(model.runUrgency(run) == .note ? Theme.md : 20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .agentCardBackground(colorScheme)
     }
@@ -78,6 +80,12 @@ struct GuardrailCard: View {
                 Text(GuardrailCopy.sourceNote(run, decision.planned))
                     .font(.footnote)
                     .foregroundStyle(Theme.textMuted)
+                if model.calendarAccess != .on {
+                    // Design decision 7: the swap lives in Evergreen until it can reach the calendar.
+                    Text(GuardrailCopy.calendarOff)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textMuted)
+                }
             }
             Button("Undo") { model.undoDecision(decision) }
                 .buttonStyle(GhostButtonStyle())
@@ -103,6 +111,20 @@ struct GuardrailCard: View {
             }
             .padding(.top, Theme.sm)
         }
+    }
+
+    /// After the answer, with no swap to offer, the card shrinks to one line
+    /// until the run starts (design decision 7).
+    private func checked(_ check: MorningCheck) -> some View {
+        VStack(alignment: .leading, spacing: Theme.xs) {
+            Text(GuardrailCopy.checkedIn(check))
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+            Text("\(run.start.formatted(.dateTime.weekday(.wide))) · \(run.title) at \(run.start.clock)")
+                .font(.footnote)
+                .foregroundStyle(Theme.textMuted)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private var answers: some View {

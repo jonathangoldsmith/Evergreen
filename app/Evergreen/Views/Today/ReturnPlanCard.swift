@@ -29,18 +29,6 @@ struct ReturnPlanCard: View {
         .agentCardBackground(colorScheme)
     }
 
-    /// Whether Today shows this card at all.
-    static func shows(_ model: AppModel) -> Bool {
-        if model.offersReturnPlan { return true }
-        guard let plan = model.returnPlan else { return false }
-        switch plan.status {
-        case .active, .paused: return true
-        case .ended, .finished:
-            // A day of "Back to your plan." or the ended card's Undo.
-            return (plan.endedAt ?? .distantPast) > Date().addingTimeInterval(-86_400)
-        }
-    }
-
     // MARK: The offer (design decision 19)
 
     private var offer: some View {

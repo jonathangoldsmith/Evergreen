@@ -17,8 +17,10 @@ Layout: `App/` (entry point and root view), `Agent/` (who answers `/tick`), `Con
 `EvergreenTests/StandInAgentTests.swift` covers the stand-in's rules: goal rounding, the very-active cap, thin history, the grace period, comeback length and time, no repeat or undone bookings, a missed comeback, completion points and duplicate merging. `CalendarSyncTests.swift` covers how plan items become calendar events and what a sync creates, moves and deletes. `SlotDefenseTests.swift` covers moves, shrinks and when the agent leaves a workout alone. The brake has its own: `GuardrailRuleTests` (spikes, the injury window, Sore and Tired, floors), `RunParserTests` (which calendar events are runs, and their size), `GuardrailScheduleTests` (the 2-a-day note budget and the pain week), `GuardrailCopyTests` (the words, and no "safe"), `BacktestTests`, `RangeReportTests`, `StorageTests` (migration, set-aside, midnight), `NotifierActionTests` (Lock Screen buttons) and `EventOutboxTests` (uploads and the Amplitude list). Run them with ⌘U in Xcode, or:
 
 ```
-xcodebuild test -project app/Evergreen.xcodeproj -scheme Evergreen -destination 'platform=iOS Simulator,name=iPhone 17'
+gtimeout 20m xcodebuild test -project app/Evergreen.xcodeproj -scheme Evergreen -destination 'platform=iOS Simulator,name=iPhone 17' -test-timeouts-enabled YES -default-test-execution-time-allowance 60 -maximum-test-execution-time-allowance 120
 ```
+
+The time limits stop a stuck test: any test still running after a minute fails (Xcode rounds the limit up to whole minutes, and a test can ask for up to two with `executionTimeAllowance`), and `gtimeout` ends the whole run after 20 minutes if something else hangs, such as the simulator. `gtimeout` comes from `brew install coreutils`; on an Apple-silicon Mac it must be the one in `/opt/homebrew/bin`, because an Intel copy in `/usr/local/bin` won't run.
 
 ## Demo controls
 

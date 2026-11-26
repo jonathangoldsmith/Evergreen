@@ -58,6 +58,17 @@ enum GuardrailCopy {
     static func keep(_ flag: GuardrailFlag) -> String { "Keep \(flag.planned.label)" }
 
     /// After the choice (design decision 7): "Changed to 12 km" / "Kept 18 km."
+    /// The morning check's answer when there's no swap to offer (design decision 7).
+    static func checkedIn(_ check: MorningCheck) -> String {
+        switch check {
+        case .fresh: "Got it. Enjoy the run."
+        case .tired, .sore: "Keep it easy today."
+        }
+    }
+
+    /// A swap with calendar access off (design decision 7).
+    static let calendarOff = "Changed in Evergreen. Allow calendar access to update your calendar."
+
     static func decided(_ decision: GuardrailDecision) -> String {
         switch decision.choice {
         case .accept: decision.keepEasy ? "Running it easy" : "Changed to \(decision.suggested.label)"

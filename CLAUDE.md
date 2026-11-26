@@ -35,3 +35,6 @@ Key routing rules:
 Read DESIGN.md before visual or UI work: it defines the fonts, colors, spacing, and
 aesthetic direction. Ask the user before departing from it. When reviewing or QA-ing
 UI, flag code that doesn't match DESIGN.md.
+
+## Running tests
+Run the iOS tests with the command in app/README.md under "Tests". It has per-test time limits and a 20-minute cap, so a stuck test fails instead of hanging the session. Don't drop those flags. Use `gtimeout` from /opt/homebrew/bin, not the Intel copy in /usr/local/bin, which won't run on this Mac.
