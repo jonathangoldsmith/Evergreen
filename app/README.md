@@ -156,10 +156,22 @@ The plan is [docs/designs/evergreen-training-range.md](../docs/designs/evergreen
 - **The push** (range plan items 10–16): people at 2 workouts a week or fewer get one comeback after a miss, at about 60% of their usual length in the next free time within a day, for 2× points (`StandInAgent+Comeback.swift`). A missed comeback gets a quiet note, never another. The card says what the points keep, and finishing a plan item shows the Done sheet with the buddy celebrating. Sam is the newcomer persona; the demo controls have "A missed walk books a comeback" and "Finish the comeback".
 - **The buddy** (item 22): Your data → People invites a friend with a code or pairs with a friend's code; Welcome has "Have a code from a friend?" for the short path. A paired inviter's finished workouts go up as `workout_completed`, on every Health read and from HealthKit's background observer (`WorkoutObserver`), and the harness sends the friend one note per workout over APNs. `EvergreenAppDelegate` sends the push token. The entitlements include `aps-environment` and HealthKit background delivery, so device builds need those capabilities on the App ID (automatic signing adds them).
 
+## The coach page, device auth and CI (milestone 3)
+
+- The coach page is the harness's (`harness/`); the app shares a link from Your data → People. Every `/users/{id}/...` call carries a per-device token from `POST /devices`, kept in the Keychain (`DeviceAuth`) and sent by `HarnessRequest.send`.
+- The rule has a Python twin (`harness/guardrail.py`); `contract/fixtures/guardrail.json` runs against both. CI (`.github/workflows/tests.yml`) runs pytest and the app tests in UTC.
+
+## The return plan and the watch (milestone 4)
+
+- **Return to running** (range plan item 21): after an injury in the last 3 months, Today offers a 4-week walk-run plan (`Guardrail/ReturnPlan.swift`: 20 to 26 minutes, 1:2 up to 4:1 run:walk) on the person's usual run days, which the weekday toggles change (Mon/Wed/Sat at 7 AM with no history). While it's active, training-calendar runs and Evergreen's own runs pause, and a session wins its day. A "Yes" to the pain check-in pauses it; End has Undo. Stored as `ReturnPlanState` in schema V3. Demo controls: "Coming back from an injury".
+- **The watch** (item 19): `EvergreenWatch/` shows the next run's question (Make it / Keep, or the morning check) and today's line, and sends taps back over WatchConnectivity (`Watch/PhoneWatchLink.swift`, `Model/AppModel+Watch.swift`). The rule runs only on the phone; the first answer wins, from the watch, the app or the Lock Screen. A tap made while the phone is away is queued and sent later.
+- **Complications** (`EvergreenWatchWidget/`): circular "in range" days and a rectangular next-run line, read from the App Group the watch app writes, with an entry at midnight so tomorrow's line rolls over without the phone.
+- To run the watch: pair a watch simulator with the iPhone simulator, build the Evergreen scheme (it embeds the watch app), install `EvergreenWatch.app` on the watch, and launch both.
+
 ## Not built yet
 
 - Routines (P1, task T11).
-- From the range plan: the watch app, the coach page and the return-to-running plan (milestones 3 and 4).
+- From the range plan: the device checks on a real paired watch (task E14).
 - Real HealthKit reads and workout import (P2). Health permission is already requested in onboarding.
 - General Sans: drop `GeneralSans-Semibold.otf` into `Evergreen/Resources/Fonts/`. It registers at launch; until then the agent's voice falls back to SF Pro Semibold.
 - The contract test that decodes the harness's golden fixtures (task T3). It goes in `EvergreenTests/` once `contract/fixtures/` exists.

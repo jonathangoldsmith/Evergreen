@@ -33,6 +33,31 @@ struct WatchAnswerTests {
         #expect(model.decisions.map(\.choice) == [.keep])
     }
 
+    /// Tomorrow's 2½-hour long run: past Jordan's longest this month, so it's flagged.
+    static let longRun = PlannedRun(key: "runna|long", title: "Long run 2h 30", calendarTitle: "Runna",
+                                    start: NotifierActionTests.start, end: NotifierActionTests.start.addingTimeInterval(9000),
+                                    size: .minutes(150), isHard: false, isAllDay: false)
+
+    /// Task T8, both orders, with the run on a training calendar: whichever
+    /// answer lands first is the one decision; the second is dropped.
+    @Test func theWatchFirstThenTheLockScreen() async throws {
+        let model = try NotifierActionTests.model()
+        model.trainingRuns = [Self.longRun]
+        let flag = try #require(model.flag(for: Self.longRun))
+        #expect(model.handleWatchAnswer(WatchAnswer(runKey: Self.longRun.key, kind: .accept)))
+        await model.handleNotificationAction(.swapKeep, NotePayload(run: Self.longRun, flag: flag))
+        #expect(model.decisions.map(\.choice) == [.accept])
+    }
+
+    @Test func theLockScreenFirstThenTheWatch() async throws {
+        let model = try NotifierActionTests.model()
+        model.trainingRuns = [Self.longRun]
+        let flag = try #require(model.flag(for: Self.longRun))
+        await model.handleNotificationAction(.swapKeep, NotePayload(run: Self.longRun, flag: flag))
+        #expect(!model.handleWatchAnswer(WatchAnswer(runKey: Self.longRun.key, kind: .accept)))
+        #expect(model.decisions.map(\.choice) == [.keep])
+    }
+
     @Test func theWatchActionEventIsWordsOnly() {
         #expect(AnalyticsEvent.watchAction("swap").properties == ["kind": "swap"])
         #expect(AnalyticsEvent.watchAction("sore").properties == ["kind": "check_in"])

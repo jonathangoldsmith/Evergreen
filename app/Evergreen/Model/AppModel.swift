@@ -63,7 +63,8 @@ final class AppModel {
     /// The person's own settings: injury month, training calendars, consent.
     let profile: Profile
     /// Runs on the picked training calendars, from the start of today for 8 days.
-    private(set) var trainingRuns: [PlannedRun] = []
+    /// Only the calendar read sets it; tests set it directly, with no EventKit.
+    var trainingRuns: [PlannedRun] = []
     /// Every swap taken or plan kept, oldest first.
     private(set) var decisions: [GuardrailDecision] = []
     private(set) var checkIns: [CheckInRecord] = []
@@ -548,6 +549,10 @@ final class AppModel {
     /// run tomorrow morning; his longest run this month was under 2 hours.
     func showBrakeDemo() {
         resetDemo()
+        // A return plan pauses training-calendar runs, and the return beat's
+        // injury changes the suggestion; this beat starts without either.
+        returnPlans.forEach(context.delete)
+        profile.injuryMonth = nil
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: storyDay) ?? storyDay
         func at(_ day: Date, _ hour: Int, plus days: Int = 0) -> Date {
             let date = calendar.date(byAdding: .day, value: days, to: day) ?? day
