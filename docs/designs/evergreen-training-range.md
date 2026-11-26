@@ -1825,7 +1825,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Outside voice #2, D5. Storage.swift:7–22
   - Files: app/Evergreen/Model/Storage/Storage.swift
   - Verify: migration test from the previous schema keeps the outbox and injury month
-- [ ] **E3 (P1, human: ~1 day / CC: ~30min)**: Tests first: seams plus characterization for UserDataClient, Notifier and the 3 delete tables
+- [x] **E3 (P1, human: ~1 day / CC: ~30min)**: Tests first: seams plus characterization for UserDataClient, Notifier and the 3 delete tables
   - Surfaced by: Section 3 R2, D3. Outside voice #7 (seams first)
   - Files: app/Evergreen/Agent/UserDataClient.swift, app/Evergreen/Notifications/Notifier.swift, harness/tests/test_people.py
   - Verify: the new tests pass on unchanged behavior before any feature change

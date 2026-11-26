@@ -8,7 +8,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let reminderLead: TimeInterval = 30 * 60
     private static let log = Logger(subsystem: "com.evergreentraining.app", category: "notifications")
 
-    private let center = UNUserNotificationCenter.current()
+    private let center: any NotificationScheduling
     private(set) var access: NotificationAccess = .notAsked
 
     /// Called when someone taps a notification, so the app can look again.
@@ -17,16 +17,18 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     /// app in the background. The app records the answer before this returns.
     var onAction: (@MainActor (NotificationAction, NotePayload?) async -> Void)?
 
-    override init() {
+    /// The real center by default; tests pass their own (eng review D3).
+    init(center: any NotificationScheduling = SystemNotificationCenter()) {
+        self.center = center
         super.init()
-        center.delegate = self
+        center.setDelegate(self)
         center.setNotificationCategories(NotificationAction.fixedCategories)
     }
 
     // MARK: Access
 
     func refreshAccess() async {
-        let status = await center.notificationSettings().authorizationStatus
+        let status = await center.authorizationStatus()
         access = switch status {
         case .authorized, .provisional, .ephemeral: .on
         case .notDetermined: .notAsked
@@ -152,7 +154,10 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         await handle(identifier, payload)
     }
 
-    private func handle(_ identifier: String, _ payload: NotePayload?) async {
+    /// A tap (any identifier that isn't one of the buttons) opens the app;
+    /// a button runs its action. Internal so tests can drive it, since a
+    /// UNNotificationResponse can't be made outside the system.
+    func handle(_ identifier: String, _ payload: NotePayload?) async {
         if let action = NotificationAction(rawValue: identifier), let onAction {
             await onAction(action, payload)
         } else {

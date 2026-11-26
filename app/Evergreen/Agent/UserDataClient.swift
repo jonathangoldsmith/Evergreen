@@ -6,6 +6,9 @@ struct UserDataClient: Sendable {
     let baseURL: URL
     let secret: String
     let user: String
+    /// The network and the device token; tests pass fakes (eng review D3, task E3).
+    var transport: HarnessRequest.Transport = HarnessRequest.urlSession
+    var auth: DeviceAuth = .shared
 
     static let timeout: TimeInterval = 10
 
@@ -41,7 +44,8 @@ struct UserDataClient: Sendable {
         request.setValue(secret, forHTTPHeaderField: "X-Harness-Secret")
         let answer: (Data, Int)
         do {
-            answer = try await HarnessRequest.send(request, baseURL: baseURL, secret: secret, user: user)
+            answer = try await HarnessRequest.send(request, baseURL: baseURL, secret: secret, user: user,
+                                                   transport: transport, auth: auth)
         } catch { throw .unreachable }
         guard (200..<300).contains(answer.1) else { throw .refused }
         return answer.0

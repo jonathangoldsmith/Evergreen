@@ -7,14 +7,23 @@ import Foundation
 actor DeviceAuth {
     static let shared = DeviceAuth()
 
-    private let item = KeychainItem(account: "harness_device_token")
+    private let item: KeychainItem
+    private let transport: HarnessRequest.Transport
     private var registering: Task<String?, Never>?
+
+    /// The app's one token by default; tests use their own Keychain account and
+    /// a fake transport (eng review D3, task E3).
+    init(account: String = "harness_device_token", transport: @escaping HarnessRequest.Transport = HarnessRequest.urlSession) {
+        item = KeychainItem(account: account)
+        self.transport = transport
+    }
 
     /// The saved token, or a new one from the harness; nil if it can't register.
     func token(baseURL: URL, secret: String, user: String) async -> String? {
         if let saved = item.read() { return saved }
         if let registering { return await registering.value }
-        let task = Task { await Self.register(baseURL: baseURL, secret: secret, user: user) }
+        let transport = transport
+        let task = Task { await Self.register(baseURL: baseURL, secret: secret, user: user, transport: transport) }
         registering = task
         let token = await task.value
         registering = nil
@@ -27,13 +36,14 @@ actor DeviceAuth {
         item.delete()
     }
 
-    private static func register(baseURL: URL, secret: String, user: String) async -> String? {
+    private static func register(baseURL: URL, secret: String, user: String,
+                                 transport: HarnessRequest.Transport) async -> String? {
         var request = URLRequest(url: baseURL.appending(path: "devices"), timeoutInterval: 10)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(secret, forHTTPHeaderField: "X-Harness-Secret")
         request.httpBody = try? JSONEncoder().encode(["user": user])
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
+        guard let (data, response) = try? await transport(request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let answer = try? JSONDecoder().decode([String: String].self, from: data)
         else { return nil }
