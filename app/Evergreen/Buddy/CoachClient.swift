@@ -27,9 +27,12 @@ struct CoachClient: Sendable {
 
     private struct ShareList: Decodable { var shares: [Share] }
 
-    /// The page a coach opens: `<harness>/coach/<token>`.
+    /// The page a coach opens: `<harness>/coach#<token>`. The token goes after the #, which
+    /// browsers never send, so it stays out of the harness's request logs (range plan task T3).
     func link(for token: String) -> URL {
-        baseURL.appending(path: "coach").appending(path: token)
+        var parts = URLComponents(url: baseURL.appending(path: "coach"), resolvingAgainstBaseURL: false)!
+        parts.fragment = token
+        return parts.url!
     }
 
     func create(name: String, includeFeelings: Bool) async throws(BuddyClient.Failure) -> Share {

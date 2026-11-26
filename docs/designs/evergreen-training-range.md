@@ -1207,7 +1207,7 @@ The plan touches no files with ASCII diagrams yet. The wireframe (bmo-main-sketc
 ## Implementation Tasks
 Synthesized from this review's findings. Each task derives from a specific finding above. Run with Claude Code or Codex; checkbox as you ship. Assumed ratios: infrastructure and config ~5x, tests ~50x, features ~30x.
 
-- [ ] **T1 (P1, human: ~1 day / CC: ~1h)**: Harness: provision SingleStore in production and fail the deploy check without it
+- [x] **T1 (P1, human: ~1 day / CC: ~1h)**: Harness: provision SingleStore in production and fail the deploy check without it
   - Surfaced by: Section 1, single points of failure. Constraints: "the harness needs a persistent store"
   - Files: harness/harness/store.py, harness/api/index.py
   - Verify: the smoke test creates and revokes a coach share on the deployed harness, then a cold start keeps it
@@ -1215,7 +1215,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Section 1, "the deploy is held by one person"
   - Files: none
   - Verify: a second person can promote a previous deployment
-- [ ] **T3 (P1, human: ~half day / CC: ~30min)**: Harness: keep coach tokens out of request logs
+- [x] **T3 (P1, human: ~half day / CC: ~30min)**: Harness: keep coach tokens out of request logs
   - Surfaced by: Section 3, "Coach token leaks through Vercel request logs"
   - Files: harness/api/index.py
   - Verify: open a coach link and confirm the token isn't in the Vercel logs
@@ -1227,7 +1227,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Section 3, HARNESS_SECRET extraction (pre-existing)
   - Files: to be determined
   - Verify: a test that no buddy or coach response contains a `usr_` id other than the caller's
-- [ ] **T6 (P1, human: ~1 day / CC: ~30min)**: Harness: a DELETE test per table (4, after eng review D1), plus the paired-person test
+- [x] **T6 (P1, human: ~1 day / CC: ~30min)**: Harness: a DELETE test per table (4, after eng review D1), plus the paired-person test
   - Surfaced by: Section 6, the 2 AM Friday test. Item 9's delete list
   - Files: harness/tests/test_people.py, harness/harness/store.py
   - Verify: `uv run pytest -q`
@@ -1251,7 +1251,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Section 11 and the stale diagram audit
   - Files: to be determined
   - Verify: the design review report is in the plan
-- [ ] **T12 (P1 after eng review D7, human: ~1 week / CC: ~1 day)**: Harness and app: build per-device auth (milestone 3) to replace the shared secret before the App Store
+- [x] **T12 (P1 after eng review D7, human: ~1 week / CC: ~1 day)**: Harness and app: build per-device auth (milestone 3) to replace the shared secret before the App Store
   - Surfaced by: Section 3 and Section 10, debt item 1
   - Files: to be determined
   - Verify: an eng review decision is recorded

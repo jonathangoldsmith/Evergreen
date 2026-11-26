@@ -8,7 +8,7 @@ struct CoachClientTests {
                                     user: "usr_0123456789abcdef")
 
     @Test func theLinkIsThePublicCoachPage() {
-        #expect(Self.client.link(for: "abc_DEF-123").absoluteString == "https://harness.example/coach/abc_DEF-123")
+        #expect(Self.client.link(for: "abc_DEF-123").absoluteString == "https://harness.example/coach#abc_DEF-123")
     }
 
     @Test func createSendsTheNameAndTheTick() throws {

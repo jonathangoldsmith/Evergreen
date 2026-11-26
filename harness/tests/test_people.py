@@ -143,3 +143,65 @@ def test_without_a_store_delete_still_clears_the_memory_copies(monkeypatch):
     store.save_verification(USER, {"relay_token": "t", "relay_secret": "s", "status": "passed"})
     assert store.delete_user(USER) == {"history": 1, "recommendations": 0, "verifications": 1}
     assert USER not in store._histories and USER not in store._verifications
+
+
+# --- a DELETE test per table (range plan task T6) ---
+
+THIRD = "usr_1111222233334444"
+
+
+def _fill(conn, table: str, values: dict) -> None:
+    """One row in `table`: the given columns, and a placeholder in every other NOT NULL one."""
+    import uuid
+    row = {}
+    for _, name, kind, notnull, _, _ in conn.db.execute(f"PRAGMA table_info({table})").fetchall():
+        if name in values:
+            row[name] = values[name]
+        elif notnull:
+            row[name] = 1 if kind.upper().startswith(("INT", "TINYINT")) else (
+                "{}" if name == "doc" else "2026-11-20 10:00:00" if name.endswith("_at") or name == "at"
+                else str(uuid.uuid4()))
+    cols = ", ".join(row)
+    conn.db.execute(f"INSERT INTO {table} ({cols}) VALUES ({', '.join('?' * len(row))})", tuple(row.values()))
+
+
+def _person_tables():
+    return [(t, c) for t, c in store.user_tables() if t != "shoe_candidates"]
+
+
+@pytest.mark.parametrize("table,column", _person_tables(), ids=lambda v: v)
+def test_delete_erases_this_persons_rows_in_every_table_and_keeps_others(monkeypatch, table, column):
+    """Each user table on real SQL: this person's row goes, another person's stays, and the
+    answer counts it. Covers each user column, so a pair goes whichever side is deleted."""
+    from tests.sqlite_store import Conn
+    conn = Conn()
+    monkeypatch.setenv("SINGLESTORE_URL", "user:pw@fake:3306/db")
+    monkeypatch.setattr(store, "_conn", lambda: conn)
+    others = {c: THIRD for t, c in store.user_tables() if t == table and c != column}
+    _fill(conn, table, {**others, column: USER})
+    _fill(conn, table, {**others, column: OTHER})
+
+    removed = store.delete_user(USER)
+
+    assert _rows(conn, table, column, USER) == 0
+    assert _rows(conn, table, column, OTHER) == 1
+    assert removed[store._DELETE_KEYS.get(table, table)] == 1
+
+
+def test_deleting_one_side_of_a_pair_leaves_the_other_persons_own_rows(monkeypatch):
+    """The paired-person case: deleting the friend ends the pair and its notes, while the
+    inviter's own history, events, device and push token stay."""
+    from tests.sqlite_store import Conn
+    conn = Conn()
+    monkeypatch.setenv("SINGLESTORE_URL", "user:pw@fake:3306/db")
+    monkeypatch.setattr(store, "_conn", lambda: conn)
+    _fill(conn, "buddy_pairs", {"inviter_id": OTHER, "friend_id": USER, "status": "paired"})
+    _fill(conn, "buddy_notes", {"inviter_id": OTHER, "friend_id": USER})
+    for table in ("user_history", "guardrail_events", "devices", "push_tokens"):
+        _fill(conn, table, {"user_id": OTHER})
+
+    store.delete_user(USER)
+
+    assert conn.rows("buddy_pairs") == [] and conn.rows("buddy_notes") == []
+    for table in ("user_history", "guardrail_events", "devices", "push_tokens"):
+        assert _rows(conn, table, "user_id", OTHER) == 1, table

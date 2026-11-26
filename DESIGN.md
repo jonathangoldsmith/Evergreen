@@ -131,7 +131,7 @@ System font and the dark palette (`{colors.dark-surface}`, `{colors.dark-text}`,
 
 ## Coach page
 
-One reading column of about 640 px (full width with 16 px margins on a phone); the light and dark tokens as CSS variables chosen by `prefers-color-scheme`; General Sans only for the runner's name; system body text at 17 px or larger at 4.5:1; no cards, swaps are a plain list between `{colors.rule}` lines; a themed focus ring; works without JavaScript.
+One reading column of about 640 px (full width with 16 px margins on a phone); the light and dark tokens as CSS variables chosen by `prefers-color-scheme`; General Sans only for the runner's name; system body text at 17 px or larger at 4.5:1; no cards, swaps are a plain list between `{colors.rule}` lines; a themed focus ring; plain HTML, except one small script in the link's opening page that reads the token from after the # (so it never reaches server logs); without JavaScript, that page asks to turn it on, and old `/coach/<token>` links still open without it.
 
 ## Motion
 
@@ -156,3 +156,4 @@ One reading column of about 640 px (full width with 16 px margins on a phone); t
 | 2026-11-22 | Cards stack on Today in urgency order | Founder's answer in the range plan's design review (decisions 1 and 13): several cards are fine; only things that need an answer are cards, and past actions become badged rows |
 | 2026-11-22 | Question card, Watch and Coach page | Design review decisions 14 and 15: questions reuse the card with SF Pro and ghost buttons; the watch and the coach page reuse these tokens |
 | 2026-11-24 | Overview for the range product; wellness wording | Design review decision 20 and business notes BN3: the product keeps training in range; copy never makes a safety claim |
+| 2026-11-26 | Coach link opens with one script | Range plan task T3, founder's answer: the token moves after the # to stay out of request logs, which needs a few lines of JavaScript; the page it opens stays plain HTML |

@@ -91,4 +91,49 @@ struct PlannerClientTests {
         #expect(plan.source == "sie")
         #expect(plan.memorySource == "bundled")
     }
+
+    // --- a real person's week carries their device token (range plan task T12) ---
+
+    static func client(_ harness: UserDataClientTests.FakeHarness) -> (PlannerClient, DeviceAuth) {
+        let transport: HarnessRequest.Transport = { try await harness.handle($0) }
+        let auth = DeviceAuth(account: "test-\(UUID().uuidString)", transport: transport)
+        return (PlannerClient(baseURL: UserDataClientTests.base, secret: "s3cret", transport: transport, auth: auth), auth)
+    }
+
+    static func body(user: String?) -> PlannerClient.Request {
+        var body = PlannerClient.request(persona: "me", now: date(20), demo: nil, newPairArrives: nil, busy: [], cal: pacific)
+        body.user = user
+        return body
+    }
+
+    @Test func aRealPersonsWeekSendsTheirDeviceToken() async throws {
+        let harness = UserDataClientTests.FakeHarness(["POST /devices": [(200, #"{"token":"tok-1"}"#)],
+                                                       "POST /workouts/recommend": [(200, Self.answer)]])
+        let (client, auth) = Self.client(harness)
+        defer { Task { await auth.forget() } }
+        _ = try await client.week(Self.body(user: UserDataClientTests.user))
+        let sent = try #require(await harness.requests("POST /workouts/recommend").first)
+        #expect(sent.value(forHTTPHeaderField: "Authorization") == "Bearer tok-1")
+        #expect(sent.value(forHTTPHeaderField: "X-Harness-Secret") == "s3cret")
+    }
+
+    @Test func aDemoPersonsWeekRegistersNothing() async throws {
+        let harness = UserDataClientTests.FakeHarness(["POST /workouts/recommend": [(200, Self.answer)]])
+        let (client, auth) = Self.client(harness)
+        defer { Task { await auth.forget() } }
+        _ = try await client.week(Self.body(user: nil))
+        #expect(await harness.requests("POST /devices").isEmpty)
+        let sent = try #require(await harness.requests("POST /workouts/recommend").first)
+        #expect(sent.value(forHTTPHeaderField: "Authorization") == nil)
+    }
+
+    @Test func aRefusalIsReportedWithItsStatus() async {
+        let harness = UserDataClientTests.FakeHarness(["POST /devices": [(200, #"{"token":"t"}"#)],
+                                                       "POST /workouts/recommend": [(403, "")]])
+        let (client, auth) = Self.client(harness)
+        defer { Task { await auth.forget() } }
+        await #expect(throws: PlannerClient.Failure.refused(status: 403)) {
+            try await client.week(Self.body(user: UserDataClientTests.user))
+        }
+    }
 }

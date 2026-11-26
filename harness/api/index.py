@@ -6,7 +6,7 @@ import re
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.responses import HTMLResponse
 
 from harness import buddy, coach, config, devices, events, store
@@ -33,6 +33,14 @@ def require_device(user: str, authorization: str = Header(default="")) -> None:
         raise HTTPException(status_code=401, detail="unknown device")
 
 
+def require_device_for(user: str | None, authorization: str) -> None:
+    """A planner call that names a person (their id, maybe their Health history) needs that
+    person's device token too: the shared secret alone can't read or overwrite anyone's
+    kept history (T12). Demo personas, with no `user`, need only the secret."""
+    if user is not None:
+        require_device(user, authorization)
+
+
 class DeviceRequest(BaseModel):
     user: str = Field(pattern=USER_ID)
 
@@ -47,8 +55,13 @@ def device_register(req: DeviceRequest) -> dict:
 
 
 @app.get("/health")
-def health() -> dict:
-    return {"ok": True, "sie": bool(config.SIE_API_KEY), "senso": bool(config.SENSO_API_KEY),
+def health(response: Response) -> dict:
+    """Open. In production a missing store is a failed health check (T1): events, buddies,
+    coach links and device tokens all need it."""
+    ok = store.enabled() or __import__("os").environ.get("VERCEL_ENV") != "production"
+    if not ok:
+        response.status_code = 503
+    return {"ok": ok, "sie": bool(config.SIE_API_KEY), "senso": bool(config.SENSO_API_KEY),
             "nimble": bool(__import__("os").environ.get("NIMBLE_API_KEY")), "singlestore": store.enabled(),
             "secret": bool(config.HARNESS_SECRET),
             "persona": bool(__import__("os").environ.get("PERSONA_API_KEY")), "version": app.version}
@@ -159,8 +172,9 @@ def push_token(user: str, req: PushToken) -> dict:
 
 
 @app.post("/workouts/recommend", dependencies=[Depends(require_secret)])
-def workouts_recommend(req: workouts.WorkoutsRequest) -> dict:
+def workouts_recommend(req: workouts.WorkoutsRequest, authorization: str = Header(default="")) -> dict:
     """The next 7 days: health data (load, sleep, resting HR) + shoe condition + memory → calendar-ready actions."""
+    require_device_for(req.user, authorization)
     try:
         return workouts.recommend(req)
     except KeyError:
@@ -243,7 +257,8 @@ def evidence(req: EvidenceRequest) -> EvidenceResponse:
 
 @app.post("/shoes/recommend", response_model=ShoesResponse, response_model_exclude_none=True,
           dependencies=[Depends(require_secret)])
-def shoes_recommend(req: ShoesRequest) -> ShoesResponse:
+def shoes_recommend(req: ShoesRequest, authorization: str = Header(default="")) -> ShoesResponse:
+    require_device_for(req.user, authorization)
     try:
         return shoes.recommend(req)
     except KeyError:
@@ -285,16 +300,41 @@ def coach_share_revoke(user: str, share_id: str) -> dict:
     return {"revoked": True}
 
 
+def _coach_html(page: str, csp: str = coach.CSP) -> HTMLResponse:
+    return HTMLResponse(page, headers={"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store",
+                                       "Referrer-Policy": "no-referrer", "Content-Security-Policy": csp})
+
+
+def _coach_page_for(token: str) -> str:
+    """Revoked, expired and unknown links get the same page, so the token isn't an oracle."""
+    try:
+        return coach.page_for(token) if 0 < len(token) <= 64 else coach.render_inactive()
+    except Exception:
+        return coach.render_inactive()
+
+
+class CoachView(BaseModel):
+    token: str = ""
+
+
+@app.get("/coach", include_in_schema=False)
+def coach_shell() -> HTMLResponse:
+    """The coach link, `/coach#<token>` (T3): the token after the # never reaches the server or
+    its logs. The shell's one script posts it to /coach/view and shows the answer."""
+    return _coach_html(coach.render_shell(), coach.SHELL_CSP)
+
+
+@app.post("/coach/view", include_in_schema=False)
+def coach_view(req: CoachView) -> HTMLResponse:
+    return _coach_html(_coach_page_for(req.token))
+
+
 @app.get("/coach/{token}", include_in_schema=False)
 def coach_page(token: str) -> HTMLResponse:
     """Public and token-scoped (E13): registered before the catch-all, escaped, never indexed or
-    cached. Revoked, expired and unknown links get the same page, so the token isn't an oracle."""
-    try:
-        page = coach.page_for(token) if len(token) <= 64 else coach.render_inactive()
-    except Exception:
-        page = coach.render_inactive()
-    return HTMLResponse(page, headers={"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store",
-                                       "Referrer-Policy": "no-referrer"})
+    cached. Links made before T3 carry the token in the path, which request logs keep; they
+    still open, and this is also the page for a coach without JavaScript."""
+    return _coach_html(_coach_page_for(token))
 
 
 @app.api_route("/{rest:path}", methods=["GET", "POST"], include_in_schema=False)
