@@ -6,7 +6,7 @@ extension AppModel {
     /// The notes for the training runs ahead and this Sunday's pain question,
     /// within the 2-a-day budget (design decision 10, R9).
     var guardrailNotes: [GuardrailNote] {
-        let states = trainingRuns.map { run in
+        let states = trainingRuns.filter { !isPausedForReturn($0) }.map { run in
             GuardrailSchedule.RunState(
                 run: run,
                 // From history alone: the morning answer comes later.

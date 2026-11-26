@@ -1235,7 +1235,7 @@ Synthesized from this review's findings. Each task derives from a specific findi
   - Surfaced by: Section 6 and item 9's Amplitude rules
   - Files: to be determined (Amplitude wrapper)
   - Verify: Swift Testing in EvergreenTests
-- [ ] **T8 (P2, human: ~1 day / CC: ~30min)**: App: a test of phone-vs-watch answer ordering, in both orders
+- [x] **T8 (P2, human: ~1 day / CC: ~30min)**: App: a test of phone-vs-watch answer ordering, in both orders
   - Surfaced by: Section 4, async ordering
   - Files: to be determined
   - Verify: a controlled pause and release test records one decision per run per flag
@@ -2116,11 +2116,11 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decisions 9, 15 and 17
   - Files: harness/ (coach page)
   - Verify: the page has no horizontal scroll at 375 px, passes 4.5:1 contrast, works without JavaScript, and shows the empty state.
-- [ ] **G11 (P2, human: ~1 day / CC: ~30min)**: Watch: circular and rectangular text complications, plus states
+- [x] **G11 (P2, human: ~1 day / CC: ~30min)**: Watch: circular and rectangular text complications, plus states
   - Surfaced by: decisions 9, 16 and 18
   - Files: app/EvergreenWatch/ (new)
   - Verify: both complications show "—" before data. VoiceOver reads "5 of 6 days in range".
-- [ ] **G12 (P2, human: ~half day / CC: ~15min)**: Return-plan weekday toggles
+- [x] **G12 (P2, human: ~half day / CC: ~15min)**: Return-plan weekday toggles
   - Surfaced by: decision 19
   - Files: app/Evergreen/Views/Today/
   - Verify: 3 prefilled toggles, the button text updates, and the hint shows outside 2–4 days.
@@ -2371,11 +2371,11 @@ The outside voice's 8 other findings are required proof or plumbing for approved
   - Surfaced by: re-run Section 1 #4–5, outside voice #8
   - Files: harness/api/index.py, harness/harness/store.py
   - Verify: the name is limited to 40 characters and escaped; edits apply immediately; DELETE erases it
-- [ ] **E22 (P2, human: ~1.5 days / CC: ~45min)**: Watch widget extension, App Group, complication transfers, multi-day timeline
+- [x] **E22 (P2, human: ~1.5 days / CC: ~45min)**: Watch widget extension, App Group, complication transfers, multi-day timeline
   - Surfaced by: re-run Section 1 #3, outside voice #6
   - Files: app/EvergreenWatch/ (new), app/EvergreenWatchWidget/ (new)
   - Verify: on a real watch, the complication updates without opening the phone app and rolls over at midnight
-- [ ] **E23 (P2, human: ~1h / CC: ~5min)**: Return-plan toggles fall back to Mon/Wed/Sat at the usual or 7 AM time; Start disabled with no days
+- [x] **E23 (P2, human: ~1h / CC: ~5min)**: Return-plan toggles fall back to Mon/Wed/Sat at the usual or 7 AM time; Start disabled with no days
   - Surfaced by: outside voice #9
   - Files: app/Evergreen/Views/Today/
   - Verify: a person with no runs sees Mon/Wed/Sat prefilled

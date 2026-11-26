@@ -63,15 +63,19 @@ final class AppModel {
     /// The person's own settings: injury month, training calendars, consent.
     let profile: Profile
     /// Runs on the picked training calendars, from the start of today for 8 days.
-    private(set) var trainingRuns: [PlannedRun] = []
+    /// Only the calendar read sets it; tests set it directly, with no EventKit.
+    var trainingRuns: [PlannedRun] = []
     /// Every swap taken or plan kept, oldest first.
     private(set) var decisions: [GuardrailDecision] = []
     private(set) var checkIns: [CheckInRecord] = []
     private(set) var painRecords: [PainRecord] = []
+    private(set) var returnPlans: [ReturnPlanState] = []
     /// "Not now" on the catch-up setup hides it until the next launch.
     var rangeSetupDeferredThisLaunch = false
     /// The week whose OSTRC questions are waiting, after "A little" or "Yes" (BN1).
     var ostrcWeek: Date?
+    /// The watch's WatchConnectivity link (range plan item 19).
+    @ObservationIgnored let watchLink = PhoneWatchLink()
     /// Guardrail events waiting for the harness (eng review D1).
     @ObservationIgnored let outbox: EventOutbox
     /// Flags already counted as shown this launch, for Amplitude.
@@ -110,6 +114,8 @@ final class AppModel {
         calendarSync.onChange = { [weak self] in self?.calendarChanged() }
         notifier.onOpen = { [weak self] in Task { await self?.tick() } }
         notifier.onAction = { [weak self] action, payload in await self?.handleNotificationAction(action, payload) }
+        watchLink.onAnswer = { [weak self] answer in self?.handleWatchAnswer(answer) }
+        watchLink.start()
         Task { await refreshNotifications() }
         if persona.key.isReal { Task { await refreshHealth() } }
     }
@@ -134,9 +140,14 @@ final class AppModel {
             ? HistoryPlan.items(health.workouts, storyDay: storyDay, calendar: calendar, madeAt: run.planMadeAt)
             : PinnedPlan.items(for: persona.key, storyDay: storyDay)
         // One plan per day (item 1): a training calendar's run wins over
-        // Evergreen's own workout that day.
-        let runDays = Set(trainingRuns.map { calendar.startOfDay(for: $0.start) })
-        return items.filter { !runDays.contains(calendar.startOfDay(for: $0.slot.start)) }
+        // Evergreen's own workout that day, and a return-plan session wins over both (item 21).
+        let runDays = Set((trainingRuns.map(\.start) + returnSessions.map(\.start)).map { calendar.startOfDay(for: $0) })
+        // During a return plan, Evergreen's own runs pause too, so no one runs twice (item 21).
+        let returning = returnPlan.map { $0.status == .active || $0.status == .paused } ?? false
+        return items.filter {
+            !runDays.contains(calendar.startOfDay(for: $0.slot.start))
+                && !(returning && $0.slot.activityType == "Running" && $0.slot.end > (returnPlan?.start ?? .distantFuture))
+        }
     }
 
     /// Where the person's history begins: Apple Health's first workout, or Jordan's mock history.
@@ -168,7 +179,7 @@ final class AppModel {
                 break
             }
         }
-        return (items + swapItems).sorted { $0.slot.start < $1.slot.start }
+        return (items + swapItems + returnItems).sorted { $0.slot.start < $1.slot.start }
     }
 
     var todayPlan: [PlanItem] { plan.filter { calendar.isDate($0.slot.start, inSameDayAs: storyDay) } }
@@ -538,6 +549,10 @@ final class AppModel {
     /// run tomorrow morning; his longest run this month was under 2 hours.
     func showBrakeDemo() {
         resetDemo()
+        // A return plan pauses training-calendar runs, and the return beat's
+        // injury changes the suggestion; this beat starts without either.
+        returnPlans.forEach(context.delete)
+        profile.injuryMonth = nil
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: storyDay) ?? storyDay
         func at(_ day: Date, _ hour: Int, plus days: Int = 0) -> Date {
             let date = calendar.date(byAdding: .day, value: days, to: day) ?? day
@@ -610,6 +625,7 @@ final class AppModel {
         }
         refreshTrainingRuns()
         refreshFromStore()
+        pushWatchState()
         syncCalendar()
         Task { await scheduleNotifications() }
     }
@@ -622,6 +638,8 @@ final class AppModel {
         decisions = (try? context.fetch(FetchDescriptor<GuardrailDecision>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
         checkIns = (try? context.fetch(FetchDescriptor<CheckInRecord>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
         painRecords = (try? context.fetch(FetchDescriptor<PainRecord>(sortBy: [SortDescriptor(\.weekStart)]))) ?? []
+        returnPlans = (try? context.fetch(FetchDescriptor<ReturnPlanState>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
+        finishReturnPlanIfDone()
     }
 
     /// Reads the picked training calendars again (plan item 1), and withdraws
@@ -644,7 +662,7 @@ final class AppModel {
         for action in appliedActions where !isUndone(action) {
             if let id = action.planItemId { reasons[id] = action.reason }
         }
-        let entries = CalendarEntry.entries(for: plan, reasons: reasons, titles: swapTitles,
+        let entries = CalendarEntry.entries(for: plan, reasons: reasons, titles: swapTitles.merging(returnTitles) { $1 },
                                             storyDay: storyDay, calendar: calendar)
         calendarSync.sync(entries, from: storyDay)
     }

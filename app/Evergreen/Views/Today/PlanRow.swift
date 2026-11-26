@@ -23,7 +23,7 @@ struct PlanRow: View {
     /// Done and missed workouts stay put; upcoming ones can move. A swap
     /// keeps its training plan's time (Undo is on its card).
     private var canMove: Bool {
-        item.source != .swap && model.completion(for: item) == nil && !isMissed && item.slot.start > model.now
+        item.source != .swap && item.source != .returnSession && model.completion(for: item) == nil && !isMissed && item.slot.start > model.now
     }
 
     private func pick() {
@@ -38,7 +38,9 @@ struct PlanRow: View {
                         .font(.body.weight(.medium))
                         .foregroundStyle(isMissed ? Theme.textMuted : Theme.text)
                         .strikethrough(isMissed, color: Theme.textMuted)
-                    if item.source == .swap {
+                    if item.source == .returnSession {
+                        Badge(text: "Return")
+                    } else if item.source == .swap {
                         Badge(text: "Changed")
                     } else if model.movedAction(for: item) != nil {
                         Badge(text: "Moved")
@@ -78,6 +80,7 @@ struct PlanRow: View {
     /// "Strength · 30 min · Demo Gym"
     private var detail: String {
         if item.source == .swap, let title = model.swapTitles[item.id] { return title }
+        if item.source == .returnSession, let title = model.returnTitles[item.id] { return title }
         var parts = [Activity.title(item.slot.activityType), "\(item.slot.minutes) min"]
         if let place = item.slot.place { parts.append(place) }
         return parts.joined(separator: " · ")

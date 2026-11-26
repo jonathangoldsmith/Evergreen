@@ -51,6 +51,7 @@ struct CalendarEntry: Equatable, Sendable {
         case .comeback: "Comeback \(Activity.noun(item.slot.activityType)) · 2× points"
         case .routine: "\(Activity.title(item.slot.activityType)) (routine)"
         case .swap: "Easy \(Activity.noun(item.slot.activityType))"
+        case .returnSession: "Walk-run (return plan)"
         }
     }
 }

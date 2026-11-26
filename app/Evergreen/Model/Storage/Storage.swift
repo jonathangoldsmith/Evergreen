@@ -26,7 +26,7 @@ enum Storage {
     }
 
     static func open(at url: URL) throws -> ModelContainer {
-        let schema = Schema(versionedSchema: EvergreenSchemaV2.self)
+        let schema = Schema(versionedSchema: EvergreenSchemaV3.self)
         let configuration = ModelConfiguration(schema: schema, url: url)
         return try ModelContainer(for: schema, migrationPlan: EvergreenMigrationPlan.self, configurations: configuration)
     }

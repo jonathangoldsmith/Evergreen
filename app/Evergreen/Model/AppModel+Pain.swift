@@ -34,6 +34,8 @@ extension AppModel {
         record.createdAt = Date()
         record.ostrc = answer == .no ? OSTRC.noProblem : record.ostrc
         if answer == .yes {
+            // A "Yes" during a return plan pauses it (item 21).
+            pauseReturnPlan()
             profile.injuryMonth = calendar.dateInterval(of: .month, for: now)?.start ?? now
             profile.injuryAnswered = true
         }
