@@ -2419,7 +2419,7 @@ Source: `docs/designs/evergreen-business-notes.md`, section 8, "Decisions to mak
   - Surfaced by: BN2
   - Files: app/Evergreen/Views/Onboarding/, app/Evergreen/Agent/EventOutbox.swift, app/Evergreen/Views/Today/YourDataView.swift, harness/tests/test_events.py
   - Verify: with "Keep it on my phone", no request reaches the harness and the swap and report still work; research is off by default; DELETE erases consent events
-- [ ] **B3 (P1, human: ~1h / CC: ~10min)**: Wording sweep of app strings, notification text and the coach page for "safe", "prevent", "risk" and "injury-proof"
+- [x] **B3 (P1, human: ~1h / CC: ~10min)**: Wording sweep of app strings, notification text and the coach page for "safe", "prevent", "risk" and "injury-proof"
   - Surfaced by: BN3
   - Files: app/Evergreen/, harness/ (coach page)
   - Verify: a test or grep check over the string catalog and coach template finds none of those words

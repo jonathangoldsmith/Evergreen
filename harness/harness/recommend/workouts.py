@@ -18,7 +18,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from harness import data, guardrail, people, store
+from harness import data, guardrail, people, store, wording
 from harness.clients import sie
 from harness.models import USER_ID, History, PhoneMemory, ShoeState
 from harness.recommend.condition import condition
@@ -249,13 +249,14 @@ def _reasons(plan: dict, ids: list[str], timeout: float) -> dict[str, str]:
     def one(s: dict) -> str:
         prompt = (
             "Write one sentence under 15 words telling a runner why this planned session looks the way it does. "
-            "Speak to them as 'your'. Use only the rules and numbers given; the session is fixed.\n\n"
+            "Speak to them as 'your'. Use only the rules and numbers given; the session is fixed. "
+            f"{wording.RULE}\n\n"
             f"{ctx}\n\nSession: {s['date']:%a %b %d} {s['start']:%H:%M}, {s['activityType']}, {s['minutes']} min. "
             f"Rules applied: {', '.join(s['tags']) or 'their usual session for this weekday'}.\n\nAnswer in JSON."
         )
         r = sie.chat_json(prompt, ONE_REASON, "session_reason", 80)["reason"].strip()
-        if not r or len(r) > 160:
-            raise ValueError("bad reason")
+        if not r or len(r) > 160 or wording.claims_safety(r):
+            raise ValueError("bad reason")      # every session falls back to the fixed wording
         return r
 
     todo = [(i, s) for i, s in zip(ids, plan["sessions"]) if not s.get("race")]
