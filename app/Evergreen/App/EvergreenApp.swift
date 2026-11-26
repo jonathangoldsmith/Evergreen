@@ -1,4 +1,3 @@
-import AmplitudeSwift
 import SwiftData
 import SwiftUI
 
@@ -7,8 +6,6 @@ struct EvergreenApp: App {
     @UIApplicationDelegateAdaptor(EvergreenAppDelegate.self) private var appDelegate
     private let container: ModelContainer
     @State private var model: AppModel
-    /// The one Amplitude client. Nil when no key is set (app/Secrets.xcconfig), so nothing is sent.
-    private let amplitude: Amplitude?
 
     init() {
         Theme.registerFonts()
@@ -20,17 +17,16 @@ struct EvergreenApp: App {
             UserDefaults.standard.set(true, forKey: "demo_controls")
         }
         #endif
-        let amplitudeKey = Bundle.main.object(forInfoDictionaryKey: "AMPLITUDE_API_KEY") as? String
-        if let amplitudeKey, !amplitudeKey.isEmpty, !amplitudeKey.hasPrefix("$(") {
-            // The "default" project is in the US data region.
-            amplitude = Amplitude(configuration: Configuration(apiKey: amplitudeKey, serverZone: .US))
-        } else {
+        // The client is made only once uploads are allowed (BN2): even an
+        // opted-out client fetches Amplitude's remote config at launch.
+        var amplitudeKey = Bundle.main.object(forInfoDictionaryKey: "AMPLITUDE_API_KEY") as? String
+        if amplitudeKey?.isEmpty != false || amplitudeKey?.hasPrefix("$(") == true {
             print("[amplitude] API key is not set — no events will be sent")
-            amplitude = nil
+            amplitudeKey = nil
         }
         let container = Storage.container()
         self.container = container
-        let model = AppModel(context: container.mainContext, amplitude: amplitude)
+        let model = AppModel(context: container.mainContext, amplitudeKey: amplitudeKey)
         _model = State(initialValue: model)
         EvergreenAppDelegate.model = model
     }

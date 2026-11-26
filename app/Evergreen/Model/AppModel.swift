@@ -27,7 +27,8 @@ final class AppModel {
     /// Tony's memory bundle in JavaScriptCore; nil if it doesn't load.
     @ObservationIgnored private let memory = MemoryEngine.standard()
     /// The app's Amplitude client, made once in the app entry; nil without a key.
-    @ObservationIgnored private let amplitude: Amplitude?
+    @ObservationIgnored private var amplitude: Amplitude?
+    @ObservationIgnored private let amplitudeKey: String?
     /// The last memory sync, for the demo controls.
     private(set) var memoryReport: MemoryEngine.Report?
     /// Events Amplitude accepted since launch.
@@ -37,7 +38,7 @@ final class AppModel {
     /// agent buys nothing on its own and Order it asks for the check first.
     private(set) var identityVerified = UserDefaults.standard.bool(forKey: "identity_verified")
     /// Whether an Amplitude key was built in (app/Secrets.xcconfig).
-    var amplitudeOn: Bool { amplitude != nil }
+    var amplitudeOn: Bool { amplitudeKey != nil }
     /// Whether notifications are allowed, for onboarding and the demo controls.
     private(set) var notificationAccess: NotificationAccess = .notAsked
 
@@ -87,9 +88,9 @@ final class AppModel {
     /// The accountability buddy as the harness last said (range plan item 22).
     var buddyStatus: BuddyClient.Status?
 
-    init(context: ModelContext, amplitude: Amplitude? = nil) {
+    init(context: ModelContext, amplitudeKey: String? = nil) {
         self.context = context
-        self.amplitude = amplitude
+        self.amplitudeKey = amplitudeKey
         let today = Calendar.current.startOfDay(for: Date())
         let saved = (try? context.fetch(FetchDescriptor<Run>()))?.first
         let run = saved ?? Run(persona: .jordan, storyDay: today)
@@ -100,6 +101,7 @@ final class AppModel {
         if savedProfile == nil { context.insert(profile) }
         self.profile = profile
         outbox = EventOutbox(context: context, sender: EventsClient.currentSender)
+        outbox.isAllowed = { [unowned profile] in profile.uploadsAllowed == true }
         calendarAccess = calendarSync.access
         persona = Persona.load(run.personaKey, storyDay: today)
         response = nil
@@ -111,6 +113,8 @@ final class AppModel {
             response = run.lastResponse.flatMap { try? JSONDecoder.contract.decode(TickResponse.self, from: $0) }
         }
         save()
+        // Amplitude only after a recorded "yes" (BN2).
+        applyUploadConsent()
         calendarSync.onChange = { [weak self] in self?.calendarChanged() }
         notifier.onOpen = { [weak self] in Task { await self?.tick() } }
         notifier.onAction = { [weak self] action, payload in await self?.handleNotificationAction(action, payload) }
@@ -209,8 +213,10 @@ final class AppModel {
 
     // MARK: Harness planner (read-only)
 
-    /// Whether the harness planner is set up (it shares the shoe pick's secret).
-    var plannerAvailable: Bool { PlannerClient.configured() != nil }
+    /// Whether the harness planner is set up (it shares the shoe pick's
+    /// secret) and may be asked: its request carries calendar busy times, so
+    /// "Keep it on my phone" hides it (BN2).
+    var plannerAvailable: Bool { mayUpload && PlannerClient.configured() != nil }
 
     /// What the planner needs about this person now: the demo clock, the shoe
     /// wear and race from the demo, the new pair's arrival once one is ordered,
@@ -220,8 +226,8 @@ final class AppModel {
             persona: persona.key.rawValue, now: now, demo: run.demo, newPairArrives: newShoesArrive,
             busy: calendarSync.busyTimes(from: storyDay, excludingCalendars: profile.trainingCalendarIds), cal: calendar
         )
-        // "Keep it on my phone" (BN2) keeps the history on the phone too.
-        if persona.key.isReal, profile.uploadsAllowed != false {
+        // Only after a "yes" (BN2): not asked yet counts as no.
+        if persona.key.isReal, mayUpload {
             request.user = DeviceIdentity.userId
             request.history = HistoryPayload(health, cal: calendar)
         }
@@ -266,7 +272,7 @@ final class AppModel {
         Task { await outbox.flush() }
         latestTick += 1
         let thisTick = latestTick
-        let agent = AgentChoice.current()
+        let agent = AgentChoice.current(uploadsAllowed: mayUpload)
         agentName = agent.name
         let snapshot = TickSnapshot(
             now: now,
@@ -298,16 +304,28 @@ final class AppModel {
         await syncMemory()
     }
 
-    /// Sends a brake event to Amplitude: fixed words only (item 9).
+    /// Sends a brake event to Amplitude: fixed words only (item 9), and only
+    /// once uploads are allowed (BN2).
     func track(_ event: AnalyticsEvent) {
+        guard mayUpload else { return }
         amplitude?.track(eventType: event.name, eventProperties: event.properties)
     }
 
+    /// Turns Amplitude on or off with the upload consent (BN2). The client is
+    /// made on the first "yes"; after a "no" it stays opted out until relaunch.
+    func applyUploadConsent() {
+        if mayUpload, amplitude == nil, let amplitudeKey {
+            amplitude = Amplitude(configuration: Configuration(apiKey: amplitudeKey, serverZone: .US))
+        }
+        amplitude?.configuration.optOut = !mayUpload
+    }
+
     /// Rolls the person's memory and sends its staged events to Amplitude when
-    /// a key is set (memory-agent/docs/AMPLITUDE.md). Never blocks the agent.
+    /// a key is set and uploads are allowed (memory-agent/docs/AMPLITUDE.md,
+    /// BN2). Never blocks the agent.
     func syncMemory() async {
         guard let memory else { return }
-        let sink = amplitude.map(AmplitudeSink.init)
+        let sink = mayUpload ? amplitude.map(AmplitudeSink.init) : nil
         let input = MemoryInput(
             personaKey: persona.key.rawValue, historyStart: historyStart,
             now: now, workouts: workouts, calendar: calendar

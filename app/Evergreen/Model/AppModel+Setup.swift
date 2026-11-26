@@ -40,6 +40,10 @@ extension AppModel {
 
     // MARK: What leaves your phone (BN2)
 
+    /// Only a recorded "yes": not asked yet and "Keep it on my phone" both mean
+    /// nothing goes to the harness or to Amplitude.
+    var mayUpload: Bool { profile.uploadsAllowed == true }
+
     func setConsent(uploads: Bool, research: Bool) {
         profile.uploadsAllowed = uploads
         // Research use needs uploads; it's never on without them.
@@ -47,6 +51,9 @@ extension AppModel {
         profile.consentVersion = Self.consentVersion
         profile.consentAt = Date()
         save()
+        applyUploadConsent()
+        // Declining leaves nothing waiting to go (BN2).
+        if !uploads { outbox.clear() }
         // A "no" never leaves the phone; a "yes" is the first event sent.
         if uploads {
             upload(.consent(research: profile.researchAllowed, version: Self.consentVersion, at: Date(), calendar: calendar), ownAnswer: true)
