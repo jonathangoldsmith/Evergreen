@@ -151,7 +151,8 @@ struct PurchaseCard: View {
                 .agentFont(24, relativeTo: .title2)
                 .foregroundStyle(Theme.accent)
             ActionCopy.shoesMilesText(purchase).font(.body).foregroundStyle(Theme.text)
-            Text("Most pairs wear out between 300 and 500 miles, and worn shoes raise your injury risk.")
+            // What wear does, not a claim about injury (BN3).
+            Text("Most pairs wear out between 300 and 500 miles, and worn foam cushions less.")
                 .font(.body)
                 .foregroundStyle(Theme.text)
             ShoePick(purchase: purchase)

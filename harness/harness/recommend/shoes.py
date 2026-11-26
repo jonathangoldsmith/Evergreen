@@ -11,7 +11,7 @@ import concurrent.futures as cf
 import time
 from datetime import datetime, timedelta
 
-from harness import data, people, store
+from harness import data, people, store, wording
 from harness.identity import gate
 from harness.web import research
 from harness.clients import sie
@@ -124,13 +124,14 @@ def _decide_prompt(need: str, eligible: list[dict], scores: dict[str, float]) ->
         "(fit notes, arrives in time to break in before the race). Choose the shoe that best fits how they train: "
         "cushioning and durability for their weekly distance and long runs come first, a familiar daily-trainer feel "
         "before a race second, price last (only to break a near tie). For every other shoe give one short reason it "
-        "lost (under 10 words, factual, no second person pronoun except 'your'). whyChosen: one sentence under 25 words, speaking to the runner as 'your' (never 'the runner').\n\n"
+        "lost (under 10 words, factual, no second person pronoun except 'your'). whyChosen: one sentence under 25 words, speaking to the runner as 'your' (never 'the runner'). "
+        f"{wording.RULE}\n\n"
         f"Runner: {need}\n\nShoes:\n{rows}\n\nAnswer in JSON."
     )
 
 
 def _guard(answer: dict, eligible: list[dict]) -> dict[str, str]:
-    """Reject anything off the shortlist, missing a reason, or too long. Returns {id: lostBecause}."""
+    """Reject anything off the shortlist, missing a reason, too long, or claiming safety (BN3). Returns {id: lostBecause}."""
     ids = {s["id"] for s in eligible}
     if answer.get("chosenId") not in ids:
         raise ValueError("chosen shoe is not on the shortlist")
@@ -140,6 +141,8 @@ def _guard(answer: dict, eligible: list[dict]) -> dict[str, str]:
         raise ValueError("a shortlisted shoe has no reason")
     if any(not r or len(r) > 120 for r in lost.values()) or not 0 < len(answer.get("whyChosen", "")) <= 220:
         raise ValueError("reason empty or too long")
+    if any(wording.claims_safety(r) for r in [answer["whyChosen"], *lost.values()]):
+        raise ValueError("reason makes a safety claim (BN3)")
     return lost
 
 
