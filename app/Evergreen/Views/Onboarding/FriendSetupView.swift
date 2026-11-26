@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// The buddy's friend's short path (range plan item 22): the disclaimer,
-/// notifications, what's shared, and the code. No backtest or injury question
-/// unless they later set Evergreen up for themselves.
+/// The buddy's friend's short path (range plan item 22): "What leaves your
+/// phone" first (BN2), then the disclaimer, notifications, what's shared, and
+/// the code. No backtest or injury question unless they later set Evergreen
+/// up for themselves.
 struct FriendSetupView: View {
     let onBack: () -> Void
 
@@ -10,8 +11,28 @@ struct FriendSetupView: View {
     @State private var code = ""
     @State private var message: String?
     @State private var busy = false
+    /// The consent step leads the path until it's answered (BN2).
+    @State private var askedConsent = false
+    /// Pairing after "Allow and share", when uploads were kept on the phone.
+    @State private var afterConsent: (() -> Void)?
 
     var body: some View {
+        if model.profile.uploadsAllowed == nil && !askedConsent {
+            VStack(alignment: .leading, spacing: 0) {
+                Button("Back", systemImage: "chevron.left", action: onBack)
+                    .foregroundStyle(Theme.textMuted)
+                    .frame(minHeight: 44)
+                ConsentStep(onDone: { askedConsent = true })
+            }
+            .padding(.horizontal, Theme.md)
+            .padding(.bottom, Theme.lg)
+            .background(Theme.surface)
+        } else {
+            join
+        }
+    }
+
+    private var join: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button("Back", systemImage: "chevron.left", action: onBack)
                 .foregroundStyle(Theme.textMuted)
@@ -47,7 +68,9 @@ struct FriendSetupView: View {
                 }
                 .padding(.top, Theme.md)
             }
-            Button("Pair with my friend", action: pair)
+            Button("Pair with my friend") {
+                if model.mayUpload { pair() } else { afterConsent = pair }
+            }
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(busy || code.trimmingCharacters(in: .whitespaces).count != 8)
                 .padding(.top, Theme.md)
@@ -55,6 +78,7 @@ struct FriendSetupView: View {
         .padding(.horizontal, Theme.md)
         .padding(.bottom, Theme.lg)
         .background(Theme.surface)
+        .uploadConsentAlert(for: $afterConsent, model: model)
     }
 
     private func pair() {

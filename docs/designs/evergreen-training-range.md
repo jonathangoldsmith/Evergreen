@@ -2415,7 +2415,7 @@ Source: `docs/designs/evergreen-business-notes.md`, section 8, "Decisions to mak
   - Surfaced by: BN1
   - Files: app/Evergreen/Notifications/, app/Evergreen/Views/Today/, the pain/injury model, harness/tests/test_events.py
   - Verify: "No" records a zero week with no sheet; a skipped sheet keeps the one-tap answer; OSTRC codes never reach Amplitude or the coach page
-- [ ] **B2 (P1, human: ~1 day / CC: ~30min)**: "What leaves your phone" step with the research tick; `consent` events; the outbox sends nothing before a "yes"; coach share and buddy invite ask first when uploads are off; the step leads the R8 catch-up flow and the friend's path
+- [x] **B2 (P1, human: ~1 day / CC: ~30min)**: "What leaves your phone" step with the research tick; `consent` events; the outbox sends nothing before a "yes"; coach share and buddy invite ask first when uploads are off; the step leads the R8 catch-up flow and the friend's path
   - Surfaced by: BN2
   - Files: app/Evergreen/Views/Onboarding/, app/Evergreen/Agent/EventOutbox.swift, app/Evergreen/Views/Today/YourDataView.swift, harness/tests/test_events.py
   - Verify: with "Keep it on my phone", no request reaches the harness and the swap and report still work; research is off by default; DELETE erases consent events

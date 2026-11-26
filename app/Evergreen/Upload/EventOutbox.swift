@@ -16,6 +16,10 @@ final class EventOutbox {
     private let sender: () -> Sender?
     private var flushing = false
 
+    /// Whether uploads are allowed now (BN2). Read on each flush, so nothing
+    /// is sent before a "yes", or after a later "Keep it on my phone".
+    var isAllowed: () -> Bool = { true }
+
     /// `sender` is read on each flush, so setting the harness URL later starts uploads.
     init(context: ModelContext, sender: @escaping () -> Sender?) {
         self.context = context
@@ -37,10 +41,16 @@ final class EventOutbox {
         try? context.save()
     }
 
+    /// Drops everything waiting: declining uploads leaves the outbox empty (BN2).
+    func clear() {
+        pending.forEach(context.delete)
+        try? context.save()
+    }
+
     /// Sends what's waiting, oldest first, and drops only the acknowledged ids.
     @discardableResult
     func flush() async -> Int {
-        guard !flushing, let send = sender() else { return 0 }
+        guard !flushing, isAllowed(), let send = sender() else { return 0 }
         flushing = true
         defer { flushing = false }
         var acknowledged = 0

@@ -11,6 +11,8 @@ struct CoachSection: View {
     @State private var newLink: URL?
     @State private var message: String?
     @State private var busy = false
+    /// What to do after "Allow and share", while that question is up.
+    @State private var afterConsent: (() -> Void)?
 
     var body: some View {
         Section {
@@ -25,7 +27,10 @@ struct CoachSection: View {
                         .font(.footnote).foregroundStyle(Theme.textMuted)
                 }
             }
-            Button("Make a link for my coach", action: create)
+            Button("Make a link for my coach") {
+                // Uploads off: ask first, then make the link (BN2).
+                if model.mayUpload { create() } else { afterConsent = create }
+            }
                 .disabled(busy || name.trimmingCharacters(in: .whitespaces).isEmpty)
             if let newLink {
                 ShareLink(item: newLink, message: Text("My training from Evergreen, read-only.")) {
@@ -44,6 +49,7 @@ struct CoachSection: View {
             Text("Your coach sees the runs Evergreen changed and why, and your weeks in range. Never your Apple Health data, calendar titles or injuries.")
         }
         .listRowBackground(Theme.card)
+        .uploadConsentAlert(for: $afterConsent, model: model)
     }
 
     /// One shared link: who, until when, what it includes, and Renew or Revoke.
@@ -73,7 +79,6 @@ struct CoachSection: View {
     private func create() {
         run {
             guard let client = model.coachClient else { return }
-            model.allowUploadsForSharing()
             let made = try await client.create(name: name, includeFeelings: includeFeelings)
             if let token = made.token { newLink = client.link(for: token) }
         }

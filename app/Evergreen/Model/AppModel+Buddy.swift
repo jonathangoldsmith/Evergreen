@@ -21,7 +21,8 @@ extension AppModel {
     }
 
     func refreshBuddy() async {
-        guard let client = BuddyClient.configured() else { return }
+        // Asking the harness for the buddy's status sends the anonymous ID (BN2).
+        guard mayUpload, let client = BuddyClient.configured() else { return }
         if let status = try? await client.status() {
             buddyStatus = status
             // The token can change; a paired person sends the current one each launch.
@@ -31,8 +32,8 @@ extension AppModel {
 
     /// Returns the new code, or the reason it couldn't be made.
     func inviteBuddy(name: String) async -> Result<BuddyClient.Invite, BuddyClient.Failure> {
+        guard mayUpload else { return .failure(.refused("uploads_off")) }
         guard let client = BuddyClient.configured() else { return .failure(.refused("status_503")) }
-        allowUploadsForSharing()
         do {
             let invite = try await client.invite(name: name)
             await refreshBuddy()
@@ -43,8 +44,8 @@ extension AppModel {
     }
 
     func redeemBuddy(code: String) async -> BuddyClient.Failure? {
+        guard mayUpload else { return .refused("uploads_off") }
         guard let client = BuddyClient.configured() else { return .refused("status_503") }
-        allowUploadsForSharing()
         do {
             buddyStatus = try await client.redeem(code: code)
             track(.buddy("paired"))
@@ -64,10 +65,11 @@ extension AppModel {
     }
 
     /// The coach-share client, when the harness is set up (range plan item 20).
-    var coachClient: CoachClient? { CoachClient.configured() }
+    /// Nil with uploads off (BN2), so the section neither lists nor makes links.
+    var coachClient: CoachClient? { mayUpload ? CoachClient.configured() : nil }
 
     /// Sharing uploads a push token, workouts or a coach's page, so it needs
-    /// uploads on. The screen that calls this has already said so.
+    /// uploads on. Called only from "Allow and share" (`uploadConsentAlert`).
     func allowUploadsForSharing() {
         if profile.uploadsAllowed != true { setConsent(uploads: true, research: profile.researchAllowed) }
     }
@@ -82,7 +84,7 @@ extension AppModel {
     /// The token goes to the harness with its environment: sandbox for builds
     /// from Xcode, production for TestFlight (item 22).
     func pushTokenArrived(_ token: Data) async {
-        guard profile.uploadsAllowed == true, let client = BuddyClient.configured() else { return }
+        guard mayUpload, let client = BuddyClient.configured() else { return }
         let hex = token.map { String(format: "%02x", $0) }.joined()
         #if DEBUG
         let environment = "sandbox"

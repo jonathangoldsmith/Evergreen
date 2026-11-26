@@ -12,6 +12,7 @@ enum BuddyCopy {
         case "too_many_tries": "Too many tries. Try again in an hour."
         case "bad_name": "Use a name of 1 to 40 characters."
         case "no persistent store", "status_503": "Buddies aren't available right now."
+        case "uploads_off": "Pairing needs uploads, and they're off. Turn them on in Your data."
         default: "Something went wrong. Try again."
         }
     }

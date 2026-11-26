@@ -11,6 +11,8 @@ struct BuddySection: View {
     @State private var message: String?
     @State private var busy = false
     @State private var confirmUnpair = false
+    /// What to do after "Allow and share", while that question is up.
+    @State private var afterConsent: (() -> Void)?
 
     var body: some View {
         Section {
@@ -29,15 +31,14 @@ struct BuddySection: View {
         }
         .listRowBackground(Theme.card)
         .disabled(busy)
+        .uploadConsentAlert(for: $afterConsent, model: model)
         if isUnpaired {
             Section {
                 TextField("8-character code", text: $code)
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .font(.body.monospaced())
-                Button("Pair with my friend") {
-                    run { message = await model.redeemBuddy(code: code).map(say) }
-                }
+                Button("Pair with my friend") { askingFirst(redeem) }
                 .disabled(code.trimmingCharacters(in: .whitespaces).count != 8)
             } header: {
                 Text("Have a friend's code?")
@@ -66,14 +67,7 @@ struct BuddySection: View {
     private var inviteRows: some View {
         TextField("The name your buddy sees", text: $name)
             .textContentType(.givenName)
-        Button("Get an invite code") {
-            run {
-                switch await model.inviteBuddy(name: name) {
-                case .success(let made): invite = made
-                case .failure(let failure): message = say(failure)
-                }
-            }
-        }
+        Button("Get an invite code") { askingFirst(makeInvite) }
         .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 
@@ -108,6 +102,26 @@ struct BuddySection: View {
             } message: {
                 Text("Your buddy's row disappears for both of you. They aren't told.")
             }
+    }
+
+    // MARK: Actions
+
+    /// Pairing needs uploads; with them off, ask first (BN2).
+    private func askingFirst(_ action: @escaping () -> Void) {
+        if model.mayUpload { action() } else { afterConsent = action }
+    }
+
+    private func makeInvite() {
+        run {
+            switch await model.inviteBuddy(name: name) {
+            case .success(let made): invite = made
+            case .failure(let failure): message = say(failure)
+            }
+        }
+    }
+
+    private func redeem() {
+        run { message = await model.redeemBuddy(code: code).map(say) }
     }
 
     // MARK: Helpers
