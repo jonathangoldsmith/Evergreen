@@ -26,6 +26,8 @@ struct WatchState: Codable, Hashable, Sendable {
     var inRangeSpoken: String
     /// The rectangular complication's line: "Sun · 12 km (was 18)", "Rest day".
     var today: String
+    /// Tomorrow's line, so the complication rolls over at midnight without the phone.
+    var tomorrow: String? = nil
     var sentAt: Date
 
     static let empty = WatchState(run: nil, inRange: "—", inRangeSpoken: "No days counted yet",
@@ -38,11 +40,12 @@ struct WatchState: Codable, Hashable, Sendable {
         return [Self.contextKey: data]
     }
 
-    init(run: Run?, inRange: String, inRangeSpoken: String, today: String, sentAt: Date) {
+    init(run: Run?, inRange: String, inRangeSpoken: String, today: String, tomorrow: String? = nil, sentAt: Date) {
         self.run = run
         self.inRange = inRange
         self.inRangeSpoken = inRangeSpoken
         self.today = today
+        self.tomorrow = tomorrow
         self.sentAt = sentAt
     }
 

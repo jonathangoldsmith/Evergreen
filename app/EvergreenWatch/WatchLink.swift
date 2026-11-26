@@ -1,15 +1,14 @@
 import Observation
 import WatchConnectivity
+import WidgetKit
 
 /// The watch's end of WatchConnectivity: the last state the phone sent, and
 /// taps sent back right away or queued until the phone is in reach.
 @Observable
 final class WatchLink: NSObject, WCSessionDelegate, @unchecked Sendable {
-    private(set) var state: WatchState = WatchLink.saved() ?? .empty
+    private(set) var state: WatchState = WatchStateStore.load() ?? .empty
     /// Taps sent while the phone was away, by run key: "Will sync with your phone".
     private(set) var queued: [String: WatchAnswer.Kind] = [:]
-
-    private static let savedKey = "watch_state"
 
     func start() {
         guard WCSession.isSupported() else { return }
@@ -35,13 +34,10 @@ final class WatchLink: NSObject, WCSessionDelegate, @unchecked Sendable {
             self.state = state
             // The phone's state is the truth: anything it decided is no longer waiting.
             self.queued = self.queued.filter { key, _ in state.run?.key == key && state.run?.decided == nil }
-            UserDefaults.standard.set(try? JSONEncoder().encode(state), forKey: Self.savedKey)
+            // The complication reads the same state from the App Group (task E22).
+            WatchStateStore.save(state)
+            WidgetCenter.shared.reloadAllTimelines()
         }
-    }
-
-    private static func saved() -> WatchState? {
-        guard let data = UserDefaults.standard.data(forKey: savedKey) else { return nil }
-        return try? JSONDecoder().decode(WatchState.self, from: data)
     }
 
     // MARK: WCSessionDelegate

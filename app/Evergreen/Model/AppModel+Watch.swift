@@ -11,7 +11,8 @@ extension AppModel {
                                             : "No days counted yet"
         let run = guardrailRuns.first.map(watchRun)
         let today = run.map { $0.decided.map { _ in watchTodayLine() } ?? $0.line } ?? watchTodayLine()
-        return WatchState(run: run, inRange: inRange, inRangeSpoken: spoken, today: today, sentAt: Date())
+        return WatchState(run: run, inRange: inRange, inRangeSpoken: spoken, today: today, tomorrow: watchTomorrowLine(),
+                          sentAt: Date())
     }
 
     private func watchRun(_ run: PlannedRun) -> WatchState.Run {
@@ -34,6 +35,19 @@ extension AppModel {
             return "\(Activity.title(item.slot.activityType)) · \(item.slot.minutes) min"
         }
         if let run = trainingRuns.first(where: { calendar.isDate($0.start, inSameDayAs: now) && !isPausedForReturn($0) }) {
+            return run.title
+        }
+        return "Rest day"
+    }
+
+    /// Tomorrow's first workout for the complication after midnight.
+    private func watchTomorrowLine() -> String {
+        guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) else { return "Rest day" }
+        if let item = plan.first(where: { calendar.isDate($0.slot.start, inSameDayAs: tomorrow) }) {
+            if item.source == .swap, let title = swapTitles[item.id] { return title }
+            return "\(Activity.title(item.slot.activityType)) · \(item.slot.minutes) min"
+        }
+        if let run = trainingRuns.first(where: { calendar.isDate($0.start, inSameDayAs: tomorrow) && !isPausedForReturn($0) }) {
             return run.title
         }
         return "Rest day"

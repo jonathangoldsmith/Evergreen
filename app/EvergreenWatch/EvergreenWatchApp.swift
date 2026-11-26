@@ -12,5 +12,10 @@ struct EvergreenWatchApp: App {
                 .environment(link)
                 .task { link.start() }
         }
+        // A complication transfer from the phone wakes the watch in the background;
+        // the link applies it and reloads the complication (task E22).
+        .backgroundTask(.watchConnectivity) {
+            await MainActor.run { link.start() }
+        }
     }
 }
