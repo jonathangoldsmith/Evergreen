@@ -5,10 +5,14 @@ import Foundation
 /// memory, sized to their training load, sleep and resting heart rate, shoe
 /// wear and race taper, each with a reason and citations, plus optional
 /// suggestions. Read-only in the app: nothing here touches the plan or the
-/// calendar. Uses the same harness URL and secret as `RecommendClient`.
+/// calendar. Uses the same harness URL and secret as `RecommendClient`; a
+/// request for a real person also carries this install's device token (T12).
 struct PlannerClient: Sendable {
     let baseURL: URL
     let secret: String
+    /// The network and the device token; tests pass fakes.
+    var transport: HarnessRequest.Transport = HarnessRequest.urlSession
+    var auth: DeviceAuth = .shared
 
     /// The planner answers in about 2 seconds; model-written reasons can take longer.
     static let timeout: TimeInterval = 12
@@ -70,9 +74,17 @@ struct PlannerClient: Sendable {
         let data: Data
         do {
             request.httpBody = try JSONEncoder.contract.encode(body)
-            let (answer, response) = try await URLSession.shared.data(for: request)
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                throw Failure.refused(status: http.statusCode)
+            let (answer, status): (Data, Int)
+            if let user = body.user {
+                // A real person's id and history: the harness wants their own device token.
+                (answer, status) = try await HarnessRequest.send(request, baseURL: baseURL, secret: secret, user: user,
+                                                                 transport: transport, auth: auth)
+            } else {
+                let (bytes, response) = try await transport(request)
+                (answer, status) = (bytes, (response as? HTTPURLResponse)?.statusCode ?? 200)
+            }
+            if !(200..<300).contains(status) {
+                throw Failure.refused(status: status)
             }
             data = answer
         } catch let failure as Failure {

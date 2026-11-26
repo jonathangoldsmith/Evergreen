@@ -154,3 +154,21 @@ def test_request_path_uses_memory_only(fake_db):
     assert src in ("web-snapshot", "catalog")
     store.load_candidates("jordan")                  # what the background refresh does
     assert shoes.candidates("jordan")[1] == "web-singlestore"
+
+
+# --- the deploy check (range plan task T1) ---
+
+def test_production_without_the_store_fails_its_health_check(monkeypatch):
+    from fastapi.testclient import TestClient
+    from api.index import app
+    client = TestClient(app)
+    monkeypatch.delenv("SINGLESTORE_URL", raising=False)
+    monkeypatch.delenv("SINGLESTORE_DB_URL", raising=False)
+    monkeypatch.setenv("VERCEL_ENV", "production")
+    r = client.get("/health")
+    assert r.status_code == 503 and r.json()["ok"] is False and r.json()["singlestore"] is False
+    monkeypatch.setenv("SINGLESTORE_URL", "user:pw@fake:3306/db")
+    assert client.get("/health").status_code == 200
+    monkeypatch.setenv("VERCEL_ENV", "preview")
+    monkeypatch.delenv("SINGLESTORE_URL")
+    assert client.get("/health").json()["ok"] is True          # previews and local runs may go without

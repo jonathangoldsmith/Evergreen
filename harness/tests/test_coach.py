@@ -123,3 +123,45 @@ def test_without_a_store_sharing_fails_closed_and_links_read_inactive(monkeypatc
     monkeypatch.delenv("SINGLESTORE_URL", raising=False)
     assert client.post(f"/users/{RUNNER}/coach-shares", json={"displayName": "Sam"}).status_code == 503
     assert coach.INACTIVE in page("anything").text
+
+
+# --- the token after the #, out of request logs (range plan task T3) ---
+
+def view(token):
+    return client.post("/coach/view", json={"token": token})
+
+
+def test_the_shell_carries_no_token_and_runs_only_its_own_script(db):
+    import base64, hashlib, re
+    r = client.get("/coach")
+    assert r.status_code == 200 and "noindex" in r.headers["x-robots-tag"] and r.headers["cache-control"] == "no-store"
+    scripts = re.findall(r"<script>(.*?)</script>", r.text, re.S)
+    assert scripts == [coach.OPENER]
+    digest = base64.b64encode(hashlib.sha256(scripts[0].encode()).digest()).decode()
+    assert f"script-src 'sha256-{digest}'" in r.headers["content-security-policy"]
+    assert "connect-src 'self'" in r.headers["content-security-policy"]
+    assert "<noscript>" in r.text and coach.NO_SCRIPT in r.text
+    assert '"/coach/view"' in coach.OPENER and "location.hash" in coach.OPENER
+
+
+def test_the_token_in_the_body_opens_the_runners_page(db):
+    events(flag(), choice(), WEEK)
+    made = share(name="Sam")
+    r = view(made["token"])
+    assert r.status_code == 200 and "Sam" in r.text and "<main>" in r.text
+    assert r.text == page(made["token"]).text                     # the same page as the old path
+    assert r.headers["cache-control"] == "no-store" and "script-src" not in r.headers["content-security-policy"]
+    assert "<script>" not in r.text                               # the opened page is plain HTML
+
+
+def test_a_bad_token_in_the_body_reads_inactive(db):
+    a = share()
+    client.delete(f"/users/{RUNNER}/coach-shares/{a['id']}")
+    for token in (a["token"], "not-a-real-token", "", "x" * 65):
+        assert coach.INACTIVE in view(token).text, token
+    assert coach.INACTIVE in client.post("/coach/view", json={}).text
+
+
+def test_old_path_links_still_open(db):
+    made = share(name="Sam")
+    assert "Sam" in page(made["token"]).text

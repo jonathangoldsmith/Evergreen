@@ -22,13 +22,14 @@ PYTHONPATH=. uv run uvicorn api.index:app --reload --port 8000
 | `GET /health` | Which keys are configured (never their values) |
 | `POST /warm` | Loads the two SIE models before the demo, since cold starts can take minutes |
 | `POST /evidence` | `{purchaseKind, query}` → `{evidence, live}`, the shape `EvidenceClient.swift` expects. Cached passages until Senso is wired. Open even when a secret is set, because the app sends no header. |
-| `POST /workouts/recommend` | The next 7 days from health data, shoe condition and memory: `{persona, now, shoes?, newPairArrives?, raceDate?, busy[]}` → `{summary, signals, actions[], memoryUsed, source, auditId}`. Needs the secret. |
+| `POST /workouts/recommend` | The next 7 days from health data, shoe condition and memory: `{persona, now, shoes?, newPairArrives?, raceDate?, busy[]}` → `{summary, signals, actions[], memoryUsed, source, auditId}`. Needs the secret. With a `user`, it also needs that user's device token (range plan task T12). |
 | `POST /shoes/prefetch?persona=jordan` | Researches shoes on the web now (Nimble + SIE, about 30 s) and stores them in SingleStore when configured. Needs the secret. |
 | `GET /audit/recent?persona=jordan&limit=20` | The latest recommendations from SingleStore. Needs the secret; 503 when SingleStore is off. |
 | `GET /audit/{auditId}` | One full audit record. Needs the secret. |
 | `POST /devices` | `{user}` → `{token}`: registers an install once (eng review D7). Needs the shared secret; every `/users/{user}/...` route below needs `Authorization: Bearer <token>` for that user instead. |
 | `POST`, `GET /users/{user}/coach-shares`; `PATCH`, `DELETE /users/{user}/coach-shares/{id}` | Coach links (range plan item 20): make one with `{displayName, includeFeelings}` (the token is in that answer only), list, change the tick or renew, revoke. |
-| `GET /coach/{token}` | The coach's read-only page: the last 4 weeks of swaps and weekly counts. Public, `noindex`, `no-store`; revoked, expired and unknown links read the same. |
+| `GET /coach`, `POST /coach/view` | The coach's read-only page: the last 4 weeks of swaps and weekly counts. The link is `/coach#<token>`; the page's one script posts the token to `/coach/view` in the body, so it never sits in a URL the server logs (range plan task T3). Public, `noindex`, `no-store`; revoked, expired and unknown links read the same. |
+| `GET /coach/{token}` | Links made before T3, and coaches without JavaScript: the same page, but the token is in the logged path. |
 | `POST /users/{user}/events` | The phone's guardrail and push events (range plan item 9): strict typed events, each stored once; `range_week` updates in place. Returns the ids stored and any buddy notes sent. 503 without SingleStore. Needs the secret. |
 | `POST /users/{user}/buddy` | `{displayName}` → `{code, expiresAt}`: an 8-character invite, good once for 48 hours (range plan item 22). |
 | `POST /users/{user}/buddy/redeem` | `{code}` pairs the friend; refusals say why (`own_code`, `used`, `expired`, `already_paired`, `unknown_code`, `too_many_tries`). |
@@ -136,4 +137,4 @@ Live at **https://trackerplusplus-harness.vercel.app** (personal Vercel project 
 - Dependencies come from `requirements.txt`. `.vercelignore` keeps `.env`, tests and scripts out of the upload.
 - Environment variables (production): `SUPERLINKED_API_KEY`, `SENSO_API_KEY`, `NIMBLE_API_KEY`, `HARNESS_SECRET`. For guardrail events and the buddy: `SINGLESTORE_URL` (they refuse with 503 without it). For buddy notes: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (the .p8 file's contents) and `APNS_TOPIC` (`com.evergreentraining.app`); without them notes stay pending and drop after 24 hours.
 - `HARNESS_SECRET` is on: `/shoes/recommend` and `/warm` need `X-Harness-Secret: <value from harness/.env>`; `/health` and `/evidence` stay open.
-- Redeploy: `cd harness && npx vercel deploy --prod --yes`. Before the demo: `POST /warm` with the header.
+- Redeploy: `cd harness && scripts/deploy.sh`. It deploys to production, then runs the deploy check, `scripts/smoke.py` (range plan task T1): `/health` must show the store on (production answers 503 without it), and a throwaway id's coach share must round-trip through SingleStore before it's erased. A failing check exits 1. Before the demo: `POST /warm` with the header.

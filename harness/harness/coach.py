@@ -10,6 +10,7 @@ revoked; revoked, expired and unknown links all read the same.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import html
 import secrets
@@ -198,8 +199,38 @@ def render_inactive() -> str:
     return _page("Evergreen", f"<h1>Evergreen</h1><p>{INACTIVE}</p>")
 
 
-def _page(title: str, content: str) -> str:
-    # DESIGN.md's coach page: one reading column, the light and dark tokens, no cards, no JavaScript.
+# The link is `/coach#<token>` (range plan task T3): browsers never send what follows the #,
+# so the token stays out of request logs. This one script, the page's only JavaScript, reads
+# it and posts it to `/coach/view`, then puts the answer's <main> in place of the shell's.
+OPENER = (
+    '(function(){var s=document.getElementById("status"),t=location.hash.slice(1);'
+    'if(!t){s.textContent="' + INACTIVE + '";return}s.textContent="Opening\u2026";'
+    'fetch("/coach/view",{method:"POST",headers:{"Content-Type":"application/json"},'
+    'body:JSON.stringify({token:t}),cache:"no-store",credentials:"omit"})'
+    '.then(function(r){return r.text()}).then(function(h){'
+    'var d=new DOMParser().parseFromString(h,"text/html"),m=d.querySelector("main");'
+    'if(!m)throw 0;document.title=d.title;document.querySelector("main").replaceWith(m)})'
+    '.catch(function(){s.textContent="This page didn\u2019t load. Check the connection and reload."})})();'
+)
+OPENER_HASH = "sha256-" + base64.b64encode(hashlib.sha256(OPENER.encode()).digest()).decode()
+NO_SCRIPT = "Turn on JavaScript and reload to open this page. It keeps the link out of server logs."
+
+# Every coach page loads nothing from anywhere; the shell may also run OPENER and call /coach/view.
+CSP = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+SHELL_CSP = CSP + f"; script-src '{OPENER_HASH}'; connect-src 'self'"
+
+
+def render_shell() -> str:
+    """What `/coach` serves before the token is read: the page's frame, OPENER, and a note
+    for a browser without JavaScript."""
+    return _page("Evergreen", f'<h1>Evergreen</h1><p id="status" aria-live="polite"></p>'
+                 f"<noscript><p>{NO_SCRIPT}</p></noscript>", script=OPENER)
+
+
+def _page(title: str, content: str, script: str = "") -> str:
+    # DESIGN.md's coach page: one reading column, the light and dark tokens, no cards; JavaScript
+    # only in the shell's OPENER, and the page it opens is plain HTML.
+    tail = f"<script>{script}</script>" if script else ""
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -221,4 +252,4 @@ footer {{ margin-top:40px; font-size:15px; color:var(--muted); }}
 a:focus, :focus-visible {{ outline:2px solid var(--accent); outline-offset:2px; }}
 ::selection {{ background:var(--accent); color:var(--surface); }}
 </style></head>
-<body><main>{content}<footer>{DISCLAIMER}</footer></main></body></html>"""
+<body><main>{content}<footer>{DISCLAIMER}</footer></main>{tail}</body></html>"""
