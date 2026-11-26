@@ -549,9 +549,7 @@ final class AppModel {
     /// run tomorrow morning; his longest run this month was under 2 hours.
     func showBrakeDemo() {
         resetDemo()
-        // A return plan pauses training-calendar runs, and the return beat's
-        // injury changes the suggestion; this beat starts without either.
-        returnPlans.forEach(context.delete)
+        // The return beat's injury changes the suggestion; this beat starts without it.
         profile.injuryMonth = nil
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: storyDay) ?? storyDay
         func at(_ day: Date, _ hour: Int, plus days: Int = 0) -> Date {
@@ -589,6 +587,8 @@ final class AppModel {
     /// calendar and the test meeting.
     func resetDemo() {
         calendarSync.removeAllEvents(around: storyDay)
+        // A return plan belongs to the beat that started it, not the next person.
+        returnPlans.forEach(context.delete)
         testMeeting = nil
         switchPerson(to: .jordan)
     }

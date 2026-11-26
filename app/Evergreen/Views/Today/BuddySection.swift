@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// "Buddy" in Your data's People (design decisions 4, 8 and 9): invite a
+/// "Buddy" in Your data (Your data refreshes it on open) (design decisions 4, 8 and 9): invite a
 /// friend with a display name, enter a friend's code, see who you're paired
 /// with and their last note, or unpair.
 struct BuddySection: View {
@@ -13,39 +13,59 @@ struct BuddySection: View {
     @State private var confirmUnpair = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.sm) {
-            Text("Buddy")
-                .font(.footnote)
-                .foregroundStyle(Theme.textMuted)
-                .accessibilityAddTraits(.isHeader)
+        Section {
             switch model.buddyStatus?.status {
             case "paired": paired
             case "invited": invited
-            default: unpaired
+            default: inviteRows
             }
             if let message {
                 Text(message).font(.footnote).foregroundStyle(Theme.textMuted)
             }
+        } header: {
+            Text("Buddy")
+        } footer: {
+            Text(footer)
         }
+        .listRowBackground(Theme.card)
         .disabled(busy)
-        .task { await model.refreshBuddy() }
-        .confirmationDialog("Stop sharing with your buddy?", isPresented: $confirmUnpair, titleVisibility: .visible) {
-            Button("Unpair", role: .destructive) { run { await model.unpairBuddy() } }
-        } message: {
-            Text("Your buddy's row disappears for both of you. They aren't told.")
+        if isUnpaired {
+            Section {
+                TextField("8-character code", text: $code)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .font(.body.monospaced())
+                Button("Pair with my friend") {
+                    run { message = await model.redeemBuddy(code: code).map(say) }
+                }
+                .disabled(code.trimmingCharacters(in: .whitespaces).count != 8)
+            } header: {
+                Text("Have a friend's code?")
+            }
+            .listRowBackground(Theme.card)
+            .disabled(busy)
+        }
+    }
+
+    private var isUnpaired: Bool {
+        let status = model.buddyStatus?.status
+        return status != "paired" && status != "invited"
+    }
+
+    private var footer: String {
+        switch model.buddyStatus?.status {
+        case "invited": "It works once and expires in 48 hours. Your friend enters it in Evergreen."
+        case "paired": "They get a short note when you finish a workout, never a miss."
+        default: "A friend gets a short note when you finish a workout, like \"Alex did a 15-minute walk.\" Never a miss."
         }
     }
 
     // MARK: States
 
     @ViewBuilder
-    private var unpaired: some View {
-        Text("A friend gets a short note when you finish a workout, like \"Alex did a 15-minute walk.\" Never a miss.")
+    private var inviteRows: some View {
         TextField("The name your buddy sees", text: $name)
             .textContentType(.givenName)
-            .padding(.horizontal, Theme.sm)
-            .frame(minHeight: 44)
-            .overlay { RoundedRectangle(cornerRadius: Theme.radiusButton).strokeBorder(Theme.rule) }
         Button("Get an invite code") {
             run {
                 switch await model.inviteBuddy(name: name) {
@@ -54,21 +74,7 @@ struct BuddySection: View {
                 }
             }
         }
-        .buttonStyle(GhostButtonStyle())
         .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
-        Text("Have a friend's code?").font(.footnote).foregroundStyle(Theme.textMuted).padding(.top, Theme.sm)
-        TextField("8-character code", text: $code)
-            .textInputAutocapitalization(.characters)
-            .autocorrectionDisabled()
-            .font(.body.monospaced())
-            .padding(.horizontal, Theme.sm)
-            .frame(minHeight: 44)
-            .overlay { RoundedRectangle(cornerRadius: Theme.radiusButton).strokeBorder(Theme.rule) }
-        Button("Pair with my friend") {
-            run { message = await model.redeemBuddy(code: code).map(say) }
-        }
-        .buttonStyle(GhostButtonStyle())
-        .disabled(code.trimmingCharacters(in: .whitespaces).count != 8)
     }
 
     @ViewBuilder
@@ -81,26 +87,27 @@ struct BuddySection: View {
             ShareLink(item: "Join me on Evergreen as my buddy. My code: \(invite.code)") {
                 Label("Send the code", systemImage: "square.and.arrow.up")
             }
-            .buttonStyle(GhostButtonStyle())
         } else {
-            Text("Your invite is waiting for your friend.")
+            Text("Your invite is waiting for your friend.").foregroundStyle(Theme.text)
         }
-        Text("It works once and expires in 48 hours. Your friend enters it in Evergreen.")
-            .font(.footnote).foregroundStyle(Theme.textMuted)
     }
 
     @ViewBuilder
     private var paired: some View {
         if model.buddyStatus?.role == "friend" {
-            Text("Your buddy: \(model.buddyStatus?.buddyName ?? "your friend")")
+            Text("Your buddy: \(model.buddyStatus?.buddyName ?? "your friend")").foregroundStyle(Theme.text)
             if let note = model.buddyStatus?.notes?.first {
                 Text(note.text).font(.footnote).foregroundStyle(Theme.textMuted)
             }
         } else {
-            Text("Paired. Your friend gets a note when you finish a workout, never a miss.")
+            Text("Paired with your friend.").foregroundStyle(Theme.text)
         }
-        Button("Unpair") { confirmUnpair = true }
-            .buttonStyle(GhostButtonStyle())
+        Button("Unpair", role: .destructive) { confirmUnpair = true }
+            .confirmationDialog("Stop sharing with your buddy?", isPresented: $confirmUnpair, titleVisibility: .visible) {
+                Button("Unpair", role: .destructive) { run { await model.unpairBuddy() } }
+            } message: {
+                Text("Your buddy's row disappears for both of you. They aren't told.")
+            }
     }
 
     // MARK: Helpers

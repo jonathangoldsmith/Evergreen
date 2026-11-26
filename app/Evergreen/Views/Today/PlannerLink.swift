@@ -5,6 +5,8 @@ import SwiftUI
 /// app/Secrets.xcconfig).
 struct PlannerLink: View {
     @State private var showing = false
+    /// Grows with the icon's text size, so the icon never overlaps the title.
+    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 24
 
     var body: some View {
         Button { showing = true } label: {
@@ -12,7 +14,7 @@ struct PlannerLink: View {
                 Image(systemName: "calendar.badge.clock")
                     .font(.body)
                     .foregroundStyle(Theme.textMuted)
-                    .frame(width: 24)
+                    .frame(width: iconWidth)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Next 7 days from the planner")

@@ -7,6 +7,7 @@ struct PlanRow: View {
     let item: PlanItem
 
     @Environment(AppModel.self) private var model
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var picking = false
 
     var body: some View {
@@ -30,10 +31,20 @@ struct PlanRow: View {
         picking = true
     }
 
+    /// At accessibility sizes the time drops under the day, so neither column
+    /// squeezes the other (design G6).
+    private var stacked: Bool { typeSize.isAccessibilitySize }
+
     private func row(showsChevron: Bool) -> some View {
-        HStack(alignment: .top, spacing: Theme.md) {
+        let layout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.xs))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: Theme.md))
+        let dayLayout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.xs))
+            : AnyLayout(HStackLayout(spacing: Theme.sm))
+        return layout {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: Theme.sm) {
+                dayLayout {
                     Text(item.slot.start.formatted(.dateTime.weekday(.wide)))
                         .font(.body.weight(.medium))
                         .foregroundStyle(isMissed ? Theme.textMuted : Theme.text)
@@ -57,14 +68,14 @@ struct PlanRow: View {
                         .padding(.top, 2)
                 }
             }
-            Spacer(minLength: Theme.sm)
-            VStack(alignment: .trailing, spacing: 2) {
+            if !stacked { Spacer(minLength: Theme.sm) }
+            VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
                 Text(item.slot.start.clock)
                     .font(.body.monospacedDigit())
                     .foregroundStyle(isMissed ? Theme.textMuted : Theme.text)
                 status
             }
-            if showsChevron {
+            if showsChevron && !stacked {
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.textMuted)

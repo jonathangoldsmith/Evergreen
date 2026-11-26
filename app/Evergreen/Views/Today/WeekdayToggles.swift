@@ -17,10 +17,13 @@ struct WeekdayToggles: View {
                     Text(Calendar.current.veryShortWeekdaySymbols[weekday - 1])
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 44)
-                        .foregroundStyle(on ? Theme.onAccent : Theme.text)
-                        .background(on ? Theme.accent : Color.clear, in: .rect(cornerRadius: Theme.radiusSmall))
+                        // A picked day is outlined and tinted, not filled, so
+                        // Start stays the card's one solid accent button.
+                        .foregroundStyle(on ? Theme.accent : Theme.text)
+                        .background(on ? Theme.accent.opacity(0.12) : Color.clear, in: .rect(cornerRadius: Theme.radiusSmall))
                         .overlay {
-                            RoundedRectangle(cornerRadius: Theme.radiusSmall).strokeBorder(on ? Theme.accent : Theme.rule)
+                            RoundedRectangle(cornerRadius: Theme.radiusSmall)
+                                .strokeBorder(on ? Theme.accent : Theme.rule, lineWidth: on ? 2 : 1)
                         }
                 }
                 .buttonStyle(.plain)
@@ -28,5 +31,7 @@ struct WeekdayToggles: View {
                 .accessibilityAddTraits(on ? .isSelected : [])
             }
         }
+        // Seven letters must fit one row; VoiceOver reads the full day names.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 }

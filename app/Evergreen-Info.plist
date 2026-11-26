@@ -4,6 +4,11 @@
 <dict>
 	<key>AMPLITUDE_API_KEY</key>
 	<string>$(AMPLITUDE_API_KEY)</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>Surface</string>
+	</dict>
 	<key>HARNESS_SECRET</key>
 	<string>$(HARNESS_SECRET)</string>
 </dict>

@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// In Your data: what the brake reads and sends, and how to change it
+/// In Your data's Form: what the brake reads and sends, and how to change it
 /// (plan items 1 and 4, business notes BN2).
 struct BrakeSettingsSection: View {
     @Environment(AppModel.self) private var model
-    @State private var editing: Editing?
+    /// Owned by Your data, which presents the one editor sheet: a modifier on a
+    /// Section is copied to each of its rows.
+    @Binding var editing: Editing?
 
     enum Editing: String, Identifiable {
         case calendars, injury
@@ -13,52 +15,41 @@ struct BrakeSettingsSection: View {
 
     var body: some View {
         @Bindable var profile = model.profile
-        VStack(alignment: .leading, spacing: Theme.lg) {
-            group("Training calendars") {
-                Text(calendarLine)
-                Button("Change") { editing = .calendars }
-                    .buttonStyle(GhostButtonStyle())
-            }
-            group("Injury in the last 12 months") {
-                Text(injuryLine)
-                Button("Change") { editing = .injury }
-                    .buttonStyle(GhostButtonStyle())
-            }
-            group("What leaves your phone") {
-                Toggle(isOn: uploads) {
-                    Text("Send my answers to Evergreen, without my name")
-                }
-                .tint(Theme.accent)
-                .padding(.trailing, Theme.xs)
-                Toggle(isOn: research) {
-                    Text("Let researchers use them to study running injuries")
-                }
-                .tint(Theme.accent)
-                .padding(.trailing, Theme.xs)
+        Section {
+            valueRow("Training calendars", value: calendarValue) { editing = .calendars }
+            valueRow("Injury in the last 12 months", value: injuryValue) { editing = .injury }
+        } header: {
+            Text("The brake")
+        } footer: {
+            Text(brakeFooter)
+        }
+        .listRowBackground(Theme.card)
+        Section {
+            Toggle("Send my answers to Evergreen, without my name", isOn: uploads)
+            Toggle("Let researchers use them to study running injuries", isOn: research)
                 .disabled(profile.uploadsAllowed != true)
-                Text("Never sent: your Apple Health data itself, where an injury or pain is, or calendar event titles.")
-                    .font(.footnote)
+        } header: {
+            Text("What leaves your phone")
+        } footer: {
+            Text("Never sent: your Apple Health data itself, where an injury or pain is, or calendar event titles.")
+        }
+        .listRowBackground(Theme.card)
+    }
+
+    /// A Settings-style row: the name, its current value, and a chevron; tapping edits it.
+    private func valueRow(_ title: String, value: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: Theme.sm) {
+                Text(title).foregroundStyle(Theme.text)
+                Spacer(minLength: Theme.sm)
+                Text(value).foregroundStyle(Theme.textMuted).multilineTextAlignment(.trailing)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.textMuted)
+                    .accessibilityHidden(true)
             }
         }
-        .sheet(item: $editing) { editing in
-            NavigationStack {
-                Group {
-                    switch editing {
-                    case .calendars: TrainingCalendarsStep(onDone: { self.editing = nil })
-                    case .injury: InjuryStep(onDone: { self.editing = nil })
-                    }
-                }
-                .padding(.horizontal, Theme.md)
-                .padding(.bottom, Theme.lg)
-                .background(Theme.surface)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { self.editing = nil }
-                    }
-                }
-            }
-        }
+        .accessibilityHint("Changes it")
     }
 
     private var uploads: Binding<Bool> {
@@ -71,27 +62,46 @@ struct BrakeSettingsSection: View {
                 set: { model.setConsent(uploads: model.profile.uploadsAllowed == true, research: $0) })
     }
 
-    private var calendarLine: String {
+    private var calendarValue: String {
         let picked = model.profile.trainingCalendarIds
-        guard !picked.isEmpty else { return "None picked. Evergreen checks your runs only on calendars you pick." }
+        guard !picked.isEmpty else { return "None" }
         let names = model.trainingCalendarOptions().filter { picked.contains($0.id) }.map(\.title)
         return names.isEmpty ? "\(picked.count) picked" : names.joined(separator: ", ")
     }
 
-    private var injuryLine: String {
-        guard model.profile.injuryAnswered else { return "Not answered yet." }
-        guard let month = model.profile.injuryMonth else { return "No." }
-        return "Yes, \(month.formatted(.dateTime.month(.wide).year())). The rule is tighter for 12 months after."
+    private var injuryValue: String {
+        guard model.profile.injuryAnswered else { return "Not answered" }
+        guard let month = model.profile.injuryMonth else { return "No" }
+        return month.formatted(.dateTime.month(.wide).year())
     }
 
-    private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Theme.sm) {
-            Text(title)
-                .font(.footnote)
-                .foregroundStyle(Theme.textMuted)
-                .accessibilityAddTraits(.isHeader)
-            content()
-                .fixedSize(horizontal: false, vertical: true)
+    /// What the two rows mean, said once below them.
+    private var brakeFooter: String {
+        let calendars = "Evergreen checks runs only on the calendars you pick, and never changes them."
+        guard model.profile.injuryMonth != nil else { return calendars }
+        return calendars + " After an injury, the rule is tighter for 12 months."
+    }
+}
+
+extension BrakeSettingsSection.Editing {
+    /// The editor for one of the brake's rows, in its own navigation stack.
+    @MainActor
+    func sheet(close: @escaping () -> Void) -> some View {
+        NavigationStack {
+            Group {
+                switch self {
+                case .calendars: TrainingCalendarsStep(onDone: close)
+                case .injury: InjuryStep(onDone: close)
+                }
+            }
+            .padding(.horizontal, Theme.md)
+            .padding(.bottom, Theme.lg)
+            .background(Theme.surface)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: close)
+                }
+            }
         }
     }
 }

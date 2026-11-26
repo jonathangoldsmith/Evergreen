@@ -20,7 +20,7 @@ struct ConsentStep: View {
                         .font(.body)
                         .foregroundStyle(Theme.text)
                     list("Sent", symbol: "arrow.up.circle", items: [
-                        "Each flag and what you chose",
+                        "Each suggestion and what you chose",
                         "Your weekly pain answer and its follow-up questions",
                         "An injury as yes or no, and how many months ago",
                         "Your answers about last year's runs",
@@ -63,6 +63,8 @@ struct ConsentStep: View {
         .onAppear { research = model.profile.researchAllowed }
     }
 
+    @ScaledMetric(relativeTo: .body) private var iconWidth: CGFloat = 24
+
     private func list(_ title: String, symbol: String, items: [String]) -> some View {
         VStack(alignment: .leading, spacing: Theme.xs) {
             Text(title)
@@ -70,9 +72,14 @@ struct ConsentStep: View {
                 .foregroundStyle(Theme.textMuted)
                 .accessibilityAddTraits(.isHeader)
             ForEach(items, id: \.self) { item in
-                Label(item, systemImage: symbol)
-                    .font(.body)
-                    .foregroundStyle(Theme.text)
+                // One icon width for both lists, so the text lines up.
+                Label {
+                    Text(item)
+                } icon: {
+                    Image(systemName: symbol).frame(width: iconWidth)
+                }
+                .font(.body)
+                .foregroundStyle(Theme.text)
             }
         }
     }

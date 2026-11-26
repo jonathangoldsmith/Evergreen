@@ -6,6 +6,7 @@ struct PrimaryButtonStyle: ButtonStyle {
         configuration.label
             .font(.body.weight(.semibold))
             .foregroundStyle(Theme.onAccent)
+            .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(Theme.accent, in: .rect(cornerRadius: Theme.radiusButton))
             .opacity(configuration.isPressed ? 0.8 : 1)

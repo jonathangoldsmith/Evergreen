@@ -6,6 +6,7 @@ struct TrainingCalendarsStep: View {
     let onDone: () -> Void
 
     @Environment(AppModel.self) private var model
+    @Environment(\.openURL) private var openURL
     @State private var options: [TrainingCalendarOption] = []
     @State private var picked: Set<String> = []
 
@@ -24,6 +25,11 @@ struct TrainingCalendarsStep: View {
                         Text("Calendar access is off, so there's nothing to pick yet. You can turn it on in Settings, then pick them in Your data.")
                             .font(.footnote)
                             .foregroundStyle(Theme.textMuted)
+                        // Like the backtest step's empty state.
+                        Button("Open Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                        }
+                        .buttonStyle(GhostButtonStyle())
                     } else if options.isEmpty {
                         Text("No calendars found.")
                             .font(.footnote)
@@ -50,7 +56,7 @@ struct TrainingCalendarsStep: View {
                 }
                 .padding(.top, Theme.lg)
             }
-            Button(picked.isEmpty ? "I don't have one" : "Continue") {
+            Button(continueTitle) {
                 model.setTrainingCalendars(picked)
                 onDone()
             }
@@ -58,6 +64,12 @@ struct TrainingCalendarsStep: View {
             .padding(.top, Theme.md)
         }
         .onAppear(perform: load)
+    }
+
+    /// With access off there's nothing to have or not have yet.
+    private var continueTitle: String {
+        if model.calendarAccess != .on { return "Skip for now" }
+        return picked.isEmpty ? "I don't have one" : "Continue"
     }
 
     private func load() {

@@ -6,8 +6,9 @@ struct GhostButtonStyle: ButtonStyle {
         configuration.label
             .font(.body.weight(.medium))
             .foregroundStyle(Theme.text)
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
+            // Wraps at large text sizes instead of widening the page.
+            // ViewThatFits still measures the one-line width to pick a row or a stack.
+            .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, minHeight: 44)
             .padding(.horizontal, Theme.md)
             .background {
