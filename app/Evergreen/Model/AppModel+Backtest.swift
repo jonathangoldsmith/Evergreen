@@ -28,8 +28,13 @@ extension AppModel {
 
     /// Every checked day of the last year, or nil with too little history
     /// (or Health not allowed, which looks the same: design decision 6).
+    /// A Health that doesn't answer within 10 seconds counts as no history, so
+    /// onboarding can't hang on "Checking your last year…".
     func loadBacktest() async -> [Backtest.Day]? {
-        let runs = await healthReader.runs(days: Backtest.lookbackDays, calendar: calendar)
+        let reader = healthReader, calendar = calendar
+        let runs = await value(within: .seconds(10), or: []) {
+            await reader.runs(days: Backtest.lookbackDays, calendar: calendar)
+        }
         guard runs.count >= Backtest.minimumRuns else { return nil }
         return Backtest.days(runs, injuryMonth: profile.injuryMonth, now: Date(), calendar: calendar)
     }

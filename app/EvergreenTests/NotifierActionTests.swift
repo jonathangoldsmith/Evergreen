@@ -15,7 +15,10 @@ struct NotifierActionTests {
     static func model() throws -> AppModel {
         let container = try Storage.open(at: StorageTests.tempStore())
         containers.append(container)
-        return AppModel(context: container.mainContext)
+        let model = AppModel(context: container.mainContext)
+        // Off the real calendar, so the runs a test sets aren't replaced on save.
+        model.calendarSync.accessForTesting = .notAsked
+        return model
     }
 
     /// Two days from now, in whole seconds like a calendar event (ISO 8601 in the payload drops fractions).

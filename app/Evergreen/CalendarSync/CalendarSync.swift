@@ -34,7 +34,12 @@ final class CalendarSync {
         }
     }
 
+    /// Tests set this so they never read the simulator's real calendars, which
+    /// depend on whatever access the simulator has granted.
+    var accessForTesting: CalendarAccess?
+
     var access: CalendarAccess {
+        if let accessForTesting { return accessForTesting }
         if grantedThisLaunch { return .on }
         return switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess: .on
