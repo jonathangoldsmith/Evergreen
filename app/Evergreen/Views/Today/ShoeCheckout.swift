@@ -8,6 +8,7 @@ struct ShoeCheckout: View {
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var ordered = false
 
     private var purchase: Purchase? {
@@ -161,6 +162,6 @@ struct ShoeCheckout: View {
 
     private func placeOrder() {
         model.approvePurchase(purchaseId)
-        withAnimation(.easeOut(duration: 0.3)) { ordered = true }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.3)) { ordered = true }
     }
 }

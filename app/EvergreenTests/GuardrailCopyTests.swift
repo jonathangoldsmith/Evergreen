@@ -27,6 +27,37 @@ struct GuardrailCopyTests {
         #expect(GuardrailCopy.sourceNote(Self.run, flag.planned) == "Runna will still say 18 km.")
     }
 
+    // MARK: VoiceOver (design decision 16)
+
+    @Test func voiceOverReadsTheSwapAsOneSentenceWithBothSizes() {
+        let spoken = GuardrailCopy.spoken(Self.run, Self.flags[0], now: Self.now, calendar: Fixture.calendar)
+        // The strikethrough is visual only, so the sentence says what it changes from.
+        #expect(spoken == "Change tomorrow’s run from 18 km to 13 km? 18 km is 38% past your longest run this month (13 km).")
+        #expect(!spoken.contains("→"))
+        let easy = GuardrailCopy.spoken(Self.run, Self.flags[3], now: Self.now, calendar: Fixture.calendar)
+        #expect(easy.hasPrefix("Run tomorrow’s 22 min easy?"))
+    }
+
+    @Test func voiceOverReadsTheDecidedRunWithWhatStaysOnTheCalendar() {
+        let decision = GuardrailDecision(run: Self.run, flag: Self.flags[0], choice: .accept, at: Self.now)
+        let on = GuardrailCopy.spokenDecided(decision, run: Self.run, calendarOn: true)
+        #expect(on.hasPrefix("Changed to 13 km: "))
+        #expect(on.contains("Long run 18 km at "))
+        #expect(on.hasSuffix("Runna will still say 18 km."))
+        let off = GuardrailCopy.spokenDecided(decision, run: Self.run, calendarOn: false)
+        #expect(off.hasSuffix(GuardrailCopy.calendarOff))
+        let kept = GuardrailDecision(run: Self.run, flag: Self.flags[0], choice: .keep, at: Self.now)
+        #expect(GuardrailCopy.spokenDecided(kept, run: Self.run, calendarOn: true).hasPrefix("Kept 18 km: "))
+    }
+
+    @Test func voiceOverReadsTheMorningCheckAsOneQuestion() {
+        let ask = GuardrailCopy.spokenMorningCheck(Self.run)
+        #expect(ask.hasPrefix("How do your legs feel before "))
+        #expect(ask.contains("’s Long run 18 km at "))
+        #expect(ask.hasSuffix("?"))
+        #expect(GuardrailCopy.spokenCheckedIn(.fresh, run: Self.run).hasPrefix("Got it. Enjoy the run: "))
+    }
+
     @Test func theEveningNoteMatchesDesignDecisionTen() {
         let note = GuardrailCopy.spikeNote(Self.run, Self.flags[0], now: Self.now, calendar: Fixture.calendar)
         #expect(note.body == "Tomorrow’s 18 km is a big jump from your longest run (13 km). Make it 13?")

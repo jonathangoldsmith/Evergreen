@@ -58,11 +58,8 @@ struct AgentCard: View {
             }
 
             if action.kind != .note && finished == nil {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: Theme.sm) { buttons }
-                    VStack(spacing: Theme.sm) { buttons }
-                }
-                .padding(.top, Theme.sm)
+                ChoiceRow { buttons }
+                    .padding(.top, Theme.sm)
             }
         }
         .padding(20)

@@ -76,9 +76,47 @@ enum GuardrailCopy {
         }
     }
 
-    /// The whole card as one sentence for VoiceOver (design decision 16).
+    // MARK: VoiceOver (design decision 16): each card as one sentence
+
+    /// "Thursday · Easy 40 min at 6:00 PM", under each run card's headline.
+    static func runLine(_ run: PlannedRun) -> String {
+        "\(run.start.formatted(.dateTime.weekday(.wide))) · \(run.title) at \(run.start.clock)"
+    }
+
+    /// "Thursday’s Easy 40 min at 6:00 PM", the same for VoiceOver.
+    static func spokenRun(_ run: PlannedRun) -> String {
+        "\(run.start.formatted(.dateTime.weekday(.wide)))’s \(run.title) at \(run.start.clock)"
+    }
+
+    /// "Change tomorrow’s run from 18 km to 12 km? 18 km is 38% past your longest
+    /// run this month (13 km)." The strikethrough is visual only, so the
+    /// spoken question says both sizes.
     static func spoken(_ run: PlannedRun, _ flag: GuardrailFlag, now: Date, calendar: Calendar = .current) -> String {
-        "\(question(run, flag, now: now, calendar: calendar)) \(reason(flag))"
+        let day = dayPossessive(run.start, now: now, calendar: calendar)
+        let ask = flag.keepEasy
+            ? question(run, flag, now: now, calendar: calendar)
+            : "Change \(day) run from \(flag.planned.label) to \(flag.suggested.label)?"
+        return "\(ask) \(reason(flag))"
+    }
+
+    /// "Changed to 12 km: Monday’s Long run at 8:00 AM. Runna will still say 18 km."
+    static func spokenDecided(_ decision: GuardrailDecision, run: PlannedRun, calendarOn: Bool) -> String {
+        var line = "\(decided(decision).trimmingCharacters(in: ["."])): \(spokenRun(run))."
+        if decision.choice == .accept {
+            line += " \(sourceNote(run, decision.planned))"
+            if !calendarOn { line += " \(calendarOff)" }
+        }
+        return line
+    }
+
+    /// "How do your legs feel before Thursday’s Easy 40 min at 6:00 PM?"
+    static func spokenMorningCheck(_ run: PlannedRun) -> String {
+        "How do your legs feel before \(spokenRun(run))?"
+    }
+
+    /// "Got it. Enjoy the run: Thursday’s Easy 40 min at 6:00 PM."
+    static func spokenCheckedIn(_ check: MorningCheck, run: PlannedRun) -> String {
+        "\(checkedIn(check).trimmingCharacters(in: ["."])): \(spokenRun(run))."
     }
 
     // MARK: Notifications (design decision 10)

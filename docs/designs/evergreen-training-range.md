@@ -2096,7 +2096,7 @@ Synthesized from this review's findings. Each task derives from a specific decis
   - Surfaced by: decision 10
   - Files: app/Evergreen/Notifications/
   - Verify: a test that a Sunday long-run weekend schedules at most 2 a day
-- [ ] **G6 (P1, human: ~half day / CC: ~20min)**: Accessibility: one-sentence card labels, stacking at accessibility sizes, list body picker, 44 pt targets, Reduce Motion
+- [x] **G6 (P1, human: ~half day / CC: ~20min)**: Accessibility: one-sentence card labels, stacking at accessibility sizes, list body picker, 44 pt targets, Reduce Motion
   - Surfaced by: decision 16
   - Files: app/Evergreen/Views/
   - Verify: VoiceOver reads the swap as one sentence. Accessibility XXXL stacks every button row.

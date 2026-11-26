@@ -10,7 +10,11 @@ struct RangeSetupView: View {
     let onFinish: () -> Void
 
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step = Step.consent
+
+    /// Steps slide in, or fade under Reduce Motion (design decision 16).
+    private var pageTransition: AnyTransition { reduceMotion ? .opacity : .move(edge: .trailing) }
 
     enum Step: Int, CaseIterable { case consent, calendars, injury, backtest }
 
@@ -33,7 +37,7 @@ struct RangeSetupView: View {
                 case .backtest: BacktestStep(onDone: next)
                 }
             }
-            .transition(.move(edge: .trailing))
+            .transition(pageTransition)
         }
         .animation(.easeInOut(duration: 0.3), value: step)
         .padding(.horizontal, Theme.md)
