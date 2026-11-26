@@ -33,12 +33,16 @@ struct ReturnPlanCard: View {
 
     private var offer: some View {
         VStack(alignment: .leading, spacing: Theme.sm) {
-            Text("Want a walk-run plan back to running?")
-                .agentFont(24, relativeTo: .title2)
-                .foregroundStyle(Theme.accent)
-            Text("4 weeks, on the days you usually run. It starts at 20 minutes of 1 minute running, 2 walking, and grows a little each week.")
-                .font(.body)
-                .foregroundStyle(Theme.text)
+            VStack(alignment: .leading, spacing: Theme.sm) {
+                Text("Want a walk-run plan back to running?")
+                    .agentFont(24, relativeTo: .title2)
+                    .foregroundStyle(Theme.accent)
+                Text("4 weeks, on the days you usually run. It starts at 20 minutes of 1 minute running, 2 walking, and grows a little each week.")
+                    .font(.body)
+                    .foregroundStyle(Theme.text)
+            }
+            // One sentence for VoiceOver (design decision 16); the day toggles stay their own.
+            .accessibilityElement(children: .combine)
             WeekdayToggles(selected: $weekdays)
                 .padding(.vertical, Theme.xs)
             if !ReturnPlan.suggestedDays.contains(weekdays.count) {
@@ -49,10 +53,7 @@ struct ReturnPlanCard: View {
             Text(Self.disclaimer)
                 .font(.footnote)
                 .foregroundStyle(Theme.textMuted)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Theme.sm) { offerButtons }
-                VStack(spacing: Theme.sm) { offerButtons }
-            }
+            ChoiceRow { offerButtons }
             .padding(.top, Theme.sm)
         }
         .onAppear {
@@ -80,17 +81,22 @@ struct ReturnPlanCard: View {
 
     private var active: some View {
         VStack(alignment: .leading, spacing: Theme.sm) {
-            Text("Return plan · Week \((model.returnWeek ?? 0) + 1) of \(ReturnPlan.weeks)")
-                .agentFont(24, relativeTo: .title2)
-                .foregroundStyle(Theme.accent)
-            if let next = model.returnSessions.first(where: { $0.end > model.now }) {
-                Text("Next: \(next.start.formatted(.dateTime.weekday(.wide))) at \(next.start.clock), \(next.title.lowercased().replacingOccurrences(of: "walk-run ", with: "")).")
-                    .font(.body)
-                    .foregroundStyle(Theme.text)
+            VStack(alignment: .leading, spacing: Theme.sm) {
+                Text("Return plan · Week \((model.returnWeek ?? 0) + 1) of \(ReturnPlan.weeks)")
+                    .agentFont(24, relativeTo: .title2)
+                    .foregroundStyle(Theme.accent)
+                if let next = model.returnSessions.first(where: { $0.end > model.now }) {
+                    Text("Next: \(next.start.formatted(.dateTime.weekday(.wide))) at \(next.start.clock), \(next.title.lowercased().replacingOccurrences(of: "walk-run ", with: "")).")
+                        .font(.body)
+                        .foregroundStyle(Theme.text)
+                }
+                Text("\(hasTrainingPlan ? "Your training plan's runs are" : "Your other runs are") paused until it's done. A missed session isn't chased.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textMuted)
             }
-            Text("\(hasTrainingPlan ? "Your training plan's runs are" : "Your other runs are") paused until it's done. A missed session isn't chased.")
-                .font(.footnote)
-                .foregroundStyle(Theme.textMuted)
+            // The words as one sentence; the button stays its own, so a
+            // double-tap on the card can't end the plan.
+            .accessibilityElement(children: .combine)
             Button("End return plan") { model.endReturnPlan() }
                 .buttonStyle(GhostButtonStyle())
                 .padding(.top, Theme.sm)
@@ -99,16 +105,16 @@ struct ReturnPlanCard: View {
 
     private var paused: some View {
         VStack(alignment: .leading, spacing: Theme.sm) {
-            Text("Your return plan is paused")
-                .font(.headline)
-                .foregroundStyle(Theme.text)
-            Text("You said it hurts this week. A physio can tell you when to pick it up again. \(hasTrainingPlan ? "Your training plan's runs stay" : "Your other runs stay") paused meanwhile.")
-                .font(.body)
-                .foregroundStyle(Theme.text)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Theme.sm) { pausedButtons }
-                VStack(spacing: Theme.sm) { pausedButtons }
+            VStack(alignment: .leading, spacing: Theme.sm) {
+                Text("Your return plan is paused")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+                Text("You said it hurts this week. A physio can tell you when to pick it up again. \(hasTrainingPlan ? "Your training plan's runs stay" : "Your other runs stay") paused meanwhile.")
+                    .font(.body)
+                    .foregroundStyle(Theme.text)
             }
+            .accessibilityElement(children: .combine)
+            ChoiceRow { pausedButtons }
             .padding(.top, Theme.sm)
         }
     }
@@ -123,12 +129,15 @@ struct ReturnPlanCard: View {
 
     private var ended: some View {
         VStack(alignment: .leading, spacing: Theme.sm) {
-            Text("Return plan ended")
-                .agentFont(24, relativeTo: .title2)
-                .foregroundStyle(Theme.accent)
-            Text(hasTrainingPlan ? "Your training plan is back, and its first run gets the usual check." : "Your usual runs are back, and the first one gets the usual check.")
-                .font(.body)
-                .foregroundStyle(Theme.text)
+            VStack(alignment: .leading, spacing: Theme.sm) {
+                Text("Return plan ended")
+                    .agentFont(24, relativeTo: .title2)
+                    .foregroundStyle(Theme.accent)
+                Text(hasTrainingPlan ? "Your training plan is back, and its first run gets the usual check." : "Your usual runs are back, and the first one gets the usual check.")
+                    .font(.body)
+                    .foregroundStyle(Theme.text)
+            }
+            .accessibilityElement(children: .combine)
             Button("Undo") { model.undoEndReturnPlan() }
                 .buttonStyle(GhostButtonStyle())
                 .padding(.top, Theme.sm)
@@ -144,5 +153,6 @@ struct ReturnPlanCard: View {
                 .font(.body)
                 .foregroundStyle(Theme.text)
         }
+        .accessibilityElement(children: .combine)
     }
 }

@@ -93,11 +93,8 @@ struct PurchaseCard: View {
             Text(ActionCopy.passTerms(purchase, now: model.now) + " · Nothing is bought without your OK.")
                 .font(.footnote)
                 .foregroundStyle(Theme.textMuted)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Theme.sm) { passAskButtons(purchase) }
-                VStack(spacing: Theme.sm) { passAskButtons(purchase) }
-            }
-            .padding(.top, Theme.sm)
+            ChoiceRow { passAskButtons(purchase) }
+                .padding(.top, Theme.sm)
         }
     }
 
@@ -215,7 +212,7 @@ struct PurchaseCard: View {
             VStack(spacing: Theme.sm) {
                 Button("Order it") { model.approvePurchase(purchaseId) }
                     .buttonStyle(PrimaryButtonStyle())
-                HStack(spacing: Theme.sm) {
+                ChoiceRow {
                     Button(ActionCopy.whyLabel(purchase)) { showWhy = true }
                         .buttonStyle(GhostButtonStyle())
                     Button("Not now") { undoPurchase() }
@@ -223,7 +220,7 @@ struct PurchaseCard: View {
                 }
             }
         case .bought:
-            HStack(spacing: Theme.sm) {
+            ChoiceRow {
                 Button(ActionCopy.whyLabel(purchase)) { showWhy = true }
                     .buttonStyle(GhostButtonStyle())
                 if !ActionCopy.isDayPass(purchase) {

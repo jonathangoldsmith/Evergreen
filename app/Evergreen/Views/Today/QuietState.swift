@@ -46,18 +46,23 @@ private struct SourceLine: View {
     let symbol: String
     let detail: String
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+    /// The icon column grows with the text, so a large icon doesn't overlap it.
+    @ScaledMetric(relativeTo: .footnote) private var iconWidth: CGFloat = 20
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Theme.sm) {
             Image(systemName: symbol)
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Theme.accent)
-                .frame(width: 20)
+                .frame(width: iconWidth)
                 .accessibilityHidden(true)
             Text(detail)
                 .font(.subheadline)
                 .foregroundStyle(Theme.text)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                // One line normally; at accessibility sizes it wraps instead of cutting off (design decision 16).
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+                .minimumScaleFactor(typeSize.isAccessibilitySize ? 1 : 0.85)
         }
     }
 }
