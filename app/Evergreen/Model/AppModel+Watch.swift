@@ -54,11 +54,16 @@ extension AppModel {
         return "Rest day"
     }
 
+    /// Where an answer came from, for the Amplitude event only.
+    enum AnswerSource { case watch, widget }
+
     /// A watch tap, recorded like a Lock Screen tap. A tap queued while the
     /// phone was away is dropped if its run has started or was already decided
-    /// on the phone; the watch then shows what was decided (item 19).
+    /// on the phone; the watch then shows what was decided (item 19). The phone
+    /// widget's answers come through here too.
     @discardableResult
-    func handleWatchAnswer(_ answer: WatchAnswer) -> Bool {
+    func handleWatchAnswer(_ answer: WatchAnswer, from source: AnswerSource = .watch) -> Bool {
+        func event(_ kind: String) -> AnalyticsEvent { source == .watch ? .watchAction(kind) : .widgetAction(kind) }
         guard let run = trainingRuns.first(where: { $0.key == answer.runKey }), run.start > Date() else {
             pushWatchState()
             return false
@@ -70,19 +75,22 @@ extension AppModel {
                 return false
             }
             answerMorningCheck(run, check)
-            track(.watchAction("check_in"))
+            track(event("check_in"))
         case .accept, .keep:
             guard latestDecision(for: run) == nil, let flag = flag(for: run) else {
                 pushWatchState()
                 return false
             }
             if answer.kind == .accept { acceptSwap(run, flag: flag) } else { keepPlan(run, flag: flag) }
-            track(.watchAction("swap"))
+            track(event("swap"))
         }
         return true
     }
 
+    /// The watch and the phone widget get the same state.
     func pushWatchState() {
-        watchLink.send(watchState)
+        let state = watchState
+        watchLink.send(state)
+        pushWidgetState(state)
     }
 }

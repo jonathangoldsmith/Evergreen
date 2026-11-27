@@ -9,6 +9,17 @@
 		<key>UIColorName</key>
 		<string>Surface</string>
 	</dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.evergreentraining.app.widget</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>evergreen</string>
+			</array>
+		</dict>
+	</array>
 	<key>HARNESS_SECRET</key>
 	<string>$(HARNESS_SECRET)</string>
 </dict>
