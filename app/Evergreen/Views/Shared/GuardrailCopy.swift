@@ -41,7 +41,57 @@ enum GuardrailCopy {
             return flag.keepEasy
                 ? "You said you’re tired. Keep the distance and run it easy."
                 : "You said you’re tired, and this one is long or hard."
+        case .body:
+            let readings = flag.body.map(bodyReadings) ?? "This morning’s readings are off your usual"
+            return flag.keepEasy
+                ? "\(readings). Keep the distance and run it easy."
+                : "\(readings), and this one is long or hard."
         }
+    }
+
+    /// "Your resting heart rate is 6 bpm above your usual and you slept 5h 40
+    /// instead of your usual 7h 30": each reading that's off, with its numbers.
+    static func bodyReadings(_ body: BodySignal) -> String {
+        let parts = body.off.map { off -> String in
+            switch off.reading {
+            case .restingHeartRate:
+                "your resting heart rate is \(Int((off.now - off.usual).rounded())) bpm above your usual"
+            case .hrv:
+                "your heart rate variability is \(Int(((1 - off.now / off.usual) * 100).rounded()))% under your usual"
+            case .sleep:
+                "you slept \(sleepLabel(off.now)) instead of your usual \(sleepLabel(off.usual))"
+            }
+        }
+        return capitalizedFirst(joined(parts))
+    }
+
+    /// "resting heart rate and sleep": which readings, without their values,
+    /// for the Lock Screen.
+    static func bodyReadingNames(_ body: BodySignal) -> String {
+        joined(body.off.map {
+            switch $0.reading {
+            case .restingHeartRate: "resting heart rate"
+            case .hrv: "heart rate variability"
+            case .sleep: "sleep"
+            }
+        })
+    }
+
+    /// "5h 40", or "7h" on the hour, to the nearest 5 minutes.
+    static func sleepLabel(_ minutes: Double) -> String {
+        let total = Int((minutes / 5).rounded()) * 5
+        let (hours, rest) = (total / 60, total % 60)
+        return rest == 0 ? "\(hours)h" : "\(hours)h \(rest)"
+    }
+
+    /// "a", "a and b", "a, b and c".
+    static func joined(_ parts: [String]) -> String {
+        guard let last = parts.last else { return "" }
+        return parts.count == 1 ? last : parts.dropLast().joined(separator: ", ") + " and " + last
+    }
+
+    private static func capitalizedFirst(_ text: String) -> String {
+        text.prefix(1).uppercased() + text.dropFirst()
     }
 
     /// "Runna will still say 18 km." The training calendar is never changed.
@@ -128,6 +178,10 @@ enum GuardrailCopy {
         let body: String = switch flag.kind {
         case .spike:
             "\(day) \(flag.planned.label) is a big jump from your longest run (\(flag.longest30?.label ?? "this month")). Make it \(Self.number(flag.suggested))?"
+        case .body:
+            // Readings stay off the Lock Screen: only which ones are off.
+            "Your \(flag.body.map(bodyReadingNames) ?? "morning readings") are off your usual this morning. "
+                + (flag.keepEasy ? "Run \(flag.planned.label) easy?" : "Make it \(Self.number(flag.suggested))?")
         default:
             "\(reason(flag)) Make it \(Self.number(flag.suggested))?"
         }

@@ -10,6 +10,7 @@ enum HealthSampleData {
         HKObjectType.workoutType(),
         HKQuantityType(.heartRate),
         HKQuantityType(.restingHeartRate),
+        HKQuantityType(.heartRateVariabilitySDNN),
         HKQuantityType(.distanceWalkingRunning),
         HKCategoryType(.sleepAnalysis),
     ]
@@ -47,10 +48,18 @@ enum HealthSampleData {
         return added
     }
 
-    /// 28 nights of about 7½ hours and a resting heart rate around 49.
+    /// 28 nights of about 7½ hours and a resting heart rate around 49, and
+    /// 60 mornings of HRV around 62 ms.
     private static func nights(storyDay: Date, calendar: Calendar) -> [HKSample] {
         let bpm = HKUnit.count().unitDivided(by: .minute())
         var samples: [HKSample] = []
+        for back in 1...60 {
+            guard let day = calendar.date(byAdding: .day, value: -back, to: storyDay),
+                  let morning = calendar.date(bySettingHour: 7, minute: 5, second: 0, of: day) else { continue }
+            samples.append(HKQuantitySample(type: HKQuantityType(.heartRateVariabilitySDNN),
+                                            quantity: HKQuantity(unit: .secondUnit(with: .milli), doubleValue: Double(58 + back % 9)),
+                                            start: morning, end: morning))
+        }
         for back in 1...28 {
             guard let day = calendar.date(byAdding: .day, value: -back, to: storyDay),
                   let bed = calendar.date(bySettingHour: 23, minute: back % 3 * 10, second: 0,

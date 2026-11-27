@@ -21,7 +21,7 @@ class _Event(BaseModel):
 
 class FlagEvent(_Event):
     type: Literal["flag"]
-    kind: Literal["spike", "returnSpike", "sore", "tired"]
+    kind: Literal["spike", "returnSpike", "sore", "tired", "body"]
     unit: Literal["km", "minutes"]
     planned: float = Field(ge=0, le=1000)
     suggested: float = Field(ge=0, le=1000)
@@ -35,7 +35,7 @@ class FlagEvent(_Event):
 class ChoiceEvent(_Event):
     type: Literal["choice"]
     choice: Literal["accept", "keep", "undo"]
-    kind: Literal["spike", "returnSpike", "sore", "tired"]
+    kind: Literal["spike", "returnSpike", "sore", "tired", "body"]
     run: str = Field(pattern=r"^swap-[0-9a-f]{12}$")   # the run's hashed key, never its title
     runDay: date
 

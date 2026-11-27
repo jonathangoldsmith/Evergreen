@@ -1,5 +1,5 @@
 {
-  "about": "Shared cases for the brake's rule (range plan items 5 and 6). app/EvergreenTests/GuardrailFixtureTests.swift and harness/tests/test_guardrail.py both run every case, so the phone and the harness can't drift (task T3). Times are local to America/Los_Angeles; history runs start daysBack days before the planned run, at the same time.",
+  "about": "Shared cases for the brake's rule (range plan items 5 and 6) and readiness's body signal (bodyOff: two of this morning's readings off the usual, worked out on the phone). app/EvergreenTests/GuardrailFixtureTests.swift and harness/tests/test_guardrail.py both run every case, so the phone and the harness can't drift (task T3). Times are local to America/Los_Angeles; history runs start daysBack days before the planned run, at the same time.",
   "timeZone": "America/Los_Angeles",
   "cases": [
     {"name": "spike: 18 km after a 13 km longest", "run": {"start": "2026-11-22T08:00:00-08:00", "km": 18, "minutes": 90},
@@ -34,6 +34,18 @@
      "expect": {"kind": "spike", "suggested": 50, "longest30": 50, "keepEasy": false, "injuryAdjusted": false}},
     {"name": "runs past 30 days and other activities don't count", "run": {"start": "2026-11-22T08:00:00-08:00", "km": 12, "minutes": 70},
      "history": [{"daysBack": 4, "km": 8}, {"daysBack": 9, "km": 9}, {"daysBack": 31, "km": 20}, {"daysBack": 5, "km": 25, "type": "Cycling"}],
-     "expect": {"kind": "spike", "suggested": 9, "longest30": 9, "keepEasy": false, "injuryAdjusted": false}}
+     "expect": {"kind": "spike", "suggested": 9, "longest30": 9, "keepEasy": false, "injuryAdjusted": false}},
+    {"name": "body off with no answer cuts a long run like tired", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 100}, "bodyOff": true,
+     "history": [{"daysBack": 3, "minutes": 50}, {"daysBack": 8, "minutes": 110}],
+     "expect": {"kind": "body", "suggested": 80, "longest30": null, "keepEasy": false, "injuryAdjusted": false}},
+    {"name": "body off but answered fresh: the answer wins", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 100}, "bodyOff": true,
+     "check": "fresh", "history": [{"daysBack": 3, "minutes": 50}, {"daysBack": 8, "minutes": 110}], "expect": null},
+    {"name": "body off and answered tired: the tired flag", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 100}, "bodyOff": true,
+     "check": "tired", "history": [{"daysBack": 3, "minutes": 50}, {"daysBack": 8, "minutes": 110}],
+     "expect": {"kind": "tired", "suggested": 80, "longest30": null, "keepEasy": false, "injuryAdjusted": false}},
+    {"name": "body off on a short easy run: no flag", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 40}, "bodyOff": true,
+     "history": [{"daysBack": 3, "minutes": 50}, {"daysBack": 8, "minutes": 55}], "expect": null},
+    {"name": "body off on a short hard run: run it easy", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 22, "hard": true}, "bodyOff": true,
+     "history": [], "expect": {"kind": "body", "suggested": 22, "longest30": null, "keepEasy": true, "injuryAdjusted": false}}
   ]
 }

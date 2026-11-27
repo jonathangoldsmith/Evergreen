@@ -1,8 +1,9 @@
 import HealthKit
 
 /// Reads the person's Apple Health history: workouts from the last 60 days
-/// (type, times, average heart rate, distance, indoors) and, for the last 28
-/// days, minutes asleep and resting heart rate. Read-only; nothing here writes.
+/// (type, times, average heart rate, distance, indoors), for the last 28
+/// days minutes asleep and resting heart rate, and for the last 60 days heart
+/// rate variability (readiness, `BodySignal`). Read-only; nothing here writes.
 struct HealthReader: Sendable {
     static let workoutDays = 60
     static let summaryDays = 28
@@ -12,6 +13,7 @@ struct HealthReader: Sendable {
         HKObjectType.workoutType(),
         HKQuantityType(.heartRate),
         HKQuantityType(.restingHeartRate),
+        HKQuantityType(.heartRateVariabilitySDNN),
         HKQuantityType(.distanceWalkingRunning),
         HKQuantityType(.distanceCycling),
         HKQuantityType(.workoutEffortScore),
@@ -31,10 +33,13 @@ struct HealthReader: Sendable {
         let daysFrom = calendar.date(byAdding: .day, value: -Self.summaryDays, to: today) ?? today
         async let workouts = workouts(store, from: workoutsFrom, to: now)
         async let sleep = sleepMinutes(store, from: daysFrom, to: now, calendar: calendar)
-        async let resting = restingHeartRates(store, from: daysFrom, to: now, calendar: calendar)
-        let (w, s, r) = await (workouts, sleep, resting)
-        let days = Set(s.keys).union(r.keys).sorted().map {
-            HealthHistory.Day(date: $0, sleepMin: s[$0], restingHeartRate: r[$0])
+        async let resting = dailyAverages(.restingHeartRate, HKUnit.count().unitDivided(by: .minute()),
+                                          store, from: daysFrom, to: now, calendar: calendar)
+        async let variability = dailyAverages(.heartRateVariabilitySDNN, .secondUnit(with: .milli),
+                                              store, from: workoutsFrom, to: now, calendar: calendar)
+        let (w, s, r, v) = await (workouts, sleep, resting, variability)
+        let days = Set(s.keys).union(r.keys).union(v.keys).sorted().map {
+            HealthHistory.Day(date: $0, sleepMin: s[$0], restingHeartRate: r[$0], hrv: v[$0])
         }
         return HealthHistory(workouts: w, days: days, readAt: now)
     }
@@ -106,21 +111,21 @@ struct HealthReader: Sendable {
         return minutes.mapValues { $0.rounded() }
     }
 
-    /// The day's average resting heart rate.
-    private func restingHeartRates(_ store: HKHealthStore, from: Date, to: Date, calendar: Calendar) async -> [Date: Double] {
+    /// The day's average of a discrete reading: resting heart rate (bpm) or HRV (ms).
+    private func dailyAverages(_ type: HKQuantityTypeIdentifier, _ unit: HKUnit, _ store: HKHealthStore,
+                               from: Date, to: Date, calendar: Calendar) async -> [Date: Double] {
         let predicate = HKQuery.predicateForSamples(withStart: from, end: to)
         let query = HKStatisticsCollectionQueryDescriptor(
-            predicate: .quantitySample(type: HKQuantityType(.restingHeartRate), predicate: predicate),
+            predicate: .quantitySample(type: HKQuantityType(type), predicate: predicate),
             options: .discreteAverage, anchorDate: calendar.startOfDay(for: from), intervalComponents: DateComponents(day: 1)
         )
         guard let collection = try? await query.result(for: store) else { return [:] }
-        let bpm = HKUnit.count().unitDivided(by: .minute())
-        var rates: [Date: Double] = [:]
+        var values: [Date: Double] = [:]
         collection.enumerateStatistics(from: from, to: to) { stats, _ in
-            if let value = stats.averageQuantity()?.doubleValue(for: bpm) {
-                rates[calendar.startOfDay(for: stats.startDate)] = (value * 10).rounded() / 10
+            if let value = stats.averageQuantity()?.doubleValue(for: unit) {
+                values[calendar.startOfDay(for: stats.startDate)] = (value * 10).rounded() / 10
             }
         }
-        return rates
+        return values
     }
 }

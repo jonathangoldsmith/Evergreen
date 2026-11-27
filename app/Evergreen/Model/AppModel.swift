@@ -13,6 +13,9 @@ final class AppModel {
     private(set) var persona: Persona
     /// What Evergreen last read from Apple Health, for the person's own week (`.me`).
     private(set) var health = HealthHistory.cached()
+    /// A demo person's sleep, resting heart rate and HRV, set by the rough-night
+    /// beat; demo personas carry workouts only. Not saved: a relaunch clears it.
+    var demoHealthDays: [HealthHistory.Day] = []
     @ObservationIgnored let healthReader = HealthReader()
     /// The last good answer, decoded once from `run.lastResponse`.
     private(set) var response: TickResponse?
@@ -608,6 +611,7 @@ final class AppModel {
         // A return plan belongs to the beat that started it, not the next person.
         returnPlans.forEach(context.delete)
         testMeeting = nil
+        demoHealthDays = []
         switchPerson(to: .jordan)
     }
 

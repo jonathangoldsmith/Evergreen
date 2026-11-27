@@ -2,7 +2,8 @@ import Foundation
 
 /// The brake (plan items 5 and 6), as one pure function over plain values so
 /// every branch has a table test. Thresholds are provisional; the backtest
-/// calibrates them.
+/// calibrates them. With no morning answer, an off body signal (`BodySignal`,
+/// readiness) cuts a long or hard run like Tired.
 enum GuardrailRule {
     /// A spike is more than this past the 30-day longest: +10%, or +5% after an injury.
     static let spikeRatio = 1.10
@@ -34,6 +35,9 @@ enum GuardrailRule {
         /// Planned runs in the 7 days from this run, for "the longest planned run this week".
         var upcoming: [PlannedRun]
         var calendar: Calendar
+        /// This morning's readings, for a run today; nil otherwise. Used only
+        /// without a morning answer: the person's own answer wins.
+        var body: BodySignal? = nil
     }
 
     static func flag(for run: PlannedRun, _ context: Context) -> GuardrailFlag? {
@@ -82,26 +86,29 @@ enum GuardrailRule {
         return month >= context.calendar.startOfDay(for: since) && month <= date
     }
 
-    // MARK: Sore and Tired
+    // MARK: Sore, Tired and the body signal
 
     private static func feel(_ run: PlannedRun, _ planned: RunSize, _ injured: Bool, _ context: Context) -> GuardrailFlag? {
         let cut: Double
+        let kind: GuardrailFlag.Kind
         switch context.check {
         case .sore? where isLong(run, planned, context):
-            cut = soreCut
+            (cut, kind) = (soreCut, .sore)
         case .tired? where isLong(run, planned, context) || run.isHard:
-            cut = tiredCut
+            (cut, kind) = (tiredCut, .tired)
+        case nil where context.body?.isOff == true && (isLong(run, planned, context) || run.isHard):
+            (cut, kind) = (tiredCut, .body)
         default:
             return nil
         }
-        let kind: GuardrailFlag.Kind = context.check == .sore ? .sore : .tired
+        let body = kind == .body ? context.body : nil
         let suggested = withFloor(roundDown(planned.value * cut, planned.unit), planned.unit)
         if suggested > planned.value * (1 - smallestCut) {
             return GuardrailFlag(kind: kind, planned: planned, suggested: planned, longest30: nil,
-                                 keepEasy: true, injuryAdjusted: injured)
+                                 keepEasy: true, injuryAdjusted: injured, body: body)
         }
         return GuardrailFlag(kind: kind, planned: planned, suggested: RunSize(value: suggested, unit: planned.unit),
-                             longest30: nil, keepEasy: false, injuryAdjusted: injured)
+                             longest30: nil, keepEasy: false, injuryAdjusted: injured, body: body)
     }
 
     /// 60+ minutes, 10+ km, or the longest planned run in the next 7 days.

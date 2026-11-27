@@ -9,6 +9,9 @@ struct HealthHistory: Codable, Equatable, Sendable {
         var date: Date
         var sleepMin: Double?
         var restingHeartRate: Double?
+        /// The day's average heart rate variability (SDNN, ms). Read for 60
+        /// days, for readiness only; it isn't sent to the planner.
+        var hrv: Double? = nil
     }
 
     var workouts: [Workout] = []

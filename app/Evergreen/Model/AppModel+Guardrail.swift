@@ -9,12 +9,27 @@ extension AppModel {
 
     // MARK: Flags
 
-    /// This run's flag, from the person's runs, injury month and morning answer.
+    /// This run's flag, from the person's runs, injury month, morning answer
+    /// and, for a run today, this morning's readings.
     func flag(for run: PlannedRun) -> GuardrailFlag? {
         GuardrailRule.flag(for: run, GuardrailRule.Context(
             history: workouts, injuryMonth: profile.injuryMonth, check: checkIn(for: run),
-            upcoming: trainingRuns, calendar: .current
+            upcoming: trainingRuns, calendar: .current, body: bodySignal(for: run)
         ))
+    }
+
+    /// Readiness: this morning's readings against the person's usual, for a
+    /// run today only (last night's sleep says nothing about Sunday).
+    func bodySignal(for run: PlannedRun) -> BodySignal? {
+        guard calendar.isDate(run.start, inSameDayAs: now) else { return nil }
+        let signal = BodySignal.read(healthDays, on: now, calendar: calendar)
+        return signal.off.isEmpty ? nil : signal
+    }
+
+    /// Sleep, resting heart rate and HRV by day: from Apple Health for the
+    /// person's own week, or what a demo beat set.
+    var healthDays: [HealthHistory.Day] {
+        persona.key.isReal ? health.days : demoHealthDays
     }
 
     func checkIn(for run: PlannedRun) -> MorningCheck? {

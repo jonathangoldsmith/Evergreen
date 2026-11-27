@@ -108,6 +108,32 @@ extension AppModel {
         if let id { setTrainingCalendars(profile.trainingCalendarIds.union([id])) } else { save() }
     }
 
+    /// Readiness (TODOS item 2): 7 AM on the day of a 1h 40 evening long run.
+    /// Jordan slept 5h 40 and his resting heart rate is 6 over his usual, so
+    /// before he answers how his legs feel, Today offers a shorter run.
+    func showRoughNightDemo() {
+        resetDemo()
+        demoHealthDays = Self.roughNightDays(storyDay: storyDay, calendar: calendar)
+        setClockMinutes(7 * 60)
+        let evening = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: storyDay) ?? storyDay
+        let id = calendarSync.addDemoTrainingWeek([("Long run 1h 40", evening, 100)])
+        if let id { setTrainingCalendars(profile.trainingCalendarIds.union([id])) } else { save() }
+    }
+
+    /// 60 usual days (about 7h 25 asleep, resting heart rate 49, HRV 62 ms),
+    /// then this morning: 5h 40 asleep and resting heart rate 55. HRV is a
+    /// little low but within the usual, so two of the three readings are off.
+    static func roughNightDays(storyDay: Date, calendar: Calendar) -> [HealthHistory.Day] {
+        let today = calendar.startOfDay(for: storyDay)
+        var days = (1...BodySignal.hrvUsualDays).reversed().compactMap { back -> HealthHistory.Day? in
+            guard let date = calendar.date(byAdding: .day, value: -back, to: today) else { return nil }
+            return HealthHistory.Day(date: date, sleepMin: Double(435 + back % 4 * 10),
+                                     restingHeartRate: Double(48 + back % 3), hrv: Double(58 + back % 9))
+        }
+        days.append(HealthHistory.Day(date: today, sleepMin: 340, restingHeartRate: 55, hrv: 57))
+        return days
+    }
+
     /// This week's Sunday at 6:30 PM: the pain question is open, and
     /// tomorrow's 2½-hour long run is a big jump, so two cards stack.
     func showSundayDemo() {

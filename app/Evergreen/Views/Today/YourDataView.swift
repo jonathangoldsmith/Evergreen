@@ -23,7 +23,7 @@ struct YourDataView: View {
             // explanations in the footers (design review G13).
             Form {
                 Section {
-                    Text("\(model.health.workouts.count) workouts from the last \(HealthReader.workoutDays) days and \(model.health.days.count) days of sleep and resting heart rate, read from Apple Health.")
+                    Text("\(model.health.workouts.count) workouts from the last \(HealthReader.workoutDays) days and \(model.health.days.count) days of sleep, resting heart rate and heart rate variability, read from Apple Health.")
                         .foregroundStyle(Theme.text)
                 } header: {
                     Text("On this phone")
@@ -37,7 +37,7 @@ struct YourDataView: View {
                 CoachSection()
                 BuddySection()
                 Section {
-                    Text("To plan your week, your workouts, sleep and resting heart rate are sent to Evergreen's planner and kept under an anonymous ID. No name, email or account is attached.")
+                    Text("To plan your week, your workouts, sleep and resting heart rate are sent to Evergreen's planner and kept under an anonymous ID. No name, email or account is attached. Heart rate variability stays on this phone.")
                         .foregroundStyle(Theme.text)
                     planner
                 } header: {
