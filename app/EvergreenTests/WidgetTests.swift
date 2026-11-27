@@ -49,7 +49,7 @@ struct WidgetTests {
     @Test func aWidgetAnswerIsOneDecisionLikeAWatchTap() async throws {
         let model = try NotifierActionTests.model()
         model.trainingRuns = [WatchAnswerTests.longRun]
-        let token = WidgetLink.ensureToken()
+        let token = WidgetLink.ensureToken(in: AppModel.widgetDefaults)
         let url = WidgetLink.answer(runKey: WatchAnswerTests.longRun.key, kind: .accept).url(token: token)
         #expect(model.handleWidgetURL(url))
         #expect(model.decisions.map(\.choice) == [.accept])
@@ -61,7 +61,7 @@ struct WidgetTests {
     @Test func aForgedWidgetAnswerChangesNothing() async throws {
         let model = try NotifierActionTests.model()
         model.trainingRuns = [WatchAnswerTests.longRun]
-        WidgetLink.ensureToken()
+        WidgetLink.ensureToken(in: AppModel.widgetDefaults)
         let url = WidgetLink.answer(runKey: WatchAnswerTests.longRun.key, kind: .accept).url(token: "forged")
         #expect(!model.handleWidgetURL(url))
         #expect(model.decisions.isEmpty)
@@ -80,6 +80,18 @@ struct WidgetTests {
         #expect(AppModel.sameForWidget(a, b))
         b.inRange = "6/6"
         #expect(!AppModel.sameForWidget(a, b))
+    }
+
+    /// A test run must not overwrite what the installed widget shows.
+    @Test func aTestRunNeverWritesTheInstalledWidgetsState() throws {
+        #expect(AppModel.isTestRun)
+        let shared = WidgetLink.sharedDefaults
+        let before = shared.data(forKey: "watch_state")
+        let model = try NotifierActionTests.model()
+        model.pushWidgetState(WatchState(run: nil, inRange: "9/9", inRangeSpoken: "9 of 9 days in range",
+                                         today: "Test only", sentAt: Date()))
+        #expect(shared.data(forKey: "watch_state") == before)
+        #expect(WatchStateStore.load(in: AppModel.widgetDefaults)?.today == "Test only")
     }
 
     // MARK: Timeline
