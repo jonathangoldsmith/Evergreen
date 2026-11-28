@@ -88,6 +88,23 @@ struct TodayRangeTests {
         #expect(range.line == "Today: 10 min, easy effort.")
     }
 
+    @Test func twoWeeksOfHistoryArentReadAsTwoWeeksOfRest() throws {
+        // 15 days at 50 min a day: the usual week is 7 of those days (1750), not
+        // the 15 days spread over 28 (938), so the room matches a steady month's.
+        let range = try #require(Self.range(Self.history(days: 15)))
+        #expect(range.ceiling == 155)
+        #expect(range.reason == "Your 7-day training load is right at your 28-day load.")
+        let insights = TrainingInsights(workouts: Self.history(days: 15), storyDay: Self.today, calendar: Self.calendar)
+        #expect(insights.monthDays == 15 && insights.usualWeekLoad == 1750)
+    }
+
+    @Test func theRoomIsLoadAndNeverUnderTheFloor() throws {
+        let steady = try #require(Self.range(Self.history()))
+        #expect(abs(steady.room - 775) < 0.001)
+        let over = try #require(Self.range(Self.history(lastSixEffort: 10)))
+        #expect(over.ceiling == 10 && over.room > 0)
+    }
+
     @Test func underTwoWeeksOfHistoryThereIsNoRange() {
         #expect(Self.range(Self.history(days: 10)) == nil)
         #expect(Self.range([]) == nil)
@@ -134,6 +151,28 @@ struct TodayRangeTests {
         let flag = try #require(model.flag(for: run))
         #expect(flag.kind == .load || flag.kind == .spike)
         #expect(flag.suggested.value <= Double(max(range.ceiling, 20)))
+    }
+
+    @Test func anEasyLongRunPastTheMinutesStaysInRange() throws {
+        // Judged by load: minutes past the ceiling at an easy effort use less of the week.
+        let model = try Self.model()
+        let range = try #require(model.todayRange)
+        let start = model.calendar.date(bySettingHour: 6, minute: 0, second: 0, of: model.storyDay)!
+        let minutes = Double(range.ceiling) + 20
+        let effort = range.room / minutes * 0.9
+        model.logWorkout(Workout(id: "easy-long", activityType: "Running", start: start,
+                                 end: start.addingTimeInterval(minutes * 60), effort: effort, avgHeartRate: nil, source: .demo))
+        #expect(!model.wentOverRange(on: model.now))
+    }
+
+    @Test func jordansFirstWeeksWithARangeStayInRange() throws {
+        // Before the fix, days 14–18 of the mock history read as over a range of 0.
+        let model = try Self.model()
+        let today = model.calendar.startOfDay(for: model.now)
+        for back in 0..<28 {
+            let day = model.calendar.date(byAdding: .day, value: -back, to: today)!
+            #expect(!model.wentOverRange(on: day), "\(day)")
+        }
     }
 
     @Test func goingOverTheCeilingIsOutOfRange() throws {

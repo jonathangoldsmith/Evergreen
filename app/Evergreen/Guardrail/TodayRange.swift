@@ -13,8 +13,9 @@ import Foundation
 /// so hard weeks leave fewer minutes than easy ones. Thresholds are
 /// provisional; the backtest calibrates them.
 ///
-/// A day is in range unless it went over its ceiling or ran past a brake
-/// suggestion the person kept (`AppModel.rangeReport`). Wellness wording:
+/// A day is in range unless its load went past the room (`room`: easier
+/// minutes count for less, so an easy long run can run past the minutes) or
+/// it ran past a brake suggestion the person kept (`AppModel.rangeReport`). Wellness wording:
 /// "in range", never "safe".
 struct TodayRange: Equatable, Sendable {
     enum Effort: String, Equatable, Sendable { case easy, usual, any }
@@ -26,6 +27,10 @@ struct TodayRange: Equatable, Sendable {
     var effort: Effort
     /// The 7-day load against the 28-day one: 0.19 is 19% more.
     var loadChange: Double
+    /// The training load (effort × minutes) today can add before the rolling
+    /// week passes 1.3× the usual, and never less than the floor at typical
+    /// effort. The ceiling is this in minutes at typical effort.
+    var room: Double = 0
 
     static let maxRatio = 1.3
     static let lowRatio = 0.8
@@ -56,7 +61,8 @@ struct TodayRange: Equatable, Sendable {
         let ceiling = max(floor, Int((minutes / 5).rounded(.down)) * 5)
         let ratio = 1 + insights.loadChange
         let effort: Effort = bodyOff || ratio > easyRatio ? .easy : ratio < lowRatio ? .any : .usual
-        return TodayRange(floor: floor, ceiling: ceiling, effort: effort, loadChange: insights.loadChange)
+        return TodayRange(floor: floor, ceiling: ceiling, effort: effort, loadChange: insights.loadChange,
+                          room: max(room, Double(floor) * insights.typicalEffort))
     }
 
     /// "Today: 10–45 min, easy effort." / "Today: up to 45 min, your usual effort."

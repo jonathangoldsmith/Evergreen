@@ -18,6 +18,11 @@ struct TrainingInsights: Equatable {
     /// Training load (effort × minutes) in the last 7 days, and in the last 28 (the 7 included).
     var weekLoad: Double
     var monthLoad: Double
+    /// Days of history in each window: 7 and 28, or fewer when the first
+    /// workout Evergreen knows of is more recent, so a short history isn't
+    /// read as weeks of rest.
+    var weekDays: Double = 7
+    var monthDays: Double = 28
     /// The average effort per minute over the last 28 days, for turning load into minutes.
     var typicalEffort: Double
     /// The longest run in the last 14 days, in minutes.
@@ -32,13 +37,14 @@ struct TrainingInsights: Equatable {
         averageHeartRate >= 160 ? 7 : averageHeartRate >= 150 ? 5 : averageHeartRate >= 135 ? 4 : 3
     }
 
-    /// The usual week's load: the 28-day load over 4.
-    var usualWeekLoad: Double { monthLoad / 4 }
+    /// The usual week's load: the 28-day load per day, times 7. Per day of
+    /// history actually covered, so two weeks of history aren't halved.
+    var usualWeekLoad: Double { monthLoad / monthDays * 7 }
 
     /// The 7-day load against the 28-day one, per day, as Apple Fitness shows
     /// it: 0.18 is 18% more.
     var loadChange: Double {
-        monthLoad > 0 ? (weekLoad / 7) / (monthLoad / 28) - 1 : 0
+        monthLoad > 0 ? (weekLoad / weekDays) / (monthLoad / monthDays) - 1 : 0
     }
 
     static func load(_ workout: Workout) -> Double {
@@ -48,6 +54,12 @@ struct TrainingInsights: Equatable {
     init(workouts: [Workout], storyDay: Date, calendar: Calendar = .current) {
         func since(_ days: Int) -> Date { calendar.date(byAdding: .day, value: -days, to: storyDay) ?? storyDay }
         let past = workouts.filter { $0.start < storyDay }
+        // From the first workout's day: history shorter than a window covers only its own days.
+        let covered = past.map(\.start).min().map {
+            calendar.dateComponents([.day], from: calendar.startOfDay(for: $0), to: calendar.startOfDay(for: storyDay)).day ?? 0
+        } ?? 28
+        weekDays = Double(min(7, max(covered, 1)))
+        monthDays = Double(min(28, max(covered, 1)))
         let week = past.filter { $0.start >= since(7) }
         let month = past.filter { $0.start >= since(28) }
         runs30 = past.filter { $0.activityType == "Running" && $0.start >= since(30) }.count
