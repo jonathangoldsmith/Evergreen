@@ -30,7 +30,7 @@ struct PermissionsView: View {
                                   state: state(model.calendarAccess == .on, asked: model.calendarAccess != .notAsked),
                                   action: allowCalendar)
                     PermissionRow(symbol: "heart", title: "Apple Health",
-                                  detail: "I read your workouts, heart rate, sleep and resting heart rate to plan your week.",
+                                  detail: "I read your workouts, heart rate, sleep, resting heart rate and heart rate variability to plan your week.",
                                   state: healthAsked ? .asked : .ask,
                                   action: allowHealth)
                     PermissionRow(symbol: "bell", title: "Notifications",

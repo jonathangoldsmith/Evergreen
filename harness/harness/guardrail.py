@@ -6,7 +6,9 @@ days (5% within 12 months of an injury), and the suggestion is that longest (min
 an injury), never below 3 km or 20 minutes; a floor that reaches the planned size means no
 flag. With fewer than 2 comparable runs there's no spike, except after an injury: anything
 over 30 minutes or 5 km. Sore cuts a long run by 30%, Tired a long or hard run by 20%, and a
-cut under 10% becomes "run it easy". One flag per run: the smaller suggestion wins.
+cut under 10% becomes "run it easy". With no morning answer, an off body signal (two of this
+morning's readings off the person's usual, worked out on the phone) cuts like Tired. One flag
+per run: the smaller suggestion wins.
 """
 from __future__ import annotations
 
@@ -89,11 +91,11 @@ def shown(value: float, unit: str) -> float:
 
 
 def flag(run: PlannedRun, history: list[dict], injury_month: date | None = None, check: str | None = None,
-         upcoming: list[PlannedRun] | None = None) -> Flag | None:
+         upcoming: list[PlannedRun] | None = None, body_off: bool = False) -> Flag | None:
     if run.size is None:
         return None
     injured = is_injured(run, injury_month)
-    found = [f for f in (_spike(run, history, injured), _feel(run, check, injured, upcoming or [])) if f]
+    found = [f for f in (_spike(run, history, injured), _feel(run, check, injured, upcoming or [], body_off)) if f]
     return min(found, key=lambda f: f.suggested) if found else None
 
 
@@ -123,11 +125,14 @@ def _is_long(run: PlannedRun, upcoming: list[PlannedRun]) -> bool:
     return len(week) > 1 and run.size >= max(week)
 
 
-def _feel(run: PlannedRun, check: str | None, injured: bool, upcoming: list[PlannedRun]) -> Flag | None:
+def _feel(run: PlannedRun, check: str | None, injured: bool, upcoming: list[PlannedRun],
+          body_off: bool = False) -> Flag | None:
     if check == "sore" and _is_long(run, upcoming):
         cut = SORE_CUT
     elif check == "tired" and (_is_long(run, upcoming) or run.hard):
         cut = TIRED_CUT
+    elif check is None and body_off and (_is_long(run, upcoming) or run.hard):
+        cut, check = TIRED_CUT, "body"
     else:
         return None
     suggested = with_floor(round_down(run.size * cut, run.unit), run.unit)

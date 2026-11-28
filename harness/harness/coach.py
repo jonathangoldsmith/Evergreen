@@ -153,7 +153,8 @@ def _swap_line(flag: dict, feelings: bool) -> dict:
     big_jump = kind in ("spike", "returnSpike")
     if feelings:
         reason = {"spike": "Big jump", "returnSpike": "Back from an injury",
-                  "sore": "Felt sore", "tired": "Felt tired"}[kind]
+                  "sore": "Felt sore", "tired": "Felt tired",
+                  "body": "Body readings off usual"}[kind]
     else:
         reason = "Shortened: big jump" if big_jump else "Shortened: how you felt"
     # The 30-day longest on an injury-adjusted swap hints at an injury, so it needs the tick (X10).

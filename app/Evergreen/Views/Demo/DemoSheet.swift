@@ -36,6 +36,10 @@ struct DemoSheet: View {
                         model.showMorningCheckDemo()
                     }
                     .disabled(model.calendarAccess != .on)
+                    beat("A rough night before a long run", detail: "7 AM: Jordan slept 5h 40 and his resting heart rate is 6 over his usual. Before he answers how his legs feel, Today offers a shorter evening long run.") {
+                        model.showRoughNightDemo()
+                    }
+                    .disabled(model.calendarAccess != .on)
                     beat("Sunday evening", detail: "This Sunday at 6:30 PM: tomorrow's long run is a big jump and the week's pain question is open, so both cards stack in order. Shows nothing new if this week is already answered.") {
                         model.showSundayDemo()
                     }
@@ -44,7 +48,7 @@ struct DemoSheet: View {
                         model.showRainDemo()
                     }
                     .disabled(model.rainTime == nil)
-                    beat("You, from Apple Health", detail: "Your own week, planned from your workouts, sleep and resting heart rate in Apple Health.") {
+                    beat("You, from Apple Health", detail: "Your own week, planned from your workouts, sleep, resting heart rate and heart rate variability in Apple Health.") {
                         Task { await model.useAppleHealth() }
                     }
                     #if DEBUG

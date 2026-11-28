@@ -112,6 +112,14 @@ def test_the_tick_can_change_and_a_share_can_be_renewed(db):
     assert "Felt tired" in page(made["token"]).text
 
 
+def test_a_body_readings_swap_stays_behind_the_tick_like_feelings(db):
+    events(flag(kind="body"), choice(kind="body"))
+    made = share()
+    assert "Shortened: how you felt" in page(made["token"]).text
+    client.patch(f"/users/{RUNNER}/coach-shares/{made['id']}", json={"includeFeelings": True})
+    assert "Body readings off usual" in page(made["token"]).text
+
+
 def test_deleting_the_runner_ends_every_link(db):
     made = share()
     client.delete(f"/users/{RUNNER}")

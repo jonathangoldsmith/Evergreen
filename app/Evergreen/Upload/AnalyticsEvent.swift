@@ -38,7 +38,8 @@ enum AnalyticsEvent: Hashable, Sendable {
         switch self {
         case .flagShown(let kind):
             // Sore and Tired come from the morning check; only that it was a check-in leaves the phone.
-            ["kind": kind == .spike || kind == .returnSpike ? "spike" : "check_in"]
+            // The body signal sends that it was one, never the readings.
+            ["kind": kind == .spike || kind == .returnSpike ? "spike" : kind == .body ? "body" : "check_in"]
         case .choice(let choice):
             ["choice": ["accept", "keep", "undo"].contains(choice) ? choice : "other"]
         case .painCheckIn(let answered):

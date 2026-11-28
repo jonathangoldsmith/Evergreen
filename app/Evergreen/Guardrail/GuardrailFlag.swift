@@ -10,6 +10,9 @@ struct GuardrailFlag: Codable, Hashable, Sendable {
         case returnSpike
         case sore
         case tired
+        /// No morning answer, and two of this morning's readings are off the
+        /// person's usual (`BodySignal`): cut like Tired.
+        case body
     }
 
     var kind: Kind
@@ -21,6 +24,8 @@ struct GuardrailFlag: Codable, Hashable, Sendable {
     var keepEasy: Bool
     /// After an injury in the last 12 months, the tighter rule applied.
     var injuryAdjusted: Bool
+    /// For a body flag, the readings behind it, so the card can say which.
+    var body: BodySignal? = nil
 
     /// How far past the 30-day longest the planned run is, in percent.
     var jumpPercent: Int? {

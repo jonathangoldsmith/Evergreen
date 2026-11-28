@@ -30,7 +30,8 @@ struct HistoryPayload: Encodable, Equatable, Sendable {
                     end: RecommendClient.instant($0.end, cal), avgHeartRate: $0.avgHeartRate,
                     distanceKm: $0.distanceKm.map { ($0 * 1000).rounded() / 1000 }, indoor: $0.indoor)
         }
-        daily = history.days.map {
+        // HRV stays on the phone (readiness); days with only HRV aren't sent.
+        daily = history.days.filter { $0.sleepMin != nil || $0.restingHeartRate != nil }.map {
             Day(date: RecommendClient.day($0.date, cal), sleepMin: $0.sleepMin, restingHeartRate: $0.restingHeartRate)
         }
     }
