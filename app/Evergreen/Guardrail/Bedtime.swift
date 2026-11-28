@@ -131,9 +131,14 @@ struct Bedtime: Equatable, Sendable {
             + "That leaves a full night before a \(Self.time(wake, calendar, amPM: false)) wake-up.")
     }
 
+    /// "10:30", or "7:00 AM". Built from the calendar's components rather than
+    /// a FormatStyle: with the AM/PM left out, the format pads the hour
+    /// ("06:00") on some OS versions and not others.
     static func time(_ date: Date, _ calendar: Calendar, amPM: Bool) -> String {
-        var style = Date.FormatStyle(timeZone: calendar.timeZone).locale(Locale(identifier: "en_US"))
-        style = amPM ? style.hour().minute() : style.hour(.defaultDigits(amPM: .omitted)).minute()
-        return date.formatted(style).replacingOccurrences(of: "\u{202F}", with: " ")
+        let parts = calendar.dateComponents([.hour, .minute], from: date)
+        let (hour, minute) = (parts.hour ?? 0, parts.minute ?? 0)
+        let twelve = hour % 12 == 0 ? 12 : hour % 12
+        let clock = "\(twelve):\(minute < 10 ? "0" : "")\(minute)"
+        return amPM ? "\(clock) \(hour < 12 ? "AM" : "PM")" : clock
     }
 }
