@@ -29,6 +29,7 @@ struct RootView: View {
         .sheet(isPresented: $showDemo) { DemoSheet() }
         .tint(Theme.text)
         .task { await model.keepTicking() }
+        .onOpenURL { model.handleWidgetURL($0) }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             model.noteAppOpened()

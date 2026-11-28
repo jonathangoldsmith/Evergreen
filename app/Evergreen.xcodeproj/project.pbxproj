@@ -12,6 +12,7 @@
 		B8F1030C30B0F1490058A375 /* PersonaInquirySDK2 in Frameworks */ = {isa = PBXBuildFile; productRef = B8F1030B30B0F1490058A375 /* PersonaInquirySDK2 */; };
 		7A100000000000000000003C /* EvergreenWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 7A1000000000000000000030 /* EvergreenWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7A100000000000000000004B /* EvergreenWatchWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A1000000000000000000040 /* EvergreenWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7A100000000000000000005C /* EvergreenWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A1000000000000000000050 /* EvergreenWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,6 +36,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 7A1000000000000000000042;
 			remoteInfo = EvergreenWatchWidget;
+		};
+		7A100000000000000000005A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7A100000000000000000000A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7A1000000000000000000053;
+			remoteInfo = EvergreenWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -61,6 +69,17 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A100000000000000000005D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				7A100000000000000000005C /* EvergreenWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -72,6 +91,9 @@
 		7A100000000000000000004E /* EvergreenWatchWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EvergreenWatchWidget.entitlements; sourceTree = "<group>"; };
 		7A100000000000000000004F /* EvergreenWatchWidget-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "EvergreenWatchWidget-Info.plist"; sourceTree = "<group>"; };
 		7A1000000000000000000030 /* EvergreenWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EvergreenWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A1000000000000000000050 /* EvergreenWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = EvergreenWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A100000000000000000005E /* EvergreenWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EvergreenWidget.entitlements; sourceTree = "<group>"; };
+		7A100000000000000000005F /* EvergreenWidget-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "EvergreenWidget-Info.plist"; sourceTree = "<group>"; };
 		B8F1030730B0ECF60058A375 /* Evergreen.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Evergreen.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -99,6 +121,16 @@
 		7A1000000000000000000041 /* EvergreenWatchWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = EvergreenWatchWidget;
+			sourceTree = "<group>";
+		};
+		7A1000000000000000000051 /* EvergreenWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = EvergreenWidget;
+			sourceTree = "<group>";
+		};
+		7A1000000000000000000052 /* WidgetShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WidgetShared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -134,6 +166,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A1000000000000000000055 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -145,10 +184,14 @@
 				7A1000000000000000000031 /* EvergreenWatch */,
 				7A1000000000000000000032 /* WatchShared */,
 				7A1000000000000000000041 /* EvergreenWatchWidget */,
+				7A1000000000000000000051 /* EvergreenWidget */,
+				7A1000000000000000000052 /* WidgetShared */,
 				7A1000000000000000000010 /* Evergreen.entitlements */,
 				7A100000000000000000004D /* EvergreenWatch.entitlements */,
 				7A100000000000000000004E /* EvergreenWatchWidget.entitlements */,
 				7A100000000000000000004F /* EvergreenWatchWidget-Info.plist */,
+				7A100000000000000000005E /* EvergreenWidget.entitlements */,
+				7A100000000000000000005F /* EvergreenWidget-Info.plist */,
 				B8F1030430B0ECDB0058A375 /* Frameworks */,
 				B8F1030730B0ECF60058A375 /* Evergreen.xcconfig */,
 				7A1000000000000000000005 /* Products */,
@@ -162,6 +205,7 @@
 				7A1000000000000000000020 /* EvergreenTests.xctest */,
 				7A1000000000000000000030 /* EvergreenWatch.app */,
 				7A1000000000000000000040 /* EvergreenWatchWidget.appex */,
+				7A1000000000000000000050 /* EvergreenWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -184,15 +228,18 @@
 				7A1000000000000000000003 /* Frameworks */,
 				7A1000000000000000000009 /* Resources */,
 				7A100000000000000000003D /* Embed Watch Content */,
+				7A100000000000000000005D /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				7A100000000000000000003B /* PBXTargetDependency */,
+				7A100000000000000000005B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7A1000000000000000000002 /* Evergreen */,
 				7A1000000000000000000032 /* WatchShared */,
+				7A1000000000000000000052 /* WidgetShared */,
 			);
 			name = Evergreen;
 			packageProductDependencies = (
@@ -274,6 +321,30 @@
 			productReference = 7A1000000000000000000040 /* EvergreenWatchWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		7A1000000000000000000053 /* EvergreenWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A1000000000000000000057 /* Build configuration list for PBXNativeTarget "EvergreenWidget" */;
+			buildPhases = (
+				7A1000000000000000000054 /* Sources */,
+				7A1000000000000000000055 /* Frameworks */,
+				7A1000000000000000000056 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7A1000000000000000000051 /* EvergreenWidget */,
+				7A1000000000000000000052 /* WidgetShared */,
+				7A1000000000000000000032 /* WatchShared */,
+			);
+			name = EvergreenWidget;
+			packageProductDependencies = (
+			);
+			productName = EvergreenWidget;
+			productReference = 7A1000000000000000000050 /* EvergreenWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -295,6 +366,9 @@
 						CreatedOnToolsVersion = 27.0;
 					};
 					7A1000000000000000000042 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					7A1000000000000000000053 = {
 						CreatedOnToolsVersion = 27.0;
 					};
 				};
@@ -321,6 +395,7 @@
 				7A1000000000000000000025 /* EvergreenTests */,
 				7A1000000000000000000033 /* EvergreenWatch */,
 				7A1000000000000000000042 /* EvergreenWatchWidget */,
+				7A1000000000000000000053 /* EvergreenWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -349,6 +424,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		7A1000000000000000000024 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A1000000000000000000056 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -386,6 +468,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A1000000000000000000054 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -403,6 +492,11 @@
 			isa = PBXTargetDependency;
 			target = 7A1000000000000000000042 /* EvergreenWatchWidget */;
 			targetProxy = 7A1000000000000000000049 /* PBXContainerItemProxy */;
+		};
+		7A100000000000000000005B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7A1000000000000000000053 /* EvergreenWidget */;
+			targetProxy = 7A100000000000000000005A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -668,6 +762,60 @@
 			};
 			name = Release;
 		};
+		7A1000000000000000000058 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = EvergreenWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 88WYGUZU9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "EvergreenWidget-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Evergreen;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.evergreentraining.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7A1000000000000000000059 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = EvergreenWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 88WYGUZU9A;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "EvergreenWidget-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Evergreen;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.evergreentraining.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -712,6 +860,15 @@
 			buildConfigurations = (
 				7A1000000000000000000047 /* Debug */,
 				7A1000000000000000000048 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7A1000000000000000000057 /* Build configuration list for PBXNativeTarget "EvergreenWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7A1000000000000000000058 /* Debug */,
+				7A1000000000000000000059 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
