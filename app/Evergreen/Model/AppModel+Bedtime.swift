@@ -1,14 +1,22 @@
 import Foundation
 
 /// Sleep the agent defends (TODOS item 4): bedtimes before the long and hard
-/// morning runs on the training calendars, as a Lock Screen note and a line
-/// on Today in the evening.
+/// morning runs on the training calendars and in Evergreen's own plan, as a
+/// Lock Screen note and a line on Today in the evening.
 extension AppModel {
-    /// The bedtimes for the training runs, from the usual night before `day`.
+    /// The bedtimes for the runs ahead, from the usual night before `day`.
     func bedtimes(before day: Date) -> [Bedtime] {
-        let runs = trainingRuns.filter { !isPausedForReturn($0) }
+        let runs = bedtimeRuns
         let usual = Bedtime.usualSleep(healthDays, before: day, calendar: calendar)
         return Bedtime.plan(runs: runs, usualSleep: usual, calendar: calendar)
+    }
+
+    /// The runs a bedtime can be for: the training calendars' (not paused for
+    /// a return plan) and Evergreen's own planned runs. The plan already leaves
+    /// out a day with a training run, so no morning counts twice.
+    var bedtimeRuns: [PlannedRun] {
+        trainingRuns.filter { !isPausedForReturn($0) }
+            + Bedtime.runs(from: plan.filter { completion(for: $0) == nil })
     }
 
     /// Tonight's bedtime for Today, from 6 PM the evening before the run.

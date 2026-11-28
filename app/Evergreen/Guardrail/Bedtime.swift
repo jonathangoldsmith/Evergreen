@@ -59,6 +59,17 @@ struct Bedtime: Equatable, Sendable {
         return nights.count >= minimumNights ? nights.reduce(0, +) / Double(nights.count) : nil
     }
 
+    /// Evergreen's own planned runs as runs a bedtime can be for: its runs
+    /// only, sized in minutes. Swaps are the training run itself, and
+    /// return-plan sessions and comebacks are short walk-runs and walks.
+    static func runs(from plan: [PlanItem]) -> [PlannedRun] {
+        plan.filter { $0.slot.activityType == "Running" && $0.source == .plan }.map { item in
+            PlannedRun(key: "evergreen|\(item.id)", title: Activity.title(item.slot.activityType), calendarTitle: "Evergreen",
+                       start: item.slot.start, end: item.slot.end, size: .minutes(Double(item.slot.minutes)),
+                       isHard: false, isAllDay: false)
+        }
+    }
+
     /// The bedtimes for `runs`, at most one a night and `perWeek` a week.
     static func plan(runs: [PlannedRun], usualSleep: Double?, calendar: Calendar) -> [Bedtime] {
         let context = GuardrailRule.Context(history: [], injuryMonth: nil, check: nil, upcoming: runs, calendar: calendar)
