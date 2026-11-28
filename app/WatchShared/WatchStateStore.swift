@@ -8,12 +8,13 @@ enum WatchStateStore {
 
     private static var defaults: UserDefaults { UserDefaults(suiteName: appGroup) ?? .standard }
 
-    static func save(_ state: WatchState) {
-        defaults.set(try? JSONEncoder().encode(state), forKey: key)
+    /// The phone saves the same state for its widget; its tests pass their own store.
+    static func save(_ state: WatchState, in store: UserDefaults? = nil) {
+        (store ?? defaults).set(try? JSONEncoder().encode(state), forKey: key)
     }
 
-    static func load() -> WatchState? {
-        guard let data = defaults.data(forKey: key) else { return nil }
+    static func load(in store: UserDefaults? = nil) -> WatchState? {
+        guard let data = (store ?? defaults).data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(WatchState.self, from: data)
     }
 }

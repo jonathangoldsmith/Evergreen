@@ -16,6 +16,8 @@ enum AnalyticsEvent: Hashable, Sendable {
     case buddy(String)
     /// check_in or swap, never the answer (item 9's list).
     case watchAction(String)
+    /// The same words, for an answer from the phone widget.
+    case widgetAction(String)
 
     var name: String {
         switch self {
@@ -28,6 +30,7 @@ enum AnalyticsEvent: Hashable, Sendable {
         case .comebackDone: "comeback_done"
         case .buddy: "buddy"
         case .watchAction: "watch_action"
+        case .widgetAction: "widget_action"
         }
     }
 
@@ -42,7 +45,7 @@ enum AnalyticsEvent: Hashable, Sendable {
             ["answered": answered ? "true" : "false"]
         case .backtestCompleted(let answered):
             ["answered": String(answered)]
-        case .watchAction(let kind):
+        case .watchAction(let kind), .widgetAction(let kind):
             ["kind": kind == "swap" ? "swap" : "check_in"]
         case .buddy(let action):
             ["action": action == "paired" ? "paired" : "unpaired"]
