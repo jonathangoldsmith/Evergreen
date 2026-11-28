@@ -124,9 +124,20 @@ struct BedtimeTests {
         #expect(Self.plan(Bedtime.runs(from: [Self.item("short", hour: 7, minutes: 30)])).isEmpty)
     }
 
+    @Test func evergreensOwnRunsNeedSixtyMinutesNotTheWeeksLongest() throws {
+        // A newcomer's 30- and 45-minute morning runs: the 45 would be "the week's
+        // longest" on a training calendar, but Evergreen's own runs need 60.
+        let week = [Self.item("short", hour: 7, minutes: 30), Self.item("longer", hour: 7, minutes: 45)]
+        #expect(Bedtime.runs(from: week).isEmpty)
+        var sixty = Self.item("sixty", hour: 7, minutes: 60)
+        sixty.slot.start = Fixture.at(7, dayOffset: 2)
+        sixty.slot.end = sixty.slot.start.addingTimeInterval(3600)
+        #expect(Self.plan(Bedtime.runs(from: week + [sixty])).map(\.run.key) == ["evergreen|sixty"])
+    }
+
     @Test func jordansPlanRunsAreCandidates() throws {
         let model = try NotifierActionTests.model()
-        let planRuns = model.plan.filter { $0.slot.activityType == "Running" && $0.source == .plan }
+        let planRuns = model.plan.filter { $0.slot.activityType == "Running" && $0.source == .plan && $0.slot.minutes >= 60 }
         #expect(!planRuns.isEmpty)
         #expect(Set(model.bedtimeRuns.map(\.key)).isSuperset(of: planRuns.map { "evergreen|\($0.id)" }))
     }

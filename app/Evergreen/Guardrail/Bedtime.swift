@@ -59,11 +59,14 @@ struct Bedtime: Equatable, Sendable {
         return nights.count >= minimumNights ? nights.reduce(0, +) / Double(nights.count) : nil
     }
 
-    /// Evergreen's own planned runs as runs a bedtime can be for: its runs
-    /// only, sized in minutes. Swaps are the training run itself, and
-    /// return-plan sessions and comebacks are short walk-runs and walks.
+    /// Evergreen's own planned runs as runs a bedtime can be for: its runs of
+    /// 60 minutes or more, sized in minutes. Not "the week's longest" like a
+    /// training calendar's, so a newcomer's 45-minute run gets no bedtime.
+    /// Swaps are the training run itself, and return-plan sessions and
+    /// comebacks are short walk-runs and walks.
     static func runs(from plan: [PlanItem]) -> [PlannedRun] {
-        plan.filter { $0.slot.activityType == "Running" && $0.source == .plan }.map { item in
+        let long = Int(GuardrailRule.longThreshold[.minutes] ?? 60)
+        return plan.filter { $0.slot.activityType == "Running" && $0.source == .plan && $0.slot.minutes >= long }.map { item in
             PlannedRun(key: "evergreen|\(item.id)", title: Activity.title(item.slot.activityType), calendarTitle: "Evergreen",
                        start: item.slot.start, end: item.slot.end, size: .minutes(Double(item.slot.minutes)),
                        isHard: false, isAllDay: false)
