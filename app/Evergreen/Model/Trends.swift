@@ -93,8 +93,12 @@ struct Trends: Equatable, Sendable {
             month.append("Training load: \(fractionTail(load, loadBefore, "the 4 weeks before", steady: "steady on")).")
         }
         if let longest = lastFour.filter({ $0.activityType == "Running" }).max(by: { $0.minutes < $1.minutes }) {
-            let date = longest.start.formatted(Date.FormatStyle(timeZone: calendar.timeZone)
-                .locale(Locale(identifier: "en_US")).month(.abbreviated).day())
+            // A fixed pattern, so it reads the same on every OS version (see `Bedtime.time`).
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = calendar.timeZone
+            formatter.dateFormat = "MMM d"
+            let date = formatter.string(from: longest.start)
             month.append("Longest run: \(duration(longest.minutes)), on \(date).")
         }
         if let range, range.daysCounted > 0 {
