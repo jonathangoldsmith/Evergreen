@@ -3,7 +3,8 @@ import Foundation
 /// The brake (plan items 5 and 6), as one pure function over plain values so
 /// every branch has a table test. Thresholds are provisional; the backtest
 /// calibrates them. With no morning answer, an off body signal (`BodySignal`,
-/// readiness) cuts a long or hard run like Tired.
+/// readiness) cuts a long or hard run like Tired. A run today longer than
+/// today's range leaves room for is cut to fit (`TodayRange`).
 enum GuardrailRule {
     /// A spike is more than this past the 30-day longest: +10%, or +5% after an injury.
     static let spikeRatio = 1.10
@@ -38,12 +39,16 @@ enum GuardrailRule {
         /// This morning's readings, for a run today; nil otherwise. Used only
         /// without a morning answer: the person's own answer wins.
         var body: BodySignal? = nil
+        /// For a run today, the minutes today's range leaves it (`TodayRange`'s
+        /// ceiling less what's already done today); nil otherwise.
+        var loadCeiling: Double? = nil
     }
 
     static func flag(for run: PlannedRun, _ context: Context) -> GuardrailFlag? {
         guard let planned = run.size else { return nil }
         let injured = isInjured(on: run.start, context)
-        let candidates = [spike(run, planned, injured, context), feel(run, planned, injured, context)].compactMap(\.self)
+        let candidates = [spike(run, planned, injured, context), feel(run, planned, injured, context),
+                          load(run, planned, injured, context)].compactMap(\.self)
         // One flag per run: the smaller suggestion wins; a spike wins a tie.
         return candidates.min { $0.suggested.value < $1.suggested.value }
     }
@@ -109,6 +114,18 @@ enum GuardrailRule {
         }
         return GuardrailFlag(kind: kind, planned: planned, suggested: RunSize(value: suggested, unit: planned.unit),
                              longest30: nil, keepEasy: false, injuryAdjusted: injured, body: body)
+    }
+
+    // MARK: Today's range
+
+    /// A run longer than today's room is cut in proportion, in its own unit.
+    /// A cut under 10% isn't worth asking about.
+    private static func load(_ run: PlannedRun, _ planned: RunSize, _ injured: Bool, _ context: Context) -> GuardrailFlag? {
+        guard let ceiling = context.loadCeiling, !run.isAllDay, run.minutes > 0, run.minutes > ceiling else { return nil }
+        let suggested = withFloor(roundDown(planned.value * max(ceiling, 0) / run.minutes, planned.unit), planned.unit)
+        guard suggested <= planned.value * (1 - smallestCut) else { return nil }
+        return GuardrailFlag(kind: .load, planned: planned, suggested: RunSize(value: suggested, unit: planned.unit),
+                             longest30: nil, keepEasy: false, injuryAdjusted: injured)
     }
 
     /// 60+ minutes, 10+ km, or the longest planned run in the next 7 days.

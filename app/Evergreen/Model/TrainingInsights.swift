@@ -1,8 +1,13 @@
 import Foundation
 
 /// What Evergreen reads from Apple Health workouts to tailor the plan: recent
-/// load against the person's usual week, their longest recent run and their
-/// heart rate. Computed on the phone from the workouts it already has.
+/// training load against the person's usual, their longest recent run and
+/// their heart rate. Computed on the phone from the workouts it already has.
+///
+/// Training load works like Apple Fitness's: each workout's effort (1–10)
+/// times its minutes, the last 7 days against the last 28. The effort is the
+/// person's own rating, else Apple's estimate, else one from the workout's
+/// average heart rate (the hackathon plan's fallback), else `unratedEffort`.
 struct TrainingInsights: Equatable {
     /// Runs in the last 30 days.
     var runs30: Int
@@ -10,26 +15,49 @@ struct TrainingInsights: Equatable {
     var avgHeartRate: Int?
     /// Training minutes in the last 7 days.
     var weekMinutes: Int
-    /// The usual week: average weekly minutes over the 3 weeks before that.
-    var usualWeekMinutes: Int
+    /// Training load (effort × minutes) in the last 7 days, and in the last 28 (the 7 included).
+    var weekLoad: Double
+    var monthLoad: Double
+    /// The average effort per minute over the last 28 days, for turning load into minutes.
+    var typicalEffort: Double
     /// The longest run in the last 14 days, in minutes.
     var longestRecentRun: Int
 
-    /// Last week against the usual one: 0.18 is 18% more.
+    /// A workout with no rating, no estimate and no heart rate counts as moderate.
+    static let unratedEffort = 5.0
+
+    /// Apple's scale from average heart rate: 3 easy (under 135), 4 (135–149),
+    /// 5 moderate (150–159), 7 hard (160+). Provisional, like the brake's thresholds.
+    static func estimatedEffort(_ averageHeartRate: Int) -> Double {
+        averageHeartRate >= 160 ? 7 : averageHeartRate >= 150 ? 5 : averageHeartRate >= 135 ? 4 : 3
+    }
+
+    /// The usual week's load: the 28-day load over 4.
+    var usualWeekLoad: Double { monthLoad / 4 }
+
+    /// The 7-day load against the 28-day one, per day, as Apple Fitness shows
+    /// it: 0.18 is 18% more.
     var loadChange: Double {
-        usualWeekMinutes > 0 ? Double(weekMinutes - usualWeekMinutes) / Double(usualWeekMinutes) : 0
+        monthLoad > 0 ? (weekLoad / 7) / (monthLoad / 28) - 1 : 0
+    }
+
+    static func load(_ workout: Workout) -> Double {
+        (workout.effort ?? workout.avgHeartRate.map(estimatedEffort) ?? unratedEffort) * workout.minutes
     }
 
     init(workouts: [Workout], storyDay: Date, calendar: Calendar = .current) {
         func since(_ days: Int) -> Date { calendar.date(byAdding: .day, value: -days, to: storyDay) ?? storyDay }
         let past = workouts.filter { $0.start < storyDay }
         let week = past.filter { $0.start >= since(7) }
-        let before = past.filter { $0.start >= since(28) && $0.start < since(7) }
+        let month = past.filter { $0.start >= since(28) }
         runs30 = past.filter { $0.activityType == "Running" && $0.start >= since(30) }.count
         let rates = week.compactMap(\.avgHeartRate)
         avgHeartRate = rates.isEmpty ? nil : rates.reduce(0, +) / rates.count
         weekMinutes = Int(week.reduce(0) { $0 + $1.minutes }.rounded())
-        usualWeekMinutes = Int((before.reduce(0) { $0 + $1.minutes } / 3).rounded())
+        weekLoad = week.reduce(0) { $0 + Self.load($1) }
+        monthLoad = month.reduce(0) { $0 + Self.load($1) }
+        let monthMinutes = month.reduce(0) { $0 + $1.minutes }
+        typicalEffort = monthMinutes > 0 ? monthLoad / monthMinutes : Self.unratedEffort
         longestRecentRun = Int(past
             .filter { $0.activityType == "Running" && $0.start >= since(14) }
             .map(\.minutes).max()?.rounded() ?? 0)

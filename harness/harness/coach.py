@@ -154,9 +154,9 @@ def _swap_line(flag: dict, feelings: bool) -> dict:
     if feelings:
         reason = {"spike": "Big jump", "returnSpike": "Back from an injury",
                   "sore": "Felt sore", "tired": "Felt tired",
-                  "body": "Body readings off usual"}[kind]
+                  "body": "Body readings off usual", "load": "Big week"}[kind]
     else:
-        reason = "Shortened: big jump" if big_jump else "Shortened: how you felt"
+        reason = "Shortened: big jump" if big_jump else "Shortened: big week" if kind == "load" else "Shortened: how you felt"
     # The 30-day longest on an injury-adjusted swap hints at an injury, so it needs the tick (X10).
     show_longest = flag.get("longest30") and (feelings or not flag.get("injuryAdjusted")) and big_jump
     detail = f"30-day longest {_size(flag['longest30'], unit)}" if show_longest else None

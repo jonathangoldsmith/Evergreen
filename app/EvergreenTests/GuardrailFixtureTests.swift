@@ -22,6 +22,7 @@ struct GuardrailFixtureTests {
         let injuryMonth: String?
         let check: String?
         let bodyOff: Bool?
+        let loadCeiling: Double?
         let expect: Expect?
         var testDescription: String { name }
     }
@@ -61,7 +62,8 @@ struct GuardrailFixtureTests {
         let got = GuardrailRule.flag(for: run, .init(history: history, injuryMonth: injury,
                                                      check: fixture.check.flatMap(MorningCheck.init(rawValue:)),
                                                      upcoming: [], calendar: calendar,
-                                                     body: fixture.bodyOff == true ? BodySignalTests.off : nil))
+                                                     body: fixture.bodyOff == true ? BodySignalTests.off : nil,
+                                                     loadCeiling: fixture.loadCeiling))
         guard let want = fixture.expect else {
             #expect(got == nil)
             return

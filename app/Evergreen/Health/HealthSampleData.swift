@@ -12,8 +12,13 @@ enum HealthSampleData {
         HKQuantityType(.restingHeartRate),
         HKQuantityType(.heartRateVariabilitySDNN),
         HKQuantityType(.distanceWalkingRunning),
+        HKQuantityType(.workoutEffortScore),
         HKCategoryType(.sleepAnalysis),
     ]
+
+    static func effort(_ w: Workout) -> Double {
+        w.avgHeartRate.map(TrainingInsights.estimatedEffort) ?? TrainingInsights.unratedEffort
+    }
 
     /// Asks to write, then adds the samples. Returns how many workouts it added.
     static func fill(storyDay: Date, calendar: Calendar = .current) async throws -> Int {
@@ -41,7 +46,13 @@ enum HealthSampleData {
             }
             if !samples.isEmpty { try await builder.addSamples(samples) }
             try await builder.endCollection(at: w.end)
-            _ = try await builder.finishWorkout()
+            if let workout = try await builder.finishWorkout() {
+                // An effort rating like the person's own, from how hard the heart worked.
+                let effort = HKQuantitySample(type: HKQuantityType(.workoutEffortScore),
+                                              quantity: HKQuantity(unit: .appleEffortScore(), doubleValue: Self.effort(w)),
+                                              start: w.start, end: w.end)
+                try? await store.relateWorkoutEffortSample(effort, with: workout, activity: nil)
+            }
             added += 1
         }
         try await store.save(nights(storyDay: storyDay, calendar: calendar))

@@ -1,7 +1,9 @@
 import Foundation
 
 /// The Sunday range report (plan item 18) from what the phone already has:
-/// Health workouts, morning answers, app opens and guardrail decisions.
+/// Health workouts, morning answers, app opens and guardrail decisions. A day
+/// is in range unless it went over its range (`TodayRange`) or ran past a
+/// kept swap's suggestion.
 extension AppModel {
     /// The report while it's showing (Sunday 7 PM through Monday), else nil.
     var rangeReport: RangeReport? {
@@ -17,7 +19,7 @@ extension AppModel {
             let counted = workouts.contains { calendar.isDate($0.start, inSameDayAs: day) }
                 || checkIns.contains { calendar.isDate($0.createdAt, inSameDayAs: day) }
                 || opened.contains(UploadEvent.day(day, calendar: calendar))
-            return RangeReport.Day(counted: counted, overSuggestion: ranOverSuggestion(on: day))
+            return RangeReport.Day(counted: counted, outOfRange: ranOverSuggestion(on: day) || wentOverRange(on: day))
         }
         let swaps = decisions.filter { $0.inEffect && $0.choice == .accept && $0.runStart >= week && $0.runStart < end }
         return RangeReport(days: days, swaps: swaps.count,
@@ -34,6 +36,13 @@ extension AppModel {
             let total = decision.unit == .km ? runs.compactMap(\.distanceKm).reduce(0, +) : runs.map(\.minutes).reduce(0, +)
             return total > decision.suggestedValue
         }
+    }
+
+    /// More training minutes that day than its range's ceiling (TODOS item 3).
+    /// A day without a range (under two weeks of history) can't go over.
+    func wentOverRange(on day: Date) -> Bool {
+        guard let range = range(on: day) else { return false }
+        return minutesDone(on: day) > Double(range.ceiling)
     }
 
     /// Remembers today as a day the app was opened (last 14 days kept).

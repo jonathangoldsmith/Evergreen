@@ -31,12 +31,22 @@ enum AnalyticsEvent: Hashable, Sendable {
         }
     }
 
+    /// The one word a flag kind sends: never the readings or the answer.
+    private static func word(for kind: GuardrailFlag.Kind) -> String {
+        switch kind {
+        case .spike, .returnSpike: "spike"
+        case .body: "body"
+        case .load: "load"
+        case .sore, .tired: "check_in"
+        }
+    }
+
     var properties: [String: String] {
         switch self {
         case .flagShown(let kind):
             // Sore and Tired come from the morning check; only that it was a check-in leaves the phone.
             // The body signal sends that it was one, never the readings.
-            ["kind": kind == .spike || kind == .returnSpike ? "spike" : kind == .body ? "body" : "check_in"]
+            ["kind": Self.word(for: kind)]
         case .choice(let choice):
             ["choice": ["accept", "keep", "undo"].contains(choice) ? choice : "other"]
         case .painCheckIn(let answered):

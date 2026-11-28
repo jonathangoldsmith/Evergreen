@@ -13,6 +13,8 @@ struct GuardrailFlag: Codable, Hashable, Sendable {
         /// No morning answer, and two of this morning's readings are off the
         /// person's usual (`BodySignal`): cut like Tired.
         case body
+        /// Longer than today's range leaves room for (`TodayRange`): cut to fit.
+        case load
     }
 
     var kind: Kind
