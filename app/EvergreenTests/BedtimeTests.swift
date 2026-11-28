@@ -88,6 +88,15 @@ struct BedtimeTests {
         #expect(bedtime.why == .long)
     }
 
+    @Test func timesReadTheSameOnEveryOSVersion() {
+        // A FormatStyle with the AM/PM left out gave "06:00" on CI and "6:00" here.
+        #expect(Bedtime.time(Fixture.at(6), Self.calendar, amPM: false) == "6:00")
+        #expect(Bedtime.time(Fixture.at(0, 5), Self.calendar, amPM: false) == "12:05")
+        #expect(Bedtime.time(Fixture.at(7), Self.calendar, amPM: true) == "7:00 AM")
+        #expect(Bedtime.time(Fixture.at(12), Self.calendar, amPM: true) == "12:00 PM")
+        #expect(Bedtime.time(Fixture.at(18, 30), Self.calendar, amPM: true) == "6:30 PM")
+    }
+
     // MARK: Not nagging
 
     @Test func oneANightForTheEarliestRun() throws {
