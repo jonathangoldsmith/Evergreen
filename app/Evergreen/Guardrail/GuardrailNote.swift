@@ -9,6 +9,8 @@ struct GuardrailNote: Hashable, Sendable {
         case morningCheck
         /// Sunday 6 PM: "How was your week? Any pain?" No / A little / Yes. Never dropped.
         case pain
+        /// The evening before a long or hard morning run: "Lights out by 10:30". No buttons; dropped first.
+        case bedtime
 
         /// Its place in the one urgency order Today and the watch use too.
         var urgency: TodayUrgency {
@@ -16,6 +18,7 @@ struct GuardrailNote: Hashable, Sendable {
             case .swap: .swap
             case .morningCheck: .morningCheck
             case .pain: .pain
+            case .bedtime: .note
             }
         }
     }
@@ -33,7 +36,7 @@ struct GuardrailNote: Hashable, Sendable {
     /// Stable, so rescheduling replaces rather than duplicates.
     var id: String {
         switch kind {
-        case .swap, .morningCheck: "guardrail-\(kind.rawValue)-\(StableHash.hex(run?.key ?? "", length: 12))"
+        case .swap, .morningCheck, .bedtime: "guardrail-\(kind.rawValue)-\(StableHash.hex(run?.key ?? "", length: 12))"
         case .pain: "guardrail-pain-\(Int((weekStart ?? fireAt).timeIntervalSince1970))"
         }
     }

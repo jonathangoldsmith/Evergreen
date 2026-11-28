@@ -40,6 +40,10 @@ struct DemoSheet: View {
                         model.showRoughNightDemo()
                     }
                     .disabled(model.calendarAccess != .on)
+                    beat("The night before a long run", detail: "8:30 PM before a 7 AM long run: Jordan usually sleeps about 7h 30, so Evergreen says lights out by 10:30, on Today and on the Lock Screen.") {
+                        model.showBedtimeDemo()
+                    }
+                    .disabled(model.calendarAccess != .on)
                     beat("Sunday evening", detail: "This Sunday at 6:30 PM: tomorrow's long run is a big jump and the week's pain question is open, so both cards stack in order. Shows nothing new if this week is already answered.") {
                         model.showSundayDemo()
                     }

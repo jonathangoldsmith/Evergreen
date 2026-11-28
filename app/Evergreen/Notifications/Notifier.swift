@@ -75,7 +75,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.removePendingNotificationRequests(withIdentifiers: pending.filter { $0.hasPrefix("guardrail-") })
         var categories = NotificationAction.fixedCategories
         for note in notes {
-            let category: String
+            let category: String?
             switch note.kind {
             case .swap:
                 guard let flag = note.flag else { continue }
@@ -85,6 +85,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
                 category = NotificationAction.morningCheckCategory
             case .pain:
                 category = NotificationAction.painCategory
+            case .bedtime:
+                category = nil
             }
             let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: note.fireAt)
             let payload = NotePayload(run: note.run, flag: note.flag, weekStart: note.weekStart)

@@ -16,6 +16,9 @@ struct TodayView: View {
                 if let range = model.todayRange {
                     TodayRangeLine(range: range)
                 }
+                if let bedtime = model.tonightsBedtime {
+                    TodaySentence(line: bedtime.line(calendar: model.calendar), reason: bedtime.reason(calendar: model.calendar))
+                }
                 if model.offline {
                     Label("Offline, showing last update", systemImage: "wifi.slash")
                         .font(.footnote)
