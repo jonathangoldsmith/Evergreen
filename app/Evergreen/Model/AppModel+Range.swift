@@ -38,11 +38,13 @@ extension AppModel {
         }
     }
 
-    /// More training minutes that day than its range's ceiling (TODOS item 3).
+    /// More training load that day than its range left room for (TODOS item 3).
     /// A day without a range (under two weeks of history) can't go over.
     func wentOverRange(on day: Date) -> Bool {
         guard let range = range(on: day) else { return false }
-        return minutesDone(on: day) > Double(range.ceiling)
+        // By load, not minutes: an easy long run uses less of the week than its minutes at typical effort.
+        let load = workouts.filter { calendar.isDate($0.start, inSameDayAs: day) }.reduce(0) { $0 + TrainingInsights.load($1) }
+        return load > max(range.room, 0) + 0.5
     }
 
     /// Remembers today as a day the app was opened (last 14 days kept).
