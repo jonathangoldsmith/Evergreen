@@ -7,11 +7,22 @@ struct TodayRangeLine: View {
     let range: TodayRange
 
     var body: some View {
+        TodaySentence(line: range.line, reason: range.reason)
+    }
+}
+
+/// One plain sentence on Today and the line under it that says why: today's
+/// range, or tonight's bedtime (TODOS item 4).
+struct TodaySentence: View {
+    let line: String
+    let reason: String
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(range.line)
+            Text(line)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(Theme.text)
-            Text(range.reason)
+            Text(reason)
                 .font(.footnote)
                 .foregroundStyle(Theme.textMuted)
         }

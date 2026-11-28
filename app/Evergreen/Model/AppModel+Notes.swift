@@ -18,7 +18,8 @@ extension AppModel {
         }
         let thisWeek = PainWeek.monday(of: Date(), calendar: calendar)
         let painWeeks = onboarded && painRecord(for: thisWeek) == nil ? [thisWeek] : []
-        return GuardrailSchedule.notes(runs: states, painWeeks: painWeeks, now: Date(), calendar: calendar)
+        return GuardrailSchedule.notes(runs: states, painWeeks: painWeeks, bedtimes: bedtimes(before: Date()), now: Date(),
+                                      calendar: calendar)
     }
 
     /// A Lock Screen button. The first answer wins: a swap already decided in

@@ -6,6 +6,9 @@ import Foundation
 /// - Spike notes fire at 7 PM the evening before a run that starts before
 ///   noon, otherwise at 7 AM on the day.
 /// - The morning check fires per `MorningCheckTiming`; none once a run is decided.
+/// - A bedtime note (`Bedtime`) fires an hour before lights out, the evening
+///   before a long or hard morning run. Its urgency is a note's, so it's the
+///   first dropped.
 /// - At most 2 a day, counted by the day a note fires. Sunday's pain note is
 ///   never dropped: an evening swap note competing with it is folded into its
 ///   text, and otherwise the least urgent note by `TodayUrgency` is dropped
@@ -25,7 +28,8 @@ enum GuardrailSchedule {
         var checkedIn: Bool
     }
 
-    static func notes(runs: [RunState], painWeeks: [Date], now: Date, calendar: Calendar) -> [GuardrailNote] {
+    static func notes(runs: [RunState], painWeeks: [Date], bedtimes: [Bedtime] = [], now: Date,
+                      calendar: Calendar) -> [GuardrailNote] {
         var notes: [GuardrailNote] = []
         for state in runs where !state.decided && state.run.start > now {
             if let flag = state.flag {
@@ -44,6 +48,11 @@ enum GuardrailSchedule {
                                                body: GuardrailCopy.morningCheck.body, run: state.run))
                 }
             }
+        }
+        for bedtime in bedtimes where bedtime.fireAt > now && bedtime.run.start > now {
+            let copy = bedtime.note(calendar: calendar)
+            notes.append(GuardrailNote(kind: .bedtime, fireAt: bedtime.fireAt, title: copy.title, body: copy.body,
+                                       run: bedtime.run))
         }
         for week in painWeeks {
             let at = PainWeek.asksAt(week, calendar: calendar)
