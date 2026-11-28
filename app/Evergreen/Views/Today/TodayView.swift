@@ -78,12 +78,16 @@ struct TodayView: View {
                             .frame(minWidth: 44, minHeight: 44)
                     }
                 }
-                // For everyone: the brake's settings (calendars, injury, uploads) live here.
-                Button("Your data") { showYourData = true }
-                    .font(.footnote)
-                    .foregroundStyle(Theme.textMuted)
-                    .frame(minHeight: 44)
-                    .accessibilityHint("Training calendars, what leaves your phone, and what Evergreen keeps")
+                HStack(spacing: Theme.lg) {
+                    Button("Trends") { model.showsTrends = true }
+                        .accessibilityHint("Your last 7 days and last 4 weeks, in sentences")
+                    // For everyone: the brake's settings (calendars, injury, uploads) live here.
+                    Button("Your data") { showYourData = true }
+                        .accessibilityHint("Training calendars, what leaves your phone, and what Evergreen keeps")
+                }
+                .font(.footnote)
+                .foregroundStyle(Theme.textMuted)
+                .frame(minHeight: 44)
             }
             .padding(.horizontal, Theme.md)
             .padding(.top, Theme.lg)
@@ -92,8 +96,13 @@ struct TodayView: View {
         }
         .background(Theme.surface)
         .sheet(isPresented: $showYourData) { YourDataView() }
+        .sheet(isPresented: trendsBinding) { TrendsView() }
         .sheet(item: ostrcBinding) { week in OSTRCSheet(week: week.date) }
         .sheet(item: celebrationBinding) { completion in DoneSheet(completion: completion) }
+    }
+
+    private var trendsBinding: Binding<Bool> {
+        Binding(get: { model.showsTrends }, set: { model.showsTrends = $0 })
     }
 
     /// The Done sheet shows once per finished plan item (range plan item 14).

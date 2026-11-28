@@ -83,7 +83,7 @@ enum GuardrailCopy {
     static func sleepLabel(_ minutes: Double) -> String {
         let total = Int((minutes / 5).rounded()) * 5
         let (hours, rest) = (total / 60, total % 60)
-        return rest == 0 ? "\(hours)h" : "\(hours)h \(rest)"
+        return rest == 0 ? "\(hours)h" : "\(hours)h \(rest < 10 ? "0" : "")\(rest)"
     }
 
     /// "a", "a and b", "a, b and c".

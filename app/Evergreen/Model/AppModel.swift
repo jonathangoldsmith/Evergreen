@@ -16,6 +16,8 @@ final class AppModel {
     /// A demo person's sleep, resting heart rate and HRV, set by the rough-night
     /// beat; demo personas carry workouts only. Not saved: a relaunch clears it.
     var demoHealthDays: [HealthHistory.Day] = []
+    /// The Trends sheet is open (TODOS item 5). The demo beat opens it too.
+    var showsTrends = false
     @ObservationIgnored let healthReader = HealthReader()
     /// The last good answer, decoded once from `run.lastResponse`.
     private(set) var response: TickResponse?
