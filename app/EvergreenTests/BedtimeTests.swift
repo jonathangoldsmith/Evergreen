@@ -97,6 +97,40 @@ struct BedtimeTests {
         #expect(Bedtime.time(Fixture.at(18, 30), Self.calendar, amPM: true) == "6:30 PM")
     }
 
+    // MARK: Evergreen's own plan
+
+    static func item(_ id: String, hour: Int, minutes: Int, type: String = "Running",
+                     source: PlanItem.Source = .plan) -> PlanItem {
+        let start = Fixture.at(hour, dayOffset: 1)
+        return PlanItem(id: id, slot: Slot(start: start, end: start.addingTimeInterval(Double(minutes) * 60), activityType: type),
+                        points: 20, source: source)
+    }
+
+    @Test func evergreensOwnLongMorningRunGetsABedtime() throws {
+        let runs = Bedtime.runs(from: [Self.item("long", hour: 7, minutes: 90)])
+        #expect(runs.map(\.key) == ["evergreen|long"] && runs.first?.size == .minutes(90))
+        let bedtime = try #require(Self.plan(runs).first)
+        #expect(bedtime.line(calendar: Self.calendar) == "Lights out by 10:30 for tomorrow’s long run.")
+    }
+
+    @Test func onlyEvergreensOwnRunsCount() {
+        let plan = [
+            Self.item("strength", hour: 7, minutes: 90, type: "FunctionalStrengthTraining"),
+            Self.item("swap", hour: 7, minutes: 90, source: .swap),
+            Self.item("return", hour: 7, minutes: 90, source: .returnSession),
+            Self.item("comeback", hour: 7, minutes: 90, source: .comeback),
+        ]
+        #expect(Bedtime.runs(from: plan).isEmpty)
+        #expect(Self.plan(Bedtime.runs(from: [Self.item("short", hour: 7, minutes: 30)])).isEmpty)
+    }
+
+    @Test func jordansPlanRunsAreCandidates() throws {
+        let model = try NotifierActionTests.model()
+        let planRuns = model.plan.filter { $0.slot.activityType == "Running" && $0.source == .plan }
+        #expect(!planRuns.isEmpty)
+        #expect(Set(model.bedtimeRuns.map(\.key)).isSuperset(of: planRuns.map { "evergreen|\($0.id)" }))
+    }
+
     // MARK: Not nagging
 
     @Test func oneANightForTheEarliestRun() throws {
