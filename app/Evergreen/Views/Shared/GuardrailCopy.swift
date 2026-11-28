@@ -41,6 +41,8 @@ enum GuardrailCopy {
             return flag.keepEasy
                 ? "You said you’re tired. Keep the distance and run it easy."
                 : "You said you’re tired, and this one is long or hard."
+        case .load:
+            return "\(flag.planned.label) would put your 7-day training load more than 30% over your usual. \(flag.suggested.label) keeps it in range."
         case .body:
             let readings = flag.body.map(bodyReadings) ?? "This morning’s readings are off your usual"
             return flag.keepEasy

@@ -1,7 +1,7 @@
 import HealthKit
 
 /// Reads the person's Apple Health history: workouts from the last 60 days
-/// (type, times, average heart rate, distance, indoors), for the last 28
+/// (type, times, effort for training load, average heart rate, distance, indoors), for the last 28
 /// days minutes asleep and resting heart rate, and for the last 60 days heart
 /// rate variability (readiness, `BodySignal`). Read-only; nothing here writes.
 struct HealthReader: Sendable {
@@ -50,7 +50,27 @@ struct HealthReader: Sendable {
         let predicate = HKQuery.predicateForSamples(withStart: from, end: to)
         let query = HKSampleQueryDescriptor(predicates: [.workout(predicate)], sortDescriptors: [SortDescriptor(\.startDate)])
         guard let samples = try? await query.result(for: store) else { return [] }
-        return samples.map(Self.workout)
+        var workouts: [Workout] = []
+        for sample in samples {
+            var workout = Self.workout(sample)
+            workout.effort = await effort(store, for: sample)
+            workouts.append(workout)
+        }
+        return workouts
+    }
+
+    /// The effort (1–10) for training load, as Apple Fitness uses it: the
+    /// person's own rating if they gave one, else Apple's estimate, else nil.
+    private func effort(_ store: HKHealthStore, for workout: HKWorkout) async -> Double? {
+        let related = HKQuery.predicateForWorkoutEffortSamplesRelated(workout: workout, activity: nil)
+        for type in [HKQuantityTypeIdentifier.workoutEffortScore, .estimatedWorkoutEffortScore] {
+            let query = HKSampleQueryDescriptor(predicates: [.quantitySample(type: HKQuantityType(type), predicate: related)],
+                                                sortDescriptors: [], limit: 1)
+            if let sample = try? await query.result(for: store).first {
+                return sample.quantity.doubleValue(for: .appleEffortScore())
+            }
+        }
+        return nil
     }
 
     static func workout(_ w: HKWorkout) -> Workout {

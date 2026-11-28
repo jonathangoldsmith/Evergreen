@@ -120,6 +120,14 @@ def test_a_body_readings_swap_stays_behind_the_tick_like_feelings(db):
     assert "Body readings off usual" in page(made["token"]).text
 
 
+def test_a_load_swap_says_big_week(db):
+    events(flag(kind="load"), choice(kind="load"))
+    made = share()
+    assert "Shortened: big week" in page(made["token"]).text
+    client.patch(f"/users/{RUNNER}/coach-shares/{made['id']}", json={"includeFeelings": True})
+    assert "Big week" in page(made["token"]).text
+
+
 def test_deleting_the_runner_ends_every_link(db):
     made = share()
     client.delete(f"/users/{RUNNER}")

@@ -8,9 +8,9 @@ struct RangeReport: Equatable, Sendable {
         /// Evergreen has some sign of the day: a Health workout, a morning
         /// answer, or the app opened. Days with none are left out.
         var counted: Bool
-        /// Ran more than the swap's suggestion on a flagged day, after keeping
-        /// the plan or ignoring the flag.
-        var overSuggestion: Bool
+        /// Went over the day's range (`TodayRange`'s ceiling), or ran more than
+        /// a swap's suggestion after keeping the plan.
+        var outOfRange: Bool
     }
 
     var daysCounted: Int
@@ -22,7 +22,7 @@ struct RangeReport: Equatable, Sendable {
     init(days: [Day], swaps: Int, longRunSwap: Bool) {
         let counted = days.filter(\.counted)
         daysCounted = counted.count
-        daysInRange = counted.filter { !$0.overSuggestion }.count
+        daysInRange = counted.filter { !$0.outOfRange }.count
         self.swaps = swaps
         self.longRunSwap = longRunSwap
     }

@@ -8,7 +8,9 @@ flag. With fewer than 2 comparable runs there's no spike, except after an injury
 over 30 minutes or 5 km. Sore cuts a long run by 30%, Tired a long or hard run by 20%, and a
 cut under 10% becomes "run it easy". With no morning answer, an off body signal (two of this
 morning's readings off the person's usual, worked out on the phone) cuts like Tired. One flag
-per run: the smaller suggestion wins.
+per run: the smaller suggestion wins. A run today longer than today's range leaves room for
+(load_ceiling, the minutes worked out on the phone) is cut in proportion to fit, unless the cut is
+under 10%.
 """
 from __future__ import annotations
 
@@ -91,11 +93,13 @@ def shown(value: float, unit: str) -> float:
 
 
 def flag(run: PlannedRun, history: list[dict], injury_month: date | None = None, check: str | None = None,
-         upcoming: list[PlannedRun] | None = None, body_off: bool = False) -> Flag | None:
+         upcoming: list[PlannedRun] | None = None, body_off: bool = False,
+         load_ceiling: float | None = None) -> Flag | None:
     if run.size is None:
         return None
     injured = is_injured(run, injury_month)
-    found = [f for f in (_spike(run, history, injured), _feel(run, check, injured, upcoming or [], body_off)) if f]
+    found = [f for f in (_spike(run, history, injured), _feel(run, check, injured, upcoming or [], body_off),
+                         _load(run, load_ceiling, injured)) if f]
     return min(found, key=lambda f: f.suggested) if found else None
 
 
@@ -139,3 +143,12 @@ def _feel(run: PlannedRun, check: str | None, injured: bool, upcoming: list[Plan
     if suggested > run.size * (1 - SMALLEST_CUT):
         return Flag(check, run.size, run.size, run.unit, None, True, injured)
     return Flag(check, run.size, suggested, run.unit, None, False, injured)
+
+
+def _load(run: PlannedRun, ceiling: float | None, injured: bool) -> Flag | None:
+    if ceiling is None or run.all_day or run.minutes <= 0 or run.minutes <= ceiling:
+        return None
+    suggested = with_floor(round_down(run.size * max(ceiling, 0) / run.minutes, run.unit), run.unit)
+    if suggested > run.size * (1 - SMALLEST_CUT):
+        return None
+    return Flag("load", run.size, suggested, run.unit, None, False, injured)

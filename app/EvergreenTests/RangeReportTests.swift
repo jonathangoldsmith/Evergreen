@@ -5,8 +5,8 @@ import Testing
 /// The Sunday range report's counts and words (plan item 18, design decision 2).
 struct RangeReportTests {
     static func days(_ counted: Int, over: Int = 0) -> [RangeReport.Day] {
-        (0..<counted).map { RangeReport.Day(counted: true, overSuggestion: $0 < over) }
-            + Array(repeating: RangeReport.Day(counted: false, overSuggestion: false), count: 7 - counted)
+        (0..<counted).map { RangeReport.Day(counted: true, outOfRange: $0 < over) }
+            + Array(repeating: RangeReport.Day(counted: false, outOfRange: false), count: 7 - counted)
     }
 
     @Test func aWeekWithASwapSaysSo() {

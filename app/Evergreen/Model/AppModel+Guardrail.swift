@@ -12,10 +12,34 @@ extension AppModel {
     /// This run's flag, from the person's runs, injury month, morning answer
     /// and, for a run today, this morning's readings.
     func flag(for run: PlannedRun) -> GuardrailFlag? {
-        GuardrailRule.flag(for: run, GuardrailRule.Context(
+        let range = calendar.isDate(run.start, inSameDayAs: now) ? todayRange : nil
+        return GuardrailRule.flag(for: run, GuardrailRule.Context(
             history: workouts, injuryMonth: profile.injuryMonth, check: checkIn(for: run),
-            upcoming: trainingRuns, calendar: .current, body: bodySignal(for: run)
+            upcoming: trainingRuns, calendar: .current, body: bodySignal(for: run),
+            loadCeiling: range.map { Double($0.ceiling) - minutesDone(on: now) }
         ))
+    }
+
+    // MARK: Today's range
+
+    /// Today's range (TODOS item 3), or nil with under two weeks of history.
+    var todayRange: TodayRange? { range(on: now) }
+
+    /// The range a day had, from the workouts before it and that morning's readings.
+    func range(on day: Date) -> TodayRange? {
+        let planned = todayPlanned(on: day)
+        let bodyOff = BodySignal.read(healthDays, on: day, calendar: calendar).isOff
+        return TodayRange.make(workouts: workouts, on: day, planned: planned, bodyOff: bodyOff, calendar: calendar)
+    }
+
+    /// Training minutes logged on that day.
+    func minutesDone(on day: Date) -> Double {
+        workouts.filter { calendar.isDate($0.start, inSameDayAs: day) }.reduce(0) { $0 + $1.minutes }
+    }
+
+    private func todayPlanned(on day: Date) -> Bool {
+        plan.contains { calendar.isDate($0.slot.start, inSameDayAs: day) }
+            || trainingRuns.contains { calendar.isDate($0.start, inSameDayAs: day) && !isPausedForReturn($0) }
     }
 
     /// Readiness: this morning's readings against the person's usual, for a

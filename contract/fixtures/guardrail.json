@@ -46,6 +46,22 @@
     {"name": "body off on a short easy run: no flag", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 40}, "bodyOff": true,
      "history": [{"daysBack": 3, "minutes": 50}, {"daysBack": 8, "minutes": 55}], "expect": null},
     {"name": "body off on a short hard run: run it easy", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 22, "hard": true}, "bodyOff": true,
-     "history": [], "expect": {"kind": "body", "suggested": 22, "longest30": null, "keepEasy": true, "injuryAdjusted": false}}
+     "history": [], "expect": {"kind": "body", "suggested": 22, "longest30": null, "keepEasy": true, "injuryAdjusted": false}},
+    {"name": "load: 100 min with 45 min of room is cut to 45", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 100}, "loadCeiling": 45,
+     "history": [{"daysBack": 3, "minutes": 50}, {"daysBack": 8, "minutes": 110}],
+     "expect": {"kind": "load", "suggested": 45, "longest30": null, "keepEasy": false, "injuryAdjusted": false}},
+    {"name": "load: a km run is cut in proportion", "run": {"start": "2026-11-22T08:00:00-08:00", "km": 18, "minutes": 100}, "loadCeiling": 60,
+     "history": [{"daysBack": 4, "km": 8}, {"daysBack": 8, "km": 17}],
+     "expect": {"kind": "load", "suggested": 10, "longest30": null, "keepEasy": false, "injuryAdjusted": false}},
+    {"name": "load: a cut under 10% isn't asked about", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 100}, "loadCeiling": 95,
+     "history": [{"daysBack": 3, "minutes": 50}, {"daysBack": 8, "minutes": 110}], "expect": null},
+    {"name": "load and a spike: the smaller suggestion", "run": {"start": "2026-11-22T08:00:00-08:00", "km": 18, "minutes": 90}, "loadCeiling": 45,
+     "history": [{"daysBack": 4, "km": 8}, {"daysBack": 8, "km": 13}],
+     "expect": {"kind": "load", "suggested": 9, "longest30": null, "keepEasy": false, "injuryAdjusted": false}},
+    {"name": "load: no room left still keeps the floor", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 60}, "loadCeiling": 0,
+     "history": [{"daysBack": 3, "minutes": 50}, {"daysBack": 8, "minutes": 55}],
+     "expect": {"kind": "load", "suggested": 20, "longest30": null, "keepEasy": false, "injuryAdjusted": false}},
+    {"name": "load: within the room, no flag", "run": {"start": "2026-11-22T18:00:00-08:00", "minutes": 40}, "loadCeiling": 45,
+     "history": [{"daysBack": 3, "minutes": 50}, {"daysBack": 8, "minutes": 55}], "expect": null}
   ]
 }

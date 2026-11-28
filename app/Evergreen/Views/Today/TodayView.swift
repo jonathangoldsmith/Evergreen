@@ -13,6 +13,9 @@ struct TodayView: View {
                     .font(.footnote)
                     .foregroundStyle(Theme.textMuted)
                     .padding(.bottom, Theme.xs)
+                if let range = model.todayRange {
+                    TodayRangeLine(range: range)
+                }
                 if model.offline {
                     Label("Offline, showing last update", systemImage: "wifi.slash")
                         .font(.footnote)

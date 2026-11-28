@@ -29,7 +29,8 @@ def build(case):
 @pytest.mark.parametrize("case", FIXTURES["cases"], ids=[c["name"] for c in FIXTURES["cases"]])
 def test_the_shared_cases(case):
     run, history, injury = build(case)
-    got = guardrail.flag(run, history, injury, case.get("check"), body_off=case.get("bodyOff", False))
+    got = guardrail.flag(run, history, injury, case.get("check"), body_off=case.get("bodyOff", False),
+                         load_ceiling=case.get("loadCeiling"))
     want = case["expect"]
     if want is None:
         assert got is None
