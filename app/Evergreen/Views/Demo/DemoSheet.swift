@@ -44,6 +44,9 @@ struct DemoSheet: View {
                         model.showBedtimeDemo()
                     }
                     .disabled(model.calendarAccess != .on)
+                    beat("Trends", detail: "Jordan's last 7 days and last 4 weeks in sentences: workouts, training load, his longest run, days in range, and a week of lower resting heart rate and shorter sleep.") {
+                        model.showTrendsDemo()
+                    }
                     beat("Sunday evening", detail: "This Sunday at 6:30 PM: tomorrow's long run is a big jump and the week's pain question is open, so both cards stack in order. Shows nothing new if this week is already answered.") {
                         model.showSundayDemo()
                     }
